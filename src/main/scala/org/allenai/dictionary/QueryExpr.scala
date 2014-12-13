@@ -18,19 +18,22 @@ case class ClustToken(value: String) extends Token
 case class Capture(expr: QueryExpr) extends QueryExpr
 case class Concat(children: QueryExpr*) extends QueryExpr
 case object Concat {
-  def fromList(children: Seq[QueryExpr]): Concat = Concat(children:_*)
+  def fromSeq(children: Seq[QueryExpr]): QueryExpr = children match {
+    case expr :: Nil => expr
+    case seq => Concat(seq:_*)
+  }
 }
 
 object QueryExprParser extends RegexParsers {
   def leftParen = "("
   def rightParen = ")"
   def wordToken: Parser[WordToken] = """[^$()\s]+""".r ^^ WordToken
-  def dictToken: Parser[DictToken] = """\$[^$()\s]+""".r ^^ DictToken
-  def clustToken: Parser[ClustToken] = """\^[01]+""".r ^^ ClustToken
+  def dictToken: Parser[DictToken] = """\$[^$()\s]+""".r ^^ { s => DictToken(s.tail) } // strip $
+  def clustToken: Parser[ClustToken] = """\^[01]+""".r ^^ { s => ClustToken(s.tail) } //strip ^
   def token: Parser[Token] = dictToken | clustToken | wordToken
-  def tokens: Parser[Concat] = rep1(token) ^^ Concat.fromList
+  def tokens: Parser[QueryExpr] = rep1(token) ^^ Concat.fromSeq
   def capture: Parser[Capture] = leftParen ~> queryExpr <~ rightParen ^^ Capture
-  def queryExpr: Parser[QueryExpr] = rep1(tokens | capture) ^^ Concat.fromList
+  def queryExpr: Parser[QueryExpr] = rep1(tokens | capture) ^^ Concat.fromSeq
   def parse(s: String): ParseResult[QueryExpr] = parseAll(queryExpr, s)
 }
 
