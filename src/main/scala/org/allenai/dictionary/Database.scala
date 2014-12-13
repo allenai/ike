@@ -3,14 +3,14 @@ package org.allenai.dictionary
 import org.apache.commons.lang.StringEscapeUtils.escapeSql
 import scalikejdbc._
 
-case class DatabaseOperations(path: String) {
+case class DatabaseOperations(path: String, n: Int, batchSize: Int = 100000) {
   
   Class.forName("org.sqlite.JDBC")
   ConnectionPool.singleton(s"jdbc:sqlite:$path", null, null)
   implicit val session = AutoSession
+  val numCols = n * 2 + 1
   
-  
-  def create(n: Int): Unit = {
+  def create: Unit = {
     val tableName = Database.tableName
     val wCols = (0 until n) map Database.wordColumn
     val wColNames = wCols map { name => s"$name TEXT" } mkString(", ")
@@ -20,23 +20,42 @@ case class DatabaseOperations(path: String) {
     SQL(createTable).execute.apply
   }
   
+  def delete: Unit = SQL(s"DROP TABLE ${Database.tableName}").execute.apply
+  
+  def gramRow(gram: CountedNGram): Seq[Any] = {
+    val words = gram.tokens.map(_.word)
+    val clusts = gram.tokens.map(_.cluster)
+    val cols = (words ++ clusts).padTo(2 * n, null)
+    cols :+ gram.count
+  }
+  
+  def insert(grams: Iterable[CountedNGram]): Unit = insert(grams.iterator)
+  
   def insert(grams: Iterator[CountedNGram]): Unit = {
     import Database.tableName
-    val query = s"INSERT INTO $tableName VALUES (?, ?, ?)"
-    SQL(query).batch(Seq("hi", "1", 3), Seq(null, null, 0)).apply
+    val cols = List.fill(numCols)("?").mkString(", ")
+    val query = s"INSERT INTO $tableName VALUES ($cols)"
+    val rows = grams map gramRow
+    for (rowBatch <- rows.grouped(batchSize)) {
+      SQL(query).batch(rowBatch:_*).apply
+    }
+  }
+  
+  def select(query: DatabaseQuery): Iterable[QueryResult] = {
+    val queryString = Database.queryString(query)
+    val results = SQL(queryString) map {
+      result => QueryResult(result.string(Database.selectName), 0)
+    }
+    results.list.apply
   }
 
 }
 
-object Foo extends App {
-  override def main(args: Array[String]): Unit = {
-    val ops = DatabaseOperations(args(0))
-    ops.create(args(1).toInt)
-    ops.insert(Iterator.empty)
-  }
-}
+case class WordWithCluster(word: String, cluster: String)
 
-case class CountedNGram(tokens: Seq[Option[String]], count: Int)
+case class CountedNGram(tokens: Seq[WordWithCluster], count: Int)
+
+case class QueryResult(string: String, count: Int)
 
 object Database {
   

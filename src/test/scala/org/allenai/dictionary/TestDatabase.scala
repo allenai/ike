@@ -57,7 +57,5 @@ class TestDatabase extends FlatSpec {
     val result = Database.select(expr3)
     assert(result == expected)
   }
-  
-  println(Database.queryString(Database.query(expr1)))
 
 }
