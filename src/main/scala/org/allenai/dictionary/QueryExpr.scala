@@ -2,13 +2,25 @@ package org.allenai.dictionary
 
 import scala.util.parsing.combinator.RegexParsers
 
-sealed trait QueryExpr {
-  def tokens: Seq[Token] = this match {
+sealed trait QueryExpr
+object QueryExpr {
+  def tokens(expr: QueryExpr): Seq[Token] = expr match {
     case t: Token => t :: Nil
-    case cap: Capture => cap.expr.tokens
-    case concat: Concat => concat.children.flatMap(_.tokens)
+    case cap: Capture => tokens(cap.expr)
+    case concat: Concat => concat.children.flatMap(tokens)
+  }
+  def captures(expr: QueryExpr): Seq[Capture] = expr match {
+    case c: Capture => c +: captures(c.expr)
+    case t: Token => Nil
+    case c: Concat => c.children.flatMap(captures)
+  }
+  def tokensBeforeCapture(expr: QueryExpr): Seq[Token] = expr match {
+    case cap: Capture => Nil
+    case t: Token => t :: Nil
+    case cat: Concat => cat.children.map(tokensBeforeCapture).takeWhile(_.nonEmpty).flatten
   }
 }
+
 sealed trait Token extends QueryExpr {
   def value: String
 }

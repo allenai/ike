@@ -3,8 +3,9 @@ package org.allenai.dictionary
 import org.scalatest.FlatSpec
 import java.io.File
 
-class TestDatabaseOperations extends FlatSpec {
+class TestSqlDatabase extends FlatSpec {
   
+  import SqlDatabase._
   val dbFile = File.createTempFile("database", "db")
   val dbPath = dbFile.getAbsolutePath
   val n = 3
@@ -18,7 +19,7 @@ class TestDatabaseOperations extends FlatSpec {
   val grams = Seq(gram1, gram2, gram3)
   
   "DatabaseOperations" should "create and delete" in {
-    val db = DatabaseOperations(dbPath, n)
+    val db = SqlDatabase(dbPath, n)
     db.create
     assert(dbFile.exists)
     db.delete
@@ -27,13 +28,12 @@ class TestDatabaseOperations extends FlatSpec {
   }
   
   it should "insert and query" in {
-    val db = DatabaseOperations(dbPath, n)
+    val db = SqlDatabase(dbPath, n)
     db.create
     db.insert(grams)
-    import Database._
-    val select = QuerySelect(Seq(wordColumn(0), wordColumn(1)))
+    val select = Seq(wordColumn(0), wordColumn(1))
     val where = Seq(Equals(wordColumn(2), Some(w3.word)))
-    val query = DatabaseQuery(select, where)
+    val query = SqlQuery(select, where)
     val results = db.select(query)
     val expected = Seq(QueryResult(s"${w1.word} ${w2.word}", 1))
     assert(expected == results)
@@ -42,7 +42,7 @@ class TestDatabaseOperations extends FlatSpec {
   
   it should "handle query expressions" in {
     val expr = Concat(Capture(WordToken(w1.word)), ClustToken(w4.cluster))
-    val db = DatabaseOperations(dbPath, n)
+    val db = SqlDatabase(dbPath, n)
     db.create
     db.insert(grams)
     val results = db.query(expr)

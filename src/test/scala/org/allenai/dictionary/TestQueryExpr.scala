@@ -5,6 +5,7 @@ import scala.util.parsing.input.CharSequenceReader
 
 class TestQueryExpr extends FlatSpec {
   
+  import QueryExpr.tokens
   val withDict = Concat(
       DictToken("taskPhrase"),
       Capture(
@@ -13,7 +14,7 @@ class TestQueryExpr extends FlatSpec {
               WordToken("hello"))))
   
   "QueryExpr" should "return tokens in order" in {
-    val result = withDict.tokens
+    val result = tokens(withDict)
     val expected = DictToken("taskPhrase") :: ClustToken("11") :: WordToken("hello") :: Nil
     assert(result == expected)
   }
