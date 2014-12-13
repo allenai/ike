@@ -16,7 +16,8 @@ case class DatabaseOperations(path: String, n: Int, batchSize: Int = 100000) {
     val wColNames = wCols map { name => s"$name TEXT" } mkString(", ")
     val cCols = (0 until n) map clusterColumn
     val cColNames = cCols map { name => s"$name VARCHAR(20)" } mkString(", ")
-    val createTable = s"CREATE TABLE $tableName ($wColNames, $cColNames, freq INTEGER NOT NULL)"
+    val fCol = Database.freqColumnName
+    val createTable = s"CREATE TABLE $tableName ($wColNames, $cColNames, $fCol INTEGER NOT NULL)"
     SQL(createTable).execute.apply
   }
   
@@ -44,7 +45,7 @@ case class DatabaseOperations(path: String, n: Int, batchSize: Int = 100000) {
   def select(query: DatabaseQuery): Iterable[QueryResult] = {
     val q = queryString(query)
     val results = SQL(q) map {
-      result => QueryResult(result.string(Database.selectName), result.int("totalFreq"))
+      result => QueryResult(result.string(Database.selectName), result.int(Database.countName))
     }
     results.list.apply
   }
@@ -60,7 +61,8 @@ case class DatabaseOperations(path: String, n: Int, batchSize: Int = 100000) {
   def queryString(q: DatabaseQuery): String = {
     val where = q.constraints.map(constraintString).mkString(" AND ")
     val select = selectString(q.select)
-    s"""SELECT $select AS $selectName, SUM(freq) AS totalFreq FROM $tableName WHERE $where GROUP BY $select"""
+    val fCol = Database.freqColumnName
+    s"""SELECT $select AS $selectName, SUM($fCol) AS totalFreq FROM $tableName WHERE $where GROUP BY $select"""
   }
   
   def query(expr: QueryExpr): Iterable[QueryResult] = {
@@ -85,8 +87,10 @@ object Database {
   
   def wordColumnName = "word"
   def clusterColumnName = "cluster"
+  def freqColumnName = "freq"
   def tableName = "grams"
   def selectName = "result"
+  def countName = "totalFreq"
     
   def wordColumn(i: Int): String = s"$wordColumnName$i"
   def clusterColumn(i: Int): String = s"$clusterColumnName$i"
