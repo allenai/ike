@@ -1,6 +1,42 @@
 package org.allenai.dictionary
 
 import org.apache.commons.lang.StringEscapeUtils.escapeSql
+import scalikejdbc._
+
+case class DatabaseOperations(path: String) {
+  
+  Class.forName("org.sqlite.JDBC")
+  ConnectionPool.singleton(s"jdbc:sqlite:$path", null, null)
+  implicit val session = AutoSession
+  
+  
+  def create(n: Int): Unit = {
+    val tableName = Database.tableName
+    val wCols = (0 until n) map Database.wordColumn
+    val wColNames = wCols map { name => s"$name TEXT" } mkString(", ")
+    val cCols = (0 until n) map Database.clusterColumn
+    val cColNames = cCols map { name => s"$name VARCHAR(20)" } mkString(", ")
+    val createTable = s"CREATE TABLE $tableName ($wColNames, $cColNames, COUNT INTEGER NOT NULL)"
+    SQL(createTable).execute.apply
+  }
+  
+  def insert(grams: Iterator[CountedNGram]): Unit = {
+    import Database.tableName
+    val query = s"INSERT INTO $tableName VALUES (?, ?, ?)"
+    SQL(query).batch(Seq("hi", "1", 3), Seq(null, null, 0)).apply
+  }
+
+}
+
+object Foo extends App {
+  override def main(args: Array[String]): Unit = {
+    val ops = DatabaseOperations(args(0))
+    ops.create(args(1).toInt)
+    ops.insert(Iterator.empty)
+  }
+}
+
+case class CountedNGram(tokens: Seq[Option[String]], count: Int)
 
 object Database {
   
