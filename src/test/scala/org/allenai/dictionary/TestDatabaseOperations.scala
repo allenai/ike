@@ -11,9 +11,11 @@ class TestDatabaseOperations extends FlatSpec {
   val w1 = WordWithCluster("cats", "1")
   val w2 = WordWithCluster("like", "0")
   val w3 = WordWithCluster("dogs", "1")
+  val w4 = WordWithCluster("purr", "0")
   val gram1 = CountedNGram(Seq(w1, w2, w3), 1)
   val gram2 = CountedNGram(Seq(w3, w2, w1), 1)
-  val grams = Seq(gram1, gram2)
+  val gram3 = CountedNGram(Seq(w1, w4), 1)
+  val grams = Seq(gram1, gram2, gram3)
   
   "DatabaseOperations" should "create and delete" in {
     val db = DatabaseOperations(dbPath, n)
@@ -30,10 +32,21 @@ class TestDatabaseOperations extends FlatSpec {
     db.insert(grams)
     import Database._
     val select = QuerySelect(Seq(wordColumn(0), wordColumn(1)))
-    val where = Seq(Equals(wordColumn(2), w3.word))
+    val where = Seq(Equals(wordColumn(2), Some(w3.word)))
     val query = DatabaseQuery(select, where)
     val results = db.select(query)
-    val expected = Seq(QueryResult(s"${w1.word} ${w2.word}", 0))
+    val expected = Seq(QueryResult(s"${w1.word} ${w2.word}", 1))
+    assert(expected == results)
+    db.delete
+  }
+  
+  it should "handle query expressions" in {
+    val expr = Concat(Capture(WordToken(w1.word)), ClustToken(w4.cluster))
+    val db = DatabaseOperations(dbPath, n)
+    db.create
+    db.insert(grams)
+    val results = db.query(expr)
+    val expected = Seq(QueryResult(s"${w1.word}", 1))
     assert(expected == results)
     db.delete
   }

@@ -12,11 +12,11 @@ class TestDatabase extends FlatSpec {
   
   "Database" should "get query constraints" in {
     val expected = Seq(
-        Equals(wordColumn(0), "the"),
+        Equals(wordColumn(0), Some("the")),
         Prefix(clusterColumn(1), "1"),
         Prefix(clusterColumn(2), "0"),
         Prefix(clusterColumn(3), "1"),
-        Equals(wordColumn(4), "algorithm"))
+        Equals(wordColumn(4), Some("algorithm")))
     val tokens = expr1.tokens
     val result = Database.constraints(tokens)
     assert(result == expected)
