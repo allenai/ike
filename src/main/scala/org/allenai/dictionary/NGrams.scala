@@ -8,7 +8,7 @@ import java.io.PrintWriter
 import com.google.code.externalsorting.ExternalSort
 import scala.io.Source
 
-class NGrams {
+object NGrams {
   def tokenStream(text: AnnotatedText): Seq[WordWithCluster] = for {
     token <- text.typedAnnotations[Token]
     cluster <- text.typedAnnotationsUnder[WordCluster](token)
@@ -16,7 +16,7 @@ class NGrams {
     clusterString = cluster.clusterId.replaceAll("[\\t\\n]", " ")
   } yield WordWithCluster(tokenString, clusterString)
   def grams(n: Int, wwcs: Seq[WordWithCluster]): Seq[NGram] = for {
-    i <- 1 until n
+    i <- 1 to n
     gram <- wwcs.sliding(i)
   } yield NGram(gram)
   def count(texts: Iterator[AnnotatedText], n: Int): Iterator[Counted[NGram]] = {

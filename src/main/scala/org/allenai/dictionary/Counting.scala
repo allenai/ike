@@ -24,7 +24,7 @@ object Counting {
     val buffered = iter.buffered
     if (buffered.hasNext) {
       val head = buffered.head
-      val zero = Counted(head, 0)
+      val zero = Counted(head, 1)
       val tallied = iter.scanLeft(zero)(tally)
       val padded = tallied ++ Iterator(zero)
       max(padded)

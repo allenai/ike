@@ -19,5 +19,7 @@ libraryDependencies += "com.google.code.externalsortinginjava" % "externalsortin
 
 libraryDependencies += "org.allenai.scholar" %% "scholar-ner" % "2014.09.02-5-SNAPSHOT"
 
+libraryDependencies += "org.allenai.scholar" %% "s2-backend" % "2014.09.02-5-SNAPSHOT"
+
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
