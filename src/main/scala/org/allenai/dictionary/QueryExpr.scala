@@ -4,29 +4,29 @@ import scala.util.parsing.combinator.RegexParsers
 
 sealed trait QueryExpr
 object QueryExpr {
-  def tokens(expr: QueryExpr): Seq[Token] = expr match {
-    case t: Token => t :: Nil
+  def tokens(expr: QueryExpr): Seq[QToken] = expr match {
+    case t: QToken => t :: Nil
     case cap: Capture => tokens(cap.expr)
     case concat: Concat => concat.children.flatMap(tokens)
   }
   def captures(expr: QueryExpr): Seq[Capture] = expr match {
     case c: Capture => c +: captures(c.expr)
-    case t: Token => Nil
+    case t: QToken => Nil
     case c: Concat => c.children.flatMap(captures)
   }
-  def tokensBeforeCapture(expr: QueryExpr): Seq[Token] = expr match {
+  def tokensBeforeCapture(expr: QueryExpr): Seq[QToken] = expr match {
     case cap: Capture => Nil
-    case t: Token => t :: Nil
+    case t: QToken => t :: Nil
     case cat: Concat => cat.children.map(tokensBeforeCapture).takeWhile(_.nonEmpty).flatten
   }
 }
 
-sealed trait Token extends QueryExpr {
+sealed trait QToken extends QueryExpr {
   def value: String
 }
-case class WordToken(value: String) extends Token
-case class DictToken(value: String) extends Token
-case class ClustToken(value: String) extends Token
+case class WordToken(value: String) extends QToken
+case class DictToken(value: String) extends QToken
+case class ClustToken(value: String) extends QToken
 case class Capture(expr: QueryExpr) extends QueryExpr
 case class Concat(children: QueryExpr*) extends QueryExpr
 case object Concat {
@@ -42,7 +42,7 @@ object QueryExprParser extends RegexParsers {
   def wordToken: Parser[WordToken] = """[^$()\s]+""".r ^^ WordToken
   def dictToken: Parser[DictToken] = """\$[^$()\s]+""".r ^^ { s => DictToken(s.tail) } // strip $
   def clustToken: Parser[ClustToken] = """\^[01]+""".r ^^ { s => ClustToken(s.tail) } //strip ^
-  def token: Parser[Token] = dictToken | clustToken | wordToken
+  def token: Parser[QToken] = dictToken | clustToken | wordToken
   def tokens: Parser[QueryExpr] = rep1(token) ^^ Concat.fromSeq
   def capture: Parser[Capture] = leftParen ~> queryExpr <~ rightParen ^^ Capture
   def queryExpr: Parser[QueryExpr] = rep1(tokens | capture) ^^ Concat.fromSeq

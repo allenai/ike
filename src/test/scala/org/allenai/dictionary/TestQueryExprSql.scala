@@ -29,7 +29,7 @@ class TestQueryExprSql extends FlatSpec {
   }
   
   it should "find capture at begninning" in {
-    val expected = Seq.empty[Token]
+    val expected = Seq.empty[QToken]
     val result = tokensBeforeCapture(expr2)
     assert(result == expected)
   }

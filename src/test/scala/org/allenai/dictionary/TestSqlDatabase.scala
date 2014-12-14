@@ -13,9 +13,9 @@ class TestSqlDatabase extends FlatSpec {
   val w2 = WordWithCluster("like", "0")
   val w3 = WordWithCluster("dogs", "1")
   val w4 = WordWithCluster("purr", "0")
-  val gram1 = CountedNGram(Seq(w1, w2, w3), 1)
-  val gram2 = CountedNGram(Seq(w3, w2, w1), 1)
-  val gram3 = CountedNGram(Seq(w1, w4), 1)
+  val gram1 = Counted(NGram(Seq(w1, w2, w3)), 1)
+  val gram2 = Counted(NGram(Seq(w3, w2, w1)), 1)
+  val gram3 = Counted(NGram(Seq(w1, w4)), 1)
   val grams = Seq(gram1, gram2, gram3)
   
   "DatabaseOperations" should "create and delete" in {

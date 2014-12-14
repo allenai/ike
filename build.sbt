@@ -15,5 +15,9 @@ libraryDependencies ++= Seq(
   "org.scalikejdbc" %% "scalikejdbc-config"  % "2.2.0"
 )
 
+libraryDependencies += "com.google.code.externalsortinginjava" % "externalsortinginjava" % "0.1.9"
+
+libraryDependencies += "org.allenai.scholar" %% "scholar-ner" % "2014.09.02-5-SNAPSHOT"
+
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 

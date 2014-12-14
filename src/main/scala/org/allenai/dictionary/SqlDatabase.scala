@@ -18,7 +18,7 @@ case object SqlDatabase {
   
   def clusterColumn(i: Int): String = s"$clusterColumnName$i"
   
-  def predicates(tokens: Seq[Token]): Seq[SqlPredicate] = for {
+  def predicates(tokens: Seq[QToken]): Seq[SqlPredicate] = for {
     (t, i) <- tokens.zipWithIndex
     predicate = t match {
       case w: WordToken => Equals(wordColumn(i), Some(w.value))
@@ -63,16 +63,17 @@ case class SqlDatabase(path: String, n: Int, batchSize: Int = 100000) {
   
   def delete: Unit = SQL(s"DROP TABLE $tableName").execute.apply
   
-  def gramRow(gram: CountedNGram): Seq[Any] = {
-    val words = gram.tokens.map(_.word).padTo(n, null)
-    val clusts = gram.tokens.map(_.cluster).padTo(n, null)
+  def gramRow(counted: Counted[NGram]): Seq[Any] = {
+    val grams = counted.value.grams
+    val words = grams.map(_.word).padTo(n, null)
+    val clusts = grams.map(_.cluster).padTo(n, null)
     val cols = (words ++ clusts)
-    cols :+ gram.count
+    cols :+ counted.count
   }
   
-  def insert(grams: Iterable[CountedNGram]): Unit = insert(grams.iterator)
+  def insert(grams: Iterable[Counted[NGram]]): Unit = insert(grams.iterator)
   
-  def insert(grams: Iterator[CountedNGram]): Unit = {
+  def insert(grams: Iterator[Counted[NGram]]): Unit = {
     val cols = List.fill(numColumns)("?").mkString(", ")
     val query = s"INSERT INTO $tableName VALUES ($cols)"
     val rows = grams map gramRow
@@ -121,10 +122,7 @@ case class SqlDatabase(path: String, n: Int, batchSize: Int = 100000) {
 
 }
 
-case class WordWithCluster(word: String, cluster: String)
-case class CountedNGram(tokens: Seq[WordWithCluster], count: Int)
 case class QueryResult(string: String, count: Int)
-
 case class SqlQuery(resultCols: Seq[String], predicates: Seq[SqlPredicate])
 sealed trait SqlPredicate
 case class Equals(name: String, value: Option[String]) extends SqlPredicate
