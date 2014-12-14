@@ -20,20 +20,13 @@ class NGrams {
     gram <- wwcs.sliding(i)
   } yield NGram(gram)
   def count(texts: Iterator[AnnotatedText], n: Int): Iterator[Counted[NGram]] = {
-    val unsortedFile = File.createTempFile("NGrams.raw", ".tsv")
-    val unsortedWriter = new PrintWriter(unsortedFile)
     val unsortedGrams = for {
       text <- texts
       tokens = tokenStream(text)
       gram <- grams(n, tokens)
     } yield gram
-    val unsortedRows = unsortedGrams map NGram.toTsv foreach unsortedWriter.println
-    unsortedWriter.close
-    val sortedFile = File.createTempFile("NGrams.sorted", ".tsv")
-    ExternalSort.sort(unsortedFile, sortedFile)
-    val sortedLines = Source.fromFile(sortedFile).getLines
-    val sortedGrams = sortedLines map NGram.fromTsv
-    Counting.count(sortedGrams)
+    val sortedGrams = Counting.sort(unsortedGrams map NGram.toTsv) map NGram.fromTsv
+    Counting.uniqc(sortedGrams)
   }
   
 }

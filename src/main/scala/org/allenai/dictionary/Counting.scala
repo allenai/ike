@@ -1,10 +1,26 @@
 package org.allenai.dictionary
 
+import java.io.File
+import java.io.PrintWriter
+import com.google.code.externalsorting.ExternalSort
+import scala.io.Source
+
 object Counting {
+  
+  /** External sort using filesystem */
+  def sort(iter: Iterator[String]): Iterator[String] = {
+    val unsortedFile = File.createTempFile("unsorted", ".tsv")
+    val unsortedWriter = new PrintWriter(unsortedFile)
+    iter foreach unsortedWriter.println
+    unsortedWriter.close
+    val sortedFile = File.createTempFile("sorted", ".tsv")
+    ExternalSort.sort(unsortedFile, sortedFile)
+    Source.fromFile(sortedFile).getLines
+  }
   
   /** Equivalent to `uniq -c` in unix.
    */
-  def count[A](iter: Iterator[A]): Iterator[Counted[A]] = {
+  def uniqc[A](iter: Iterator[A]): Iterator[Counted[A]] = {
     val buffered = iter.buffered
     if (buffered.hasNext) {
       val head = buffered.head
@@ -27,8 +43,3 @@ object Counting {
 }
 
 case class Counted[A](value: A, count: Int)
-
-object Foo extends App {
-  val foo = Iterator()
-  Counting.count(foo) foreach println
-}
