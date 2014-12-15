@@ -61,6 +61,11 @@ case class SqlDatabase(path: String, n: Int, batchSize: Int = 100000) {
     SQL(createTable).execute.apply
   }
   
+  def createIndexes: Unit = columnNames foreach createColumnIndex
+  
+  def createColumnIndex(columnName: String): Unit =
+    SQL(s"CREATE INDEX index$columnName ON $tableName ($columnName)").execute.apply
+  
   def delete: Unit = SQL(s"DROP TABLE $tableName").execute.apply
   
   def gramRow(counted: Counted[NGram]): Seq[Any] = {

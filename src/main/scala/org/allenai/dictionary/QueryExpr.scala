@@ -41,7 +41,7 @@ object QueryExprParser extends RegexParsers {
   def rightParen = ")"
   def wordToken: Parser[WordToken] = """[^$()\s]+""".r ^^ WordToken
   def dictToken: Parser[DictToken] = """\$[^$()\s]+""".r ^^ { s => DictToken(s.tail) } // strip $
-  def clustToken: Parser[ClustToken] = """\^[01]+""".r ^^ { s => ClustToken(s.tail) } //strip ^
+  def clustToken: Parser[ClustToken] = """\^[01]""".r ^^ { s => ClustToken(s.tail) } //strip ^
   def token: Parser[QToken] = dictToken | clustToken | wordToken
   def tokens: Parser[QueryExpr] = rep1(token) ^^ Concat.fromSeq
   def capture: Parser[Capture] = leftParen ~> queryExpr <~ rightParen ^^ Capture
