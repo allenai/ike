@@ -6,6 +6,7 @@ import java.io.File
 class TestSqlDatabase extends FlatSpec {
   
   import SqlDatabase._
+  import NGramTable._
   val dbFile = File.createTempFile("database", "db")
   val dbPath = dbFile.getAbsolutePath
   val n = 3
@@ -30,10 +31,10 @@ class TestSqlDatabase extends FlatSpec {
   it should "insert and query" in {
     val db = SqlDatabase(dbPath, n)
     db.create
-    db.insert(grams)
-    val select = Seq(wordColumn(0), wordColumn(1))
-    val where = Seq(Equals(wordColumn(2), Some(w3.word)))
-    val query = SqlQuery(select, where)
+    db.insert(grams.iterator)
+    val select = Seq(wordColumnName(0), wordColumnName(1))
+    val where = Seq(Equals(wordColumnName(2), Some(w3.word)))
+    val query = SqlQuery(s"$tablePrefix$n", select, where)
     val results = db.select(query)
     val expected = Seq(QueryResult(s"${w1.word} ${w2.word}", 1))
     assert(expected == results)
@@ -44,7 +45,7 @@ class TestSqlDatabase extends FlatSpec {
     val expr = Concat(Capture(WordToken(w1.word)), ClustToken(w4.cluster))
     val db = SqlDatabase(dbPath, n)
     db.create
-    db.insert(grams)
+    db.insert(grams.iterator)
     val results = db.query(expr)
     val expected = Seq(QueryResult(s"${w1.word}", 1))
     assert(expected == results)

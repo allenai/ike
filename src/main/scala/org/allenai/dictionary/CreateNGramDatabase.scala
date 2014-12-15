@@ -1,8 +1,11 @@
 package org.allenai.dictionary
 
 import scala.io.Source
+import scalikejdbc._
 
 object CreateNGramDatabase extends App {
+  
+  GlobalSettings.loggingSQLAndTime = LoggingSQLAndTimeSettings(enabled = false)
   
   val inputPath = args(0)
   val clusterPath = args(1)
