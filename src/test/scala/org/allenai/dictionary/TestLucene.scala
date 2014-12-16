@@ -5,7 +5,7 @@ import java.nio.file.Files
 
 class TestLucene extends FlatSpec {
       
-  val docs = "This is some super TEXT that was super slick." :: "This is super salty!" :: Nil
+  val docs = "This is some super TEXT that was Super SLICK." :: "This is super salty!" :: Nil
   val wordClusters = Map("super" -> "00", "slick" -> "01", "salty" -> "001", "text" -> "1")
     
   val tempDir = Files.createTempDirectory("lucene").toFile
