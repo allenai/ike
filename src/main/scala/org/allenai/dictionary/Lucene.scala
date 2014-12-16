@@ -45,8 +45,8 @@ case class LuceneReader(path: File) {
   
   def sequenceQuery(qs: Seq[SpanQuery]): SpanQuery = new SpanNearQuery(qs.toArray, 0, true)
   
-  def matches(spanQuery: SpanQuery): Iterable[String] = {
-    val results = new ListBuffer[String]
+  def matches(spanQuery: SpanQuery): Iterable[Seq[String]] = {
+    val results = new ListBuffer[Seq[String]]
     val termContexts = new HashMap[Term, TermContext]
     val spans = spanQuery.getSpans(arc, bits, termContexts)
     while (spans.next) {
@@ -65,12 +65,53 @@ case class LuceneReader(path: File) {
         }
         pos += 1
       }
-      val matched = terms.mkString(" ")
-      results += matched 
+      results += terms.toSeq
     }
     results.toSeq
   }
+  
+  def interpretToken(qtoken: QToken): SpanQuery = qtoken match {
+    case WordToken(w) => wordQuery(w)
+    case ClustToken(c) => clusterPrefixQuery(c)
+    case _ => throw new IllegalArgumentException(s"Cannot interpret token $qtoken")
+  }
+  
+  def interpret(expr: QueryExpr): LuceneQuery = {
+    val tokens = QueryExpr.tokens(expr)
+    val queryTokens = tokens map interpretToken
+    val spanQuery = sequenceQuery(queryTokens)
+    val captures = QueryExpr.captures(expr)
+    val nCaptures = captures.size
+    assert(nCaptures == 1, 
+        s"Can only interpret query with exactly 1 capture group; got $nCaptures in $expr")
+    val capture = captures.head
+    val captureSize = QueryExpr.tokens(capture).size
+    val start = QueryExpr.tokensBeforeCapture(expr).size
+    val end = start + captureSize
+    LuceneQuery(spanQuery, start, end)
+  }
+  
+  def getCaptureGroup(terms: Seq[String], lq: LuceneQuery): String = {
+    terms.slice(lq.captureStart, lq.captureEnd).mkString(" ")
+  }
+  
+  def execute(lq: LuceneQuery): Seq[LuceneHit] = {
+    val results = matches(lq.spanQuery)
+    val captured = results map { terms => getCaptureGroup(terms, lq) }
+    val histogram = captured.groupBy(identity).mapValues(_.size).toSeq
+    val hits = for {
+      (captureGroup, count) <- histogram
+      hit = LuceneHit(captureGroup, count)
+    } yield hit
+    hits
+  }
+  
+  def execute(qexpr: QueryExpr): Seq[LuceneHit] = execute(interpret(qexpr))
+  
 }
+
+case class LuceneHit(captureGroup: String, count: Int)
+case class LuceneQuery(spanQuery: SpanQuery, captureStart: Int, captureEnd: Int)
 
 case class LuceneWriter(path: File, wordClusters: Map[String, String]) {
   import Lucene._
