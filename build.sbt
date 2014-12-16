@@ -23,3 +23,12 @@ libraryDependencies += "org.allenai.scholar" %% "s2-backend" % "2014.09.02-5-SNA
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
+libraryDependencies += "org.apache.lucene" % "lucene-core" % "4.8.1"
+
+libraryDependencies += "org.apache.lucene" % "lucene-codecs" % "4.8.1"
+
+libraryDependencies += "org.apache.lucene" % "lucene-analyzers-common" % "4.8.1"
+
+libraryDependencies += "org.apache.lucene" % "lucene-queryparser" % "4.8.1"
+
+

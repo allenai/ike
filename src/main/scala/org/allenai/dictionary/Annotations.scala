@@ -3,9 +3,9 @@ package org.allenai.dictionary
 import org.allenai.scholar.text.AnnotatedText
 import org.allenai.scholar.text.Token
 import org.allenai.scholar.text.WordCluster
-import org.allenai.scholar.pipeline.annotate.SentenceAnnotator
+import org.allenai.scholar.pipeline.annotate.AnnotateSentences.{annotate => annotateSents}
 import org.allenai.scholar.text.NamedAnnotatedText
-import org.allenai.scholar.pipeline.annotate.TokenAnnotator
+import org.allenai.scholar.pipeline.annotate.AnnotateTokens.{annotate => annotateTokens}
 import scala.io.Source
 
 object Annotations {
@@ -20,8 +20,8 @@ object Annotations {
   
   def annotate(clusters: Map[String, String], content: String): AnnotatedText = {
     val empty = new AnnotatedText(content, Seq.empty)
-    val sentenced = SentenceAnnotator.annotate(NamedAnnotatedText("", empty))
-    val tokenized = TokenAnnotator.annotate(sentenced).text
+    val sentenced = annotateSents(NamedAnnotatedText("", empty))
+    val tokenized = annotateTokens(sentenced).text
     annotateClusters(clusters, tokenized)
   }
   
