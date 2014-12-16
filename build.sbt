@@ -16,3 +16,4 @@ libraryDependencies += "org.apache.lucene" % "lucene-analyzers-common" % "4.8.1"
 
 libraryDependencies += "org.apache.lucene" % "lucene-queryparser" % "4.8.1"
 
+libraryDependencies += "org.apache.lucene" % "lucene-highlighter" % "4.8.1"
