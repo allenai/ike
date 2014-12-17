@@ -19,6 +19,24 @@ object QueryExpr {
     case t: QToken => t :: Nil
     case cat: Concat => cat.children.map(tokensBeforeCapture).takeWhile(_.nonEmpty).flatten
   }
+  def evalDicts(expr: QueryExpr, dicts: Map[String, Seq[QueryExpr]]): Seq[QueryExpr] = expr match {
+    case DictToken(name) => dicts.get(name) match {
+      case Some(otherExprs) => otherExprs
+      case None => throw new IllegalArgumentException(s"Cannot resolve dictionary '$name'")
+    }
+    case t: QToken => t :: Nil
+    case cap: Capture => for (replacement <- evalDicts(cap.expr, dicts)) yield Capture(replacement)
+    case c: Concat => {
+      val expandedChildren = c.children.map(evalDicts(_, dicts))
+      for {
+        product <- cartesian(expandedChildren)
+        newExpr = Concat(product:_*)
+      } yield newExpr
+    }
+  }
+  def cartesian[A](xs: Traversable[Traversable[A]]): Seq[Seq[A]] = xs.foldLeft(Seq(Seq.empty[A])) {
+    (x, y) => for (a <- x; b <- y) yield a :+ b 
+  }
 }
 
 sealed trait QToken extends QueryExpr {
