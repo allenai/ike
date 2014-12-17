@@ -79,5 +79,6 @@ object QueryExprParser extends RegexParsers {
   def capture: Parser[Capture] = leftParen ~> queryExpr <~ rightParen ^^ Capture
   def queryExpr: Parser[QueryExpr] = rep1(tokens | capture) ^^ Concat.fromSeq
   def parse(s: String): ParseResult[QueryExpr] = parseAll(queryExpr, s)
+  def tokenize(s: String): Seq[QToken] = QueryExpr.tokens(parse(s).get)
 }
 
