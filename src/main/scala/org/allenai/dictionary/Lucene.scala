@@ -108,6 +108,11 @@ case class LuceneReader(path: File) {
   
   def execute(qexpr: QueryExpr): Seq[LuceneHit] = execute(interpret(qexpr))
   
+  def execute(exprs: Seq[QueryExpr]): Seq[LuceneHit] = {
+    val results = exprs.flatMap(execute).groupBy(_.captureGroup).mapValues(_.map(_.count).reduce(_ + _))
+    results.map(x => LuceneHit(x._1, x._2)).toSeq
+  }
+  
 }
 
 case class LuceneHit(captureGroup: String, count: Int)
