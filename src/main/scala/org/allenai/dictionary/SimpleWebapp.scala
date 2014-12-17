@@ -18,7 +18,9 @@ import akka.io.IO
 import spray.can.Http
 import akka.pattern.ask
 
-
+case class WordClusterRequest(words: Seq[String])
+case class WordTokenInfoRequest(query: String)
+case class SearchRequest(env: EnvironmentState)
 
 case class Request(name: String)
 case object Request {
