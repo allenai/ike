@@ -17,3 +17,5 @@ libraryDependencies += "org.apache.lucene" % "lucene-analyzers-common" % "4.8.1"
 libraryDependencies += "org.apache.lucene" % "lucene-queryparser" % "4.8.1"
 
 libraryDependencies += "org.apache.lucene" % "lucene-highlighter" % "4.8.1"
+
+libraryDependencies += "org.allenai.common" %% "common-core" % "2014.09.09-0"

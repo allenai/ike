@@ -2,6 +2,7 @@ package org.allenai.dictionary
 
 import org.scalatest.FlatSpec
 import scala.util.parsing.input.CharSequenceReader
+import org.allenai.common.immutable.Interval
 
 class TestQueryExpr extends FlatSpec {
   
@@ -52,6 +53,15 @@ class TestQueryExpr extends FlatSpec {
     val expected = expected1 :: expected2 :: expected3 :: expected4 :: Nil
     val got = QueryExpr.evalDicts(withTwoDicts, dicts).map(tokens)
     assert(got == expected)
+  }
+  
+  it should "find token offsets" in {
+    val i = Interval.open _
+    val input = "hello  (this is ) a ^0 test"
+    val parsedTokens = tokens(QueryExprParser.parse(input).get)
+    val offsets = QueryExpr.tokenOffsets(input, parsedTokens)
+    val expected = i(0, 5) :: i(8, 12) :: i(13, 15) :: i(18, 19) :: i(21, 22) :: i(23, 27) :: Nil
+    assert(expected == offsets)
   }
   
 }

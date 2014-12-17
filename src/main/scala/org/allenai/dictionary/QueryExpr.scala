@@ -1,6 +1,7 @@
 package org.allenai.dictionary
 
 import scala.util.parsing.combinator.RegexParsers
+import org.allenai.common.immutable.Interval
 
 sealed trait QueryExpr
 object QueryExpr {
@@ -37,6 +38,19 @@ object QueryExpr {
   def cartesian[A](xs: Traversable[Traversable[A]]): Seq[Seq[A]] = xs.foldLeft(Seq(Seq.empty[A])) {
     (x, y) => for (a <- x; b <- y) yield a :+ b 
   }
+  def tokenOffsets(input: String, tokens: Seq[QToken]): Seq[Interval] =
+    tokenOffsets(input, tokens, 0)
+  def tokenOffsets(input: String, tokens: Seq[QToken], start: Int): Seq[Interval] = tokens match {
+    case Nil => Nil
+    case head :: rest => {
+      val value = head.value
+      val tstart = input.indexOf(value, start)
+      assert(tstart >= 0, s"Could not find offsets for $head")
+      val tend = tstart + value.size
+      val interval = Interval.open(tstart, tend)
+      interval +: tokenOffsets(input, rest, tend)
+    }
+  }
 }
 
 sealed trait QToken extends QueryExpr {
@@ -59,7 +73,7 @@ object QueryExprParser extends RegexParsers {
   def rightParen = ")"
   def wordToken: Parser[WordToken] = """[^$()\s]+""".r ^^ WordToken
   def dictToken: Parser[DictToken] = """\$[^$()\s]+""".r ^^ { s => DictToken(s.tail) } // strip $
-  def clustToken: Parser[ClustToken] = """\^[01]*""".r ^^ { s => ClustToken(s.tail) } //strip ^
+  def clustToken: Parser[ClustToken] = """\^[01]+""".r ^^ { s => ClustToken(s.tail) } //strip ^
   def token: Parser[QToken] = dictToken | clustToken | wordToken
   def tokens: Parser[QueryExpr] = rep1(token) ^^ Concat.fromSeq
   def capture: Parser[Capture] = leftParen ~> queryExpr <~ rightParen ^^ Capture
