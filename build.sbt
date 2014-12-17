@@ -19,3 +19,16 @@ libraryDependencies += "org.apache.lucene" % "lucene-queryparser" % "4.8.1"
 libraryDependencies += "org.apache.lucene" % "lucene-highlighter" % "4.8.1"
 
 libraryDependencies += "org.allenai.common" %% "common-core" % "2014.09.09-0"
+
+libraryDependencies ++= {
+  val akkaV = "2.3.6"
+  val sprayV = "1.3.1"
+  Seq(
+    "io.spray"            %%  "spray-can"     % sprayV,
+    "io.spray"            %%  "spray-routing" % sprayV,
+    "io.spray"            %%  "spray-testkit" % sprayV  % "test",
+    "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
+    "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test",
+    "org.specs2"          %%  "specs2-core"   % "2.3.7" % "test"
+  )
+}
