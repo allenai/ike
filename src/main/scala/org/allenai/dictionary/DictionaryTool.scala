@@ -2,8 +2,14 @@ package org.allenai.dictionary
 
 import java.io.File
 import org.allenai.common.immutable.Interval
+import spray.json._
+import DefaultJsonProtocol._
+import com.typesafe.config.ConfigFactory
 
 case class WordTokenInfo(word: String, cluster: String, position: TokenPosition)
+case object WordTokenInfo {
+  implicit val format = jsonFormat3(WordTokenInfo.apply)
+}
 
 case class DictionaryTool(indexPath: String, clusterPath: String) {
   
@@ -29,4 +35,13 @@ case class DictionaryTool(indexPath: String, clusterPath: String) {
     reader.execute(exprs)
   }
 
+}
+
+case object DictionaryTool {
+  def fromConfig: DictionaryTool = {
+    val config = ConfigFactory.load
+    val indexPath = config.getString("indexPath")
+    val clusterPath = config.getString("clusterPath")
+    DictionaryTool(indexPath, clusterPath)
+  }
 }

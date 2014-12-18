@@ -25,6 +25,8 @@ import org.apache.lucene.search.spans.SpanMultiTermQueryWrapper
 import org.apache.lucene.index.FieldInfo
 import org.apache.lucene.search.spans.SpanTermQuery
 import org.apache.lucene.search.spans.SpanNearQuery
+import spray.json._
+import DefaultJsonProtocol._
 
 case class LuceneReader(path: File) {
   import Lucene._
@@ -123,6 +125,9 @@ case class LuceneReader(path: File) {
 }
 
 case class LuceneHit(captureGroup: String, count: Int)
+case object LuceneHit {
+  implicit val format = jsonFormat2(LuceneHit.apply)
+}
 case class LuceneQuery(spanQuery: SpanQuery, captureStart: Int, captureEnd: Int)
 
 case class LuceneWriter(path: File, wordClusters: Map[String, String]) {

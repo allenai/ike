@@ -20,6 +20,8 @@ libraryDependencies += "org.apache.lucene" % "lucene-highlighter" % "4.8.1"
 
 libraryDependencies += "org.allenai.common" %% "common-core" % "2014.09.09-0"
 
+libraryDependencies += "com.typesafe" % "config" % "1.2.1"
+
 libraryDependencies ++= {
   val akkaV = "2.3.6"
   val sprayV = "1.3.1"

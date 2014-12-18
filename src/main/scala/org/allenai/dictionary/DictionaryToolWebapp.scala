@@ -18,18 +18,41 @@ import akka.io.IO
 import spray.can.Http
 import akka.pattern.ask
 
-case class WordClusterRequest(words: Seq[String])
-case class WordTokenInfoRequest(query: String)
-case class SearchRequest(env: EnvironmentState)
+object DictionaryToolWebapp {
+  val name = "dictionary-tool"
+  def main(args: Array[String]): Unit = {
+    implicit val system = ActorSystem("dictionary-tool")
+    val service = system.actorOf(Props[DictionaryToolActor], "webapp-actor")
 
-case class Request(name: String)
-case object Request {
-  implicit val format = jsonFormat1(Request.apply)
+    {
+      implicit val timeout = Timeout(30.seconds)
+      IO(Http) ? Http.Bind(service, interface = "0.0.0.0", port = 8080)
+    }
+  }
 }
 
-case class Person(name: String, age: Int)
-case object Person {
-  implicit val format = jsonFormat2(Person.apply)
+case class WordTokenInfoRequest(query: String)
+case object WordTokenInfoRequest {
+  implicit val format = jsonFormat1(WordTokenInfoRequest.apply)
+}
+
+trait DictionaryToolService extends HttpService with SprayJsonSupport {
+  val tool = DictionaryTool.fromConfig
+  val serviceRoute =
+    pathPrefix("api" / "wordTokenInfo") {
+      post {
+        entity(as[WordTokenInfoRequest]) { req =>
+          complete(tool.wordTokenInfo(req.query))
+        }
+      }
+    } ~
+    pathPrefix("api" / "execute") {
+      post {
+        entity(as[EnvironmentState]) { req =>
+          complete(tool.execute(req))
+        }
+      }
+    }
 }
 
 trait BasicService extends HttpService {
@@ -45,18 +68,7 @@ trait BasicService extends HttpService {
     }
 }
 
-trait MyService extends HttpService with SprayJsonSupport {
-  val serviceRoute =
-    pathPrefix("api" / "foo") {
-      post {
-        entity(as[Request]) { body =>
-          complete(Person("tony", 29))
-        }
-      }
-    }
-}
-
-class MyActor extends Actor with BasicService with MyService {
+class DictionaryToolActor extends Actor with BasicService with DictionaryToolService {
   implicit def myExceptionHandler(implicit log: LoggingContext) =
     ExceptionHandler {
       case e: Exception =>
@@ -68,17 +80,4 @@ class MyActor extends Actor with BasicService with MyService {
   def actorRefFactory = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
   def receive = runRoute(basicRoute ~ serviceRoute)
-}
-
-object MyWebApp {
-  val name = "webapp"
-  def main(args: Array[String]): Unit = {
-    implicit val system = ActorSystem("webapp")
-    val service = system.actorOf(Props[MyActor], "webapp-actor")
-    
-    {
-      implicit val timeout = Timeout(30.seconds)
-      IO(Http) ? Http.Bind(service, interface = "0.0.0.0", port = 8080)
-    }
-  }
 }

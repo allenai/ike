@@ -2,6 +2,8 @@ package org.allenai.dictionary
 
 import scala.util.parsing.combinator.RegexParsers
 import org.allenai.common.immutable.Interval
+import spray.json._
+import DefaultJsonProtocol._
 
 sealed trait QueryExpr
 object QueryExpr {
@@ -60,6 +62,9 @@ object QueryExpr {
 }
 
 case class TokenPosition(index: Int, offest: Interval)
+case object TokenPosition {
+  implicit val format = jsonFormat2(TokenPosition.apply)
+}
 
 sealed trait QToken extends QueryExpr {
   def value: String

@@ -1,10 +1,18 @@
 package org.allenai.dictionary
 
 import org.allenai.common.immutable.Interval
+import spray.json._
+import DefaultJsonProtocol._
 
 case class ClusterReplacement(offset: Interval, clusterPrefix: String)
+case object ClusterReplacement {
+  implicit val format = jsonFormat2(ClusterReplacement.apply)
+}
 
 case class EnvironmentState(query: String, replacements: Seq[ClusterReplacement], dictionaries: Map[String, Seq[String]])
+case object EnvironmentState {
+  implicit val format = jsonFormat3(EnvironmentState.apply)
+}
 
 case object Environment {
   def replaceClusters(s: String, repls: Seq[ClusterReplacement]): String = 
