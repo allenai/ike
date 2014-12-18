@@ -49,8 +49,12 @@ case class LuceneReader(path: File) {
     val results = new ListBuffer[Seq[String]]
     val termContexts = new HashMap[Term, TermContext]
     val spans = spanQuery.getSpans(arc, bits, termContexts)
+    var spanCount = 0
+    var termCount = 0
+    var seenDocs = scala.collection.mutable.Set.empty[Int]
     while (spans.next) {
       val id = spans.doc
+      seenDocs.add(id)
       val start = spans.start()
       val end = spans.end()
       val doc = searcher.doc(id)
@@ -64,9 +68,12 @@ case class LuceneReader(path: File) {
           terms += term
         }
         pos += 1
+        termCount += 1
       }
       results += terms.toSeq
+      spanCount += 1
     }
+    println(s"$termCount terms, $spanCount spans")
     results.toSeq
   }
   

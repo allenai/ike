@@ -51,7 +51,15 @@ object QueryExpr {
       interval +: tokenOffsets(input, rest, tend)
     }
   }
+  
+  def tokenPositions(s: String, expr: QueryExpr): Seq[TokenPosition] = {
+    val tokens = QueryExpr.tokens(expr)
+    val offsets = QueryExpr.tokenOffsets(s, tokens)
+    for ((offset, index) <- offsets.zipWithIndex) yield TokenPosition(index, offset)
+  }
 }
+
+case class TokenPosition(index: Int, offest: Interval)
 
 sealed trait QToken extends QueryExpr {
   def value: String
@@ -73,7 +81,7 @@ object QueryExprParser extends RegexParsers {
   def rightParen = ")"
   def wordToken: Parser[WordToken] = """[^$()\s]+""".r ^^ WordToken
   def dictToken: Parser[DictToken] = """\$[^$()\s]+""".r ^^ { s => DictToken(s.tail) } // strip $
-  def clustToken: Parser[ClustToken] = """\^[01]+""".r ^^ { s => ClustToken(s.tail) } //strip ^
+  def clustToken: Parser[ClustToken] = """\^[01]*\b""".r ^^ { s => ClustToken(s.tail) } //strip ^
   def token: Parser[QToken] = dictToken | clustToken | wordToken
   def tokens: Parser[QueryExpr] = rep1(token) ^^ Concat.fromSeq
   def capture: Parser[Capture] = leftParen ~> queryExpr <~ rightParen ^^ Capture

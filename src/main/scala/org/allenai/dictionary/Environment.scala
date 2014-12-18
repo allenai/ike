@@ -2,8 +2,6 @@ package org.allenai.dictionary
 
 import org.allenai.common.immutable.Interval
 
-case class WordTokenInfo(word: String, position: Int, offset: Interval)
-
 case class ClusterReplacement(offset: Interval, clusterPrefix: String)
 
 case class EnvironmentState(query: String, replacements: Seq[ClusterReplacement], dictionaries: Map[String, Seq[String]])
@@ -25,17 +23,5 @@ case object Environment {
     val parsedDict = parseDict(env.dictionaries) 
     QueryExpr.evalDicts(parsed, parsedDict)
   }
-  
-  def wordTokenInfo(s: String, parser: String => QueryExpr): Seq[WordTokenInfo] = {
-    val expr = parser(s)
-    val tokens = QueryExpr.tokens(expr)
-    val wordPositions = tokens.zipWithIndex collect { case (w: WordToken, i) => (w, i) }
-    val offsets = QueryExpr.tokenOffsets(s, tokens).zipWithIndex.map(_.swap).toMap
-    for {
-      (wordToken, position) <- wordPositions
-      offset <- offsets.get(position)
-      word = wordToken.value
-      info = WordTokenInfo(word, position, offset)
-    } yield info
-  } 
+
 }

@@ -49,13 +49,4 @@ class TestEnvironment extends FlatSpec {
     assert(expected == results)
   }
   
-  it should "return expected word info" in {
-    val q = "$this (is a) test"
-    val info1 = WordTokenInfo("is", 1, i(7, 9))
-    val info2 = WordTokenInfo("a", 2, i(10, 11))
-    val info3 = WordTokenInfo("test", 3, i(13, 17))
-    val info = info1 :: info2 :: info3 :: Nil
-    val results = Environment.wordTokenInfo(q, parser)
-    assert(results == info)
-  }
 }

@@ -64,4 +64,18 @@ class TestQueryExpr extends FlatSpec {
     assert(expected == offsets)
   }
   
+  it should "return expected word info" in {
+    val i = Interval.open _
+    val parser = (s: String) => QueryExprParser.parse(s).get
+    val q = "$this (is a) test"
+    val pos1 = TokenPosition(0, i(1, 5))
+    val pos2 = TokenPosition(1, i(7, 9))
+    val pos3 = TokenPosition(2, i(10, 11))
+    val pos4 = TokenPosition(3, i(13, 17))
+    val info = pos1 :: pos2 :: pos3 :: pos4 :: Nil
+    val expr = parser(q)
+    val results = QueryExpr.tokenPositions(q, expr)
+    assert(results == info)
+  }
+  
 }
