@@ -61,7 +61,7 @@ object QueryExpr {
   }
 }
 
-case class TokenPosition(index: Int, offest: Interval)
+case class TokenPosition(index: Int, offset: Interval)
 case object TokenPosition {
   implicit val format = jsonFormat2(TokenPosition.apply)
 }

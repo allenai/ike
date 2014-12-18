@@ -35,7 +35,7 @@ class TestFullExample extends FlatSpec {
     val queryString = "dogs ($verb) ^0"
     val expr = parser(queryString)
     val dogsTokenInfo = QueryExpr.tokenPositions(queryString, expr).find(_.index == 0).get
-    val repl = ClusterReplacement(dogsTokenInfo.offest, "0")
+    val repl = ClusterReplacement(dogsTokenInfo.offset, "0")
     val env = EnvironmentState(queryString, repl :: Nil, dict)
     val queries = Environment.interpret(env, parser)
     val results = reader.execute(queries)
