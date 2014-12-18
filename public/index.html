@@ -1,1 +1,101 @@
-hi
+<html>
+  <head>
+    <title>Hello React</title>
+    <script src="http://fb.me/react-0.12.2.js"></script>
+    <script src="http://fb.me/JSXTransformer-0.12.2.js"></script>
+    <script src="http://code.jquery.com/jquery-1.10.0.min.js"></script>
+  </head>
+  <body>
+    <div id="content"></div>
+    <script type="text/jsx">
+        var Results = React.createClass({
+            render: function() {
+                var createRow = function(row) {
+                    return <li>{row.captureGroup} {row.count}</li>;
+                };
+                return <ul>{this.props.rows.map(createRow)}</ul>;
+            }
+        });
+        var WordToken = React.createClass({
+            render: function() {
+                var info = this.props.info;
+                return (
+                    <div>
+                        <div>{info.word}</div>
+                        <div>{info.cluster}</div>
+                        <div><input type="range"/></div>
+                    </div>
+                );
+            }
+        });
+        var DictionaryApp = React.createClass({
+            getInitialState: function() {
+                return {
+                    query: "",
+                    wordTokenInfo: [],
+                    replacements: [],
+                    dictionaries: [],
+                    results: []
+                };
+            },
+            renderWordTokenInfo: function(data) {
+                this.setState({wordTokenInfo: data});
+                console.log(this.state);
+            },
+            updateWordTokenInfo: function() {
+                var data = {query: this.state.query};
+                var request = {
+                    type: "POST",
+                    url: "/api/wordTokenInfo",
+                    contentType: "application/json",
+                    data: JSON.stringify(data)
+                };
+                $.ajax(request).success(this.renderWordTokenInfo);
+            },
+            updateResults: function() {
+                var data = {
+                    query: this.state.query, 
+                    replacements: [],
+                    dictionaries: {}
+                }
+                var request = {
+                    type: "POST",
+                    url: "/api/execute",
+                    contentType: "application/json",
+                    data: JSON.stringify(data)
+                };
+                $.ajax(request).success(this.renderResults);
+            },
+            renderResults: function(results) {
+                console.log('hi');
+                this.setState({results: results});
+            },
+            updateQuery: function(e) {
+                this.setState({query: e.target.value});
+            },
+            handleSubmit: function(e) {
+                e.preventDefault();
+                this.updateWordTokenInfo();
+                this.updateResults();
+            },
+            render: function() {
+                return (
+                  <div>
+                    <h3>Old Man Fader's <em>New</em> Dictionary Builder</h3>
+                    <form onSubmit={this.handleSubmit}>
+                        <input onChange={this.updateQuery} value={this.state.query} />
+                        <button>Submit</button>
+                    </form>
+                    {this.state.wordTokenInfo.map(function(info) {
+                        return <WordToken info={info} />;
+                    })}
+                    <Results rows={this.state.results} />
+                  </div>
+                );
+            }
+        });
+        React.render(<DictionaryApp />, document.getElementById('content'));
+        $('input').focus();
+    </script>
+  </body>
+</html>

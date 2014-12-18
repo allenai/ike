@@ -42,14 +42,20 @@ trait DictionaryToolService extends HttpService with SprayJsonSupport {
     pathPrefix("api" / "wordTokenInfo") {
       post {
         entity(as[WordTokenInfoRequest]) { req =>
-          complete(tool.wordTokenInfo(req.query))
+          println(req)
+          val result = tool.wordTokenInfo(req.query)
+          println(result)
+          complete(result)
         }
       }
     } ~
     pathPrefix("api" / "execute") {
       post {
         entity(as[EnvironmentState]) { req =>
-          complete(tool.execute(req))
+          println(req)
+          val result = tool.execute(req)
+          println(result)
+          complete(result)
         }
       }
     }
