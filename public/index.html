@@ -86,9 +86,15 @@
                         <input onChange={this.updateQuery} value={this.state.query} />
                         <button>Submit</button>
                     </form>
+                    <div>
                     {this.state.wordTokenInfo.map(function(info) {
-                        return <WordToken info={info} />;
+                        <div>
+                            <div>{info.word}</div>
+                            <div>{info.cluster}</div>
+                            <div><input type="range" min="0" max={info.cluster.length + 1} value={info.cluster.length + 1}/></div>
+                        </div>
                     })}
+                    </div>
                     <Results rows={this.state.results} />
                   </div>
                 );

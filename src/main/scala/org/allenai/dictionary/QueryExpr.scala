@@ -84,7 +84,7 @@ case object Concat {
 object QueryExprParser extends RegexParsers {
   def leftParen = "("
   def rightParen = ")"
-  def wordToken: Parser[WordToken] = """[^$()\s]+""".r ^^ WordToken
+  def wordToken: Parser[WordToken] = """[^\^$()\s]+""".r ^^ WordToken
   def dictToken: Parser[DictToken] = """\$[^$()\s]+""".r ^^ { s => DictToken(s.tail) } // strip $
   def clustToken: Parser[ClustToken] = """\^[01]*\b""".r ^^ { s => ClustToken(s.tail) } //strip ^
   def token: Parser[QToken] = dictToken | clustToken | wordToken
