@@ -4,6 +4,10 @@
     <script src="http://fb.me/react-0.12.2.js"></script>
     <script src="http://fb.me/JSXTransformer-0.12.2.js"></script>
     <script src="http://code.jquery.com/jquery-1.10.0.min.js"></script>
+    <style>
+      .prefix { color: blue; font-weight: bold; }
+      .suffix { color: grey; }
+    </style>
   </head>
   <body>
     <div id="content"></div>
@@ -11,8 +15,30 @@
       var DictionaryApp = React.createClass({
         getInitialState: function() {
           return {
-            query: ""
+            query: "",
+            results: []
           };
+        },
+        updateResults: function() {
+          var data = {
+            query: this.state.query,
+            replacements: [],
+            dictionaries: {}
+          };
+          var request = {
+            type: "POST",
+            url: "/api/execute",
+            contentType: "application/json",
+            data: JSON.stringify(data)
+          };
+          $.ajax(request).success(function(results) {
+            this.setState({results: results});
+          }.bind(this));
+        },
+        handleSubmit: function(e) {
+          e.preventDefault();
+          this.setState({query: e.target.value});
+          this.updateResults();
         },
         handleChange: function(e) {
           this.setState({query: e.target.value});
@@ -21,21 +47,18 @@
           var query = this.state.query;
           return (
             <div>
-              <InputBox query={query} handleChange={this.handleChange}/>
-              <WordTokenInfos query={query} infos={this.props.data.wordTokenInfo} />
-              <Results results={this.props.data.results}/>
+              <InputBox query={query} handleChange={this.handleChange} handleSubmit={this.handleSubmit}/>
+              <WordTokenInfos query={query} key={query} />
+              <Results results={this.state.results}/>
             </div>
           );
         }
       });
 
       var InputBox = React.createClass({
-        handleSubmit: function(e) {
-          e.preventDefault();
-        },
         render: function() {
           return (
-            <form onSubmit={this.handleSubmit}>
+            <form onSubmit={this.props.handleSubmit}>
               <input value={this.props.query} onChange={this.props.handleChange}/>
               <button>Submit</button>
             </form>
@@ -55,9 +78,9 @@
             contentType: "application/json",
             data: JSON.stringify(data)
           };
-          return $.ajax(request).success(function(results) {
+          $.ajax(request).success(function(results) {
             this.setState({infos: results});
-          });
+          }.bind(this));
         },
         render: function() {
           var createInfo = function(i) {
@@ -68,6 +91,15 @@
       });
 
       var WordTokenInfo = React.createClass({
+        getInitialState: function() {
+          return {sliderValue: 0};
+        },
+        componentDidMount: function() {
+          this.setState({sliderValue: this.props.cluster.length + 1});
+        },
+        sliderChange: function(e) {
+          this.setState({sliderValue: e.target.value});
+        },
         render: function() {
           var word = this.props.word;
           var cluster = this.props.cluster;
@@ -75,8 +107,8 @@
           return (
             <li>
               <div>{word}</div>
-              <ClusterDisplay cluster={cluster}/>
-              <ClusterSlider max={max}/>
+              <ClusterDisplay cluster={cluster} sliderValue={this.state.sliderValue}/>
+              <ClusterSlider max={max} sliderValue={this.state.sliderValue} sliderChange={this.sliderChange} />
             </li>
           );
         }
@@ -84,18 +116,25 @@
 
       var ClusterDisplay = React.createClass({
         render: function() {
-          return <div>{this.props.cluster}</div>;
+          var cluster = this.props.cluster + 'w';
+          var n = this.props.sliderValue;
+          var prefix = cluster.slice(0, n);
+          var suffix = cluster.slice(n, cluster.length);
+          return (
+            <div>
+              <span className="prefix">{prefix}</span>
+              <span className="suffix">{suffix}</span>
+            </div>
+            );
         }
       });
 
       var ClusterSlider = React.createClass({
-        handleChange: function(e) {
-        },
         render: function() {
           var max = this.props.max;
           return (
             <div>
-              <input type="range" min="0" max={max} value={max} onChange={this.handleChange}/>
+              <input type="range" min="0" max={max} value={this.props.sliderValue} onChange={this.props.sliderChange}/>
             </div>
           );
         }
