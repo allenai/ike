@@ -16,14 +16,15 @@
         getInitialState: function() {
           return {
             query: "",
-            results: []
+            results: [],
+            replacements: []
           };
         },
         updateResults: function() {
           if (this.state.query == '')  { return; }
           var data = {
             query: this.state.query,
-            replacements: [],
+            replacements: this.state.replacements,
             dictionaries: {}
           };
           var request = {
@@ -41,14 +42,33 @@
           this.updateResults();
         },
         handleChange: function(e) {
-          this.setState({query: e.target.value});
+          this.setState({query: e.target.value, replacements: []});
+        },
+        sliderCallback: function(offset, cluster, value) {
+          var replacements = this.state.replacements;
+          for (var i = 0; i < replacements.length; i++) {
+            if (replacements[i].offset == offset) {
+              break;
+            }
+          }
+          if (i < replacements.length) {
+            replacements.splice(i, i+1);
+          }
+          if (value < cluster.length) {
+            var prefix = cluster.slice(0, value);
+            var replacement = {offset: offset, clusterPrefix: prefix}; 
+            replacements.push(replacement);
+          }
+          this.setState({replacements: replacements});
+          this.updateResults();
         },
         render: function() {
           var query = this.state.query;
+          console.log(this.state);
           return (
             <div>
               <InputBox query={query} handleChange={this.handleChange} handleSubmit={this.handleSubmit}/>
-              <WordTokenInfos query={query} key={query} />
+              <WordTokenInfos query={query} key={query} replacements={this.state.replacements} sliderCallback={this.sliderCallback}/>
               <Results results={this.state.results}/>
             </div>
           );
@@ -84,8 +104,8 @@
         },
         render: function() {
           var createInfo = function(i) {
-            return <WordTokenInfo word={i.word} cluster={i.cluster} key={i.word}/>
-          };
+            return <WordTokenInfo word={i.word} cluster={i.cluster} offset={i.position.offset} key={i.position.index} sliderCallback={this.props.sliderCallback}/>
+          }.bind(this);
           return <ul>{this.state.infos.map(createInfo)}</ul>;
         }
       });
@@ -98,6 +118,8 @@
           this.setState({sliderValue: this.props.cluster.length + 1});
         },
         sliderChange: function(e) {
+          var sliderValue = e.target.value;
+          this.props.sliderCallback(this.props.offset, this.props.cluster, sliderValue);
           this.setState({sliderValue: e.target.value});
         },
         render: function() {
