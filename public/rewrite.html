@@ -20,6 +20,7 @@
           };
         },
         updateResults: function() {
+          if (this.state.query == '')  { return; }
           var data = {
             query: this.state.query,
             replacements: [],
@@ -37,7 +38,6 @@
         },
         handleSubmit: function(e) {
           e.preventDefault();
-          this.setState({query: e.target.value});
           this.updateResults();
         },
         handleChange: function(e) {
