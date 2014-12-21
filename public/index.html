@@ -21,10 +21,22 @@
             replacements: [],
             wordTokenInfo: [],
             message: "",
-            dictionaries: {task: ['information extraction','statistical machine tranlsation','word sense disambiguation']}
+            target: "technique",
+            dictionaries: {task: ['information extraction','statistical machine translation','word sense disambiguation'], technique: ['svms', 'logistic regression', 'deep learning']}
           };
         },
         request: null,
+        updateTarget: function(e) {
+          this.setState({target: e.target.value});
+        },
+        deleteDictionaryEntry: function(name, value) {
+          var dicts = this.state.dictionaries;
+          if (name in dicts && dicts[name].indexOf(value) >= 0) {
+            var i = dicts[name].indexOf(value);
+            dicts[name].splice(i, i+1);
+            this.setState({dictionaries: dicts});
+          }
+        },
         updateResults: function() {
           if (this.request != null) {
             this.request.abort();
@@ -95,7 +107,7 @@
           var query = this.state.query;
           return (
             <div>
-              <Dictionaries dictionaries={this.state.dictionaries}/>
+              <Dictionaries target={this.state.target} dictionaries={this.state.dictionaries} update={this.updateTarget} deleteEntry={this.deleteDictionaryEntry}/>
               <InputBox inputValue={this.state.inputValue} handleChange={this.inputBoxChange} handleSubmit={this.handleSubmit}/>
               <WordTokenInfos key={query} replacements={this.state.replacements} sliderCallback={this.sliderCallback} wordTokenInfo={this.state.wordTokenInfo} />
               <Results message={this.state.message} results={this.state.results}/>
@@ -106,16 +118,47 @@
 
       var Dictionaries = React.createClass({
         render: function() {
-          var createItem = function(name) {
-            var values = this.props.dictionaries[name];
-            return values.map(function(v) {
-              return <li>{v} {name}</li>
-            });
+          return (
+            <div>
+              <DictionarySelector dictionaries={this.props.dictionaries} target={this.props.target} update={this.props.update}/> 
+              <DictionaryDisplay dictionaries={this.props.dictionaries} target={this.props.target} deleteEntry={this.props.deleteEntry}/>
+            </div>
+          );
+        }
+      });
+
+      var DictionaryDisplay = React.createClass({
+        render: function() {
+          var target = this.props.target;
+          var entries = [];
+          if (target in this.props.dictionaries) {
+            entries = this.props.dictionaries[target];
+          }
+          var deleteEntry = this.props.deleteEntry;
+          var createEntry = function(e) {
+            var deleteFn = function() { deleteEntry(target, e); };
+            return (
+              <li key={target + ' ' + e}>
+                <div>{e}</div>
+                <div><button onClick={deleteFn}>Delete</button></div>
+              </li>
+            );
           }.bind(this);
           return (
-            <ul>
-            {Object.keys(this.props.dictionaries).map(createItem)}
-            </ul>
+            <ul>{entries.map(createEntry)}</ul>
+          );
+        }
+      });
+
+      var DictionarySelector = React.createClass({
+        render: function() {
+          var target = this.props.target;
+          var names = Object.keys(this.props.dictionaries);
+          var createItem = function(name) {
+            return <option key={name} value={name}>{name}</option>;
+          };
+          return (
+            <select defaultValue={target} onChange={this.props.update}>{names.map(createItem)}}</select>
           );
         }
       });
