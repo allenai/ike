@@ -22,7 +22,8 @@
             wordTokenInfo: [],
             message: "",
             target: "",
-            dictionaries: {}
+            dictionaries: {},
+            hideEntries: false
           };
         },
         request: null,
@@ -117,14 +118,29 @@
           this.setState({replacements: replacements});
           this.updateResults();
         },
+        toggleHideEntries: function() {
+          this.setState({hideEntries: !this.state.hideEntries});
+        },
         render: function() {
           var query = this.state.query;
           return (
             <div>
               <Dictionaries target={this.state.target} dictionaries={this.state.dictionaries} update={this.updateTarget} deleteEntry={this.deleteDictionaryEntry} addDictionary={this.addDictionary}/>
+              <HideEntries hideEntries={this.state.hideEntries} toggleHideEntries={this.toggleHideEntries}/>
               <InputBox inputValue={this.state.inputValue} handleChange={this.inputBoxChange} handleSubmit={this.handleSubmit}/>
               <WordTokenInfos key={query} replacements={this.state.replacements} sliderCallback={this.sliderCallback} wordTokenInfo={this.state.wordTokenInfo} />
-              <Results message={this.state.message} results={this.state.results} addDictionaryEntry={this.addDictionaryEntry} target={this.state.target} />
+              <Results dictionaries={this.state.dictionaries} message={this.state.message} results={this.state.results} addDictionaryEntry={this.addDictionaryEntry} target={this.state.target} hideEntries={this.state.hideEntries} />
+            </div>
+          );
+        }
+      });
+
+      var HideEntries = React.createClass({
+        render: function() {
+          return (
+            <div>
+              Hide Entries
+              <input type="checkbox" defaultChecked={this.props.hideEntries} onClick={this.props.toggleHideEntries}/>
             </div>
           );
         }
@@ -286,12 +302,19 @@
       var Results = React.createClass({
         render: function() {
           var createRow = function(row) {
-            return <ResultsRow value={row.captureGroup} count={row.count} key={row.captureGroup} target={this.props.target} addDictionaryEntry={this.props.addDictionaryEntry}/>;
+            return <ResultsRow value={row.captureGroup} count={row.count} key={row.captureGroup} target={this.props.target} addDictionaryEntry={this.props.addDictionaryEntry} hideEntires={this.props.hideEntries}/>;
           }.bind(this);
+          var results = this.props.results.filter(function(r) {
+            var value = r.captureGroup;
+            var target = this.props.target;
+            var dicts = this.props.dictionaries;
+            var inDict = (target in dicts) && dicts[target].indexOf(value) >= 0;
+            return !this.props.hideEntries || !inDict;
+          }.bind(this));
           return (
             <div>
               <div>{this.props.message}</div>
-              <ul>{this.props.results.map(createRow)}</ul>
+              <ul>{results.map(createRow)}</ul>
             </div>
           );
         }
