@@ -16,34 +16,63 @@
         getInitialState: function() {
           return {
             query: "",
+            inputValue: "",
             results: [],
-            replacements: []
+            replacements: [],
+            wordTokenInfo: [],
+            message: "",
+            dictionaries: {task: ['information extraction','statistical machine tranlsation','word sense disambiguation']}
           };
         },
+        request: null,
         updateResults: function() {
+          if (this.request != null) {
+            this.request.abort();
+          }
           if (this.state.query == '')  { return; }
           var data = {
             query: this.state.query,
             replacements: this.state.replacements,
-            dictionaries: {}
+            dictionaries: this.state.dictionaries
           };
-          var request = {
+          var r = {
             type: "POST",
             url: "/api/execute",
             contentType: "application/json",
             data: JSON.stringify(data)
           };
-          $.ajax(request).success(function(results) {
-            this.setState({results: results});
+          this.request = $.ajax(r).success(function(results) {
+            this.setState({results: results, message: ""});
           }.bind(this));
+          this.setState({message: "Loading...", results: []});
         },
         handleSubmit: function(e) {
           e.preventDefault();
+          var clearedState = {query: this.state.inputValue, replacements: [], 
+            wordTokenInfo: [], results: []};
+          this.setState(clearedState, this.afterSubmit);
+        },
+        afterSubmit: function() {
           this.updateResults();
+          this.updateWordTokenInfo();
         },
-        handleChange: function(e) {
-          this.setState({query: e.target.value, replacements: []});
+        inputBoxChange: function(e) {
+          this.setState({inputValue: e.target.value});
         },
+        updateWordTokenInfo: function() {
+          if (this.state.query == "") { return; }
+          var data = { query: this.state.query };
+          var request = {
+            type: "POST",
+            url: "/api/wordTokenInfo",
+            contentType: "application/json",
+            data: JSON.stringify(data)
+          };
+          $.ajax(request).success(function(results) {
+            this.setState({wordTokenInfo: results});
+          }.bind(this));
+        },
+
         sliderCallback: function(offset, cluster, value) {
           var replacements = this.state.replacements;
           for (var i = 0; i < replacements.length; i++) {
@@ -64,13 +93,29 @@
         },
         render: function() {
           var query = this.state.query;
-          console.log(this.state);
           return (
             <div>
-              <InputBox query={query} handleChange={this.handleChange} handleSubmit={this.handleSubmit}/>
-              <WordTokenInfos query={query} key={query} replacements={this.state.replacements} sliderCallback={this.sliderCallback}/>
-              <Results results={this.state.results}/>
+              <Dictionaries dictionaries={this.state.dictionaries}/>
+              <InputBox inputValue={this.state.inputValue} handleChange={this.inputBoxChange} handleSubmit={this.handleSubmit}/>
+              <WordTokenInfos key={query} replacements={this.state.replacements} sliderCallback={this.sliderCallback} wordTokenInfo={this.state.wordTokenInfo} />
+              <Results message={this.state.message} results={this.state.results}/>
             </div>
+          );
+        }
+      });
+
+      var Dictionaries = React.createClass({
+        render: function() {
+          var createItem = function(name) {
+            var values = this.props.dictionaries[name];
+            return values.map(function(v) {
+              return <li>{v} {name}</li>
+            });
+          }.bind(this);
+          return (
+            <ul>
+            {Object.keys(this.props.dictionaries).map(createItem)}
+            </ul>
           );
         }
       });
@@ -79,7 +124,7 @@
         render: function() {
           return (
             <form onSubmit={this.props.handleSubmit}>
-              <input value={this.props.query} onChange={this.props.handleChange}/>
+              <input value={this.props.inputValue} onChange={this.props.handleChange}/>
               <button>Submit</button>
             </form>
           );
@@ -87,35 +132,19 @@
       });
 
       var WordTokenInfos = React.createClass({
-        getInitialState: function() {
-          return {infos: []};
-        },
-        componentDidMount: function() {
-          var data = { query: this.props.query };
-          var request = {
-            type: "POST",
-            url: "/api/wordTokenInfo",
-            contentType: "application/json",
-            data: JSON.stringify(data)
-          };
-          $.ajax(request).success(function(results) {
-            this.setState({infos: results});
-          }.bind(this));
-        },
         render: function() {
+          var query = this.props.query;
           var createInfo = function(i) {
-            return <WordTokenInfo word={i.word} cluster={i.cluster} offset={i.position.offset} key={i.position.index} sliderCallback={this.props.sliderCallback}/>
+            var key = query + ' ' + i.position.index
+            return <WordTokenInfo word={i.word} cluster={i.cluster} offset={i.position.offset} key={key} sliderCallback={this.props.sliderCallback}/>
           }.bind(this);
-          return <ul>{this.state.infos.map(createInfo)}</ul>;
+          return <ul>{this.props.wordTokenInfo.map(createInfo)}</ul>;
         }
       });
 
       var WordTokenInfo = React.createClass({
         getInitialState: function() {
-          return {sliderValue: 0};
-        },
-        componentDidMount: function() {
-          this.setState({sliderValue: this.props.cluster.length + 1});
+          return {sliderValue: this.props.cluster.length + 1};
         },
         sliderChange: function(e) {
           var sliderValue = e.target.value;
@@ -152,11 +181,23 @@
       });
 
       var ClusterSlider = React.createClass({
+        getInitialState: function() {
+          return {tempVal: this.props.sliderValue};
+        },
+        updateTempValue: function(e) {
+          this.setState({tempVal: e.target.value});
+        },
+        keyupChange: function(e) {
+          var code = e.keyCode;
+          if (code == 37 || code == 38 || code == 39 || code == 40) {
+            this.props.sliderChange(e);
+          }
+        },
         render: function() {
           var max = this.props.max;
           return (
             <div>
-              <input type="range" min="0" max={max} value={this.props.sliderValue} onChange={this.props.sliderChange}/>
+              <input type="range" min="0" max={max} value={this.state.tempVal} onChange={this.updateTempValue} onMouseUp={this.props.sliderChange} onKeyUp={this.keyupChange}/>
             </div>
           );
         }
@@ -167,7 +208,12 @@
           var createRow = function(row) {
             return <ResultsRow value={row.captureGroup} count={row.count} key={row.captureGroup}/>;
           }
-          return <ul>{this.props.results.map(createRow)}</ul>;
+          return (
+            <div>
+              <div>{this.props.message}</div>
+              <ul>{this.props.results.map(createRow)}</ul>
+            </div>
+          );
         }
       });
 

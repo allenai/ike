@@ -31,11 +31,7 @@ case class DictionaryTool(indexPath: String, clusterPath: String) {
   }
   
   def execute(env: EnvironmentState): Seq[LuceneHit] = {
-    val wrappedEnv = QueryExpr.captures(parser(env.query)).size match {
-      case 0 => env.copy(query = s"(${env.query})")
-      case _ => env
-    }
-    val exprs = Environment.interpret(wrappedEnv, parser)
+    val exprs = Environment.interpret(env, parser)
     reader.execute(exprs).sortBy(hit => -hit.count)
   }
 

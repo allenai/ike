@@ -26,9 +26,12 @@ case object Environment {
     input.mapValues(_.map(interpretDictValue))
   def interpret(env: EnvironmentState, parser: String => QueryExpr): Seq[QueryExpr] = {
     val orignalQuery = env.query
-    val replaced = replaceClusters(orignalQuery, env.replacements.sortBy(_.offset))
+    val replaced = replaceClusters(orignalQuery, env.replacements.sortBy(_.offset)) match {
+      case s if s.contains("(") && s.contains(")") => s
+      case s => s"($s)"
+    }
     val parsed = parser(replaced)
-    val parsedDict = parseDict(env.dictionaries) 
+    val parsedDict = parseDict(env.dictionaries)
     QueryExpr.evalDicts(parsed, parsedDict)
   }
 
