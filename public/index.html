@@ -21,11 +21,25 @@
             replacements: [],
             wordTokenInfo: [],
             message: "",
-            target: "technique",
-            dictionaries: {task: ['information extraction','statistical machine translation','word sense disambiguation'], technique: ['svms', 'logistic regression', 'deep learning']}
+            target: "",
+            dictionaries: {}
           };
         },
         request: null,
+        addDictionary: function(name) {
+          var dicts = this.state.dictionaries;
+          if (!(name in dicts)) {
+            dicts[name] = [];
+            this.setState({dictionaries: dicts, target: name});
+          }
+        },
+        addDictionaryEntry: function(name, value) {
+          var dicts = this.state.dictionaries;
+          if (name in dicts && dicts[name].indexOf(value) < 0) {
+            dicts[name].push(value);
+            this.setState({dictionaries: dicts});
+          }
+        },
         updateTarget: function(e) {
           this.setState({target: e.target.value});
         },
@@ -107,10 +121,10 @@
           var query = this.state.query;
           return (
             <div>
-              <Dictionaries target={this.state.target} dictionaries={this.state.dictionaries} update={this.updateTarget} deleteEntry={this.deleteDictionaryEntry}/>
+              <Dictionaries target={this.state.target} dictionaries={this.state.dictionaries} update={this.updateTarget} deleteEntry={this.deleteDictionaryEntry} addDictionary={this.addDictionary}/>
               <InputBox inputValue={this.state.inputValue} handleChange={this.inputBoxChange} handleSubmit={this.handleSubmit}/>
               <WordTokenInfos key={query} replacements={this.state.replacements} sliderCallback={this.sliderCallback} wordTokenInfo={this.state.wordTokenInfo} />
-              <Results message={this.state.message} results={this.state.results}/>
+              <Results message={this.state.message} results={this.state.results} addDictionaryEntry={this.addDictionaryEntry} target={this.state.target} />
             </div>
           );
         }
@@ -120,9 +134,32 @@
         render: function() {
           return (
             <div>
-              <DictionarySelector dictionaries={this.props.dictionaries} target={this.props.target} update={this.props.update}/> 
+              <DictionarySelector dictionaries={this.props.dictionaries} target={this.props.target} update={this.props.update}/>
+              <DictionaryCreator addDictionary={this.props.addDictionary}/>
               <DictionaryDisplay dictionaries={this.props.dictionaries} target={this.props.target} deleteEntry={this.props.deleteEntry}/>
             </div>
+          );
+        }
+      });
+
+      var DictionaryCreator = React.createClass({
+        getInitialState: function() {
+          return {value: ""};
+        },
+        handleChange: function(e) {
+          this.setState({value: e.target.value});
+        },
+        addDictionary: function(e) {
+          e.preventDefault();
+          this.props.addDictionary(this.state.value);
+          this.setState({value: ""});
+        },
+        render: function() {
+          return (
+            <form onSubmit={this.addDictionary}>
+              <input value={this.state.value} onChange={this.handleChange} placeholder="add dictionary"/>
+              <button>Add</button>
+            </form>
           );
         }
       });
@@ -249,8 +286,8 @@
       var Results = React.createClass({
         render: function() {
           var createRow = function(row) {
-            return <ResultsRow value={row.captureGroup} count={row.count} key={row.captureGroup}/>;
-          }
+            return <ResultsRow value={row.captureGroup} count={row.count} key={row.captureGroup} target={this.props.target} addDictionaryEntry={this.props.addDictionaryEntry}/>;
+          }.bind(this);
           return (
             <div>
               <div>{this.props.message}</div>
@@ -262,7 +299,16 @@
 
       var ResultsRow = React.createClass({
         render: function() {
-          return <li><div>{this.props.value}</div><div>{this.props.count}</div></li>;
+          var add = function(e) {
+            this.props.addDictionaryEntry(this.props.target, this.props.value);
+          }.bind(this);
+          return (
+            <li>
+              <div>{this.props.value}</div>
+              <div>{this.props.count}</div>
+              <div><button onClick={add}>{this.props.target}</button></div>
+            </li>
+          );
         }
       });
 
