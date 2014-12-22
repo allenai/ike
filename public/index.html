@@ -1,12 +1,20 @@
 <html>
   <head>
     <title>Buildin' Them Electric Dictionaries</title>
-    <script src="http://fb.me/react-0.12.2.js"></script>
-    <script src="http://fb.me/JSXTransformer-0.12.2.js"></script>
-    <script src="http://code.jquery.com/jquery-1.10.0.min.js"></script>
+    <script src="js/react-0.12.2.js"></script>
+    <script src="js/JSXTransformer-0.12.2.js"></script>
+    <script src="js/jquery-1.10.0.min.js"></script>
+    <link rel="stylesheet" href="css/jquery-ui.min.css">
+    <link rel="stylesheet" href="css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="css/dataTables.tableTools.css">
+    <script src="js/jquery-ui.min.js"></script>
+    <script src="js/jquery.dataTables.min.js"></script>
+    <script src="js/dataTables.tableTools.js"></script>
     <style>
       .prefix { color: blue; font-weight: bold; }
       .suffix { color: grey; }
+      #results .ui-selected { background-color: lightyellow;}
+      #results tbody { cursor: pointer; }
     </style>
   </head>
   <body>
@@ -75,7 +83,7 @@
         },
         handleSubmit: function(e) {
           e.preventDefault();
-          var clearedState = {query: this.state.inputValue, replacements: [], 
+          var clearedState = {query: this.state.inputValue, replacements: [],
             wordTokenInfo: [], results: []};
           this.setState(clearedState, this.afterSubmit);
         },
@@ -112,7 +120,7 @@
           }
           if (value < cluster.length) {
             var prefix = cluster.slice(0, value);
-            var replacement = {offset: offset, clusterPrefix: prefix}; 
+            var replacement = {offset: offset, clusterPrefix: prefix};
             replacements.push(replacement);
           }
           this.setState({replacements: replacements});
@@ -125,11 +133,15 @@
           var query = this.state.query;
           return (
             <div>
-              <Dictionaries target={this.state.target} dictionaries={this.state.dictionaries} update={this.updateTarget} deleteEntry={this.deleteDictionaryEntry} addDictionary={this.addDictionary}/>
-              <HideEntries hideEntries={this.state.hideEntries} toggleHideEntries={this.toggleHideEntries}/>
-              <InputBox inputValue={this.state.inputValue} handleChange={this.inputBoxChange} handleSubmit={this.handleSubmit}/>
+              <div id="controlPane">
+                <Dictionaries target={this.state.target} dictionaries={this.state.dictionaries} update={this.updateTarget} deleteEntry={this.deleteDictionaryEntry} addDictionary={this.addDictionary}/>
+                <HideEntries hideEntries={this.state.hideEntries} toggleHideEntries={this.toggleHideEntries}/>
+                <InputBox inputValue={this.state.inputValue} handleChange={this.inputBoxChange} handleSubmit={this.handleSubmit}/>
+              </div>
               <WordTokenInfos key={query} replacements={this.state.replacements} sliderCallback={this.sliderCallback} wordTokenInfo={this.state.wordTokenInfo} />
-              <Results dictionaries={this.state.dictionaries} message={this.state.message} results={this.state.results} addDictionaryEntry={this.addDictionaryEntry} target={this.state.target} hideEntries={this.state.hideEntries} />
+              <div id="resultsPane">
+                <Results dictionaries={this.state.dictionaries} message={this.state.message} results={this.state.results} addDictionaryEntry={this.addDictionaryEntry} target={this.state.target} hideEntries={this.state.hideEntries} />
+              </div>
             </div>
           );
         }
@@ -300,6 +312,14 @@
       });
 
       var Results = React.createClass({
+        addSelected: function() {
+          var toAdd = [];
+          $("#results .ui-selected").each(function() {
+            var index = $( "#results tr" ).index(this);
+            toAdd.push(index);
+          });
+          console.log(toAdd);
+        },
         render: function() {
           var createRow = function(row) {
             return <ResultsRow value={row.captureGroup} count={row.count} key={row.captureGroup} target={this.props.target} addDictionaryEntry={this.props.addDictionaryEntry} hideEntires={this.props.hideEntries}/>;
@@ -313,10 +333,39 @@
           }.bind(this));
           return (
             <div>
-              <div>{this.props.message}</div>
-              <ul>{results.map(createRow)}</ul>
+            <div>{this.props.message}</div>
+            <button onClick={this.addSelected}>Add Selected</button>
+            <table id="results" className="display">
+              <thead>
+                <tr>
+                  <th>Candidate String</th>
+                  <th>Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.map(createRow)}
+              </tbody>
+            </table>
             </div>
           );
+        },
+        componentDidMount: function() {
+          var $r = $('#results tbody');
+          $r.selectable({
+            selected: function (event, ui) {
+                if ($(ui.selected).hasClass('click-selected')) {
+                    $(ui.selected).removeClass('ui-selected click-selected');
+                } else {
+                    $(ui.selected).addClass('click-selected');
+                }
+            },
+            unselected: function (event, ui) {
+                $(ui.unselected).removeClass('click-selected');
+            },
+            stop: function() {
+              
+            }
+          });
         }
       });
 
@@ -326,11 +375,10 @@
             this.props.addDictionaryEntry(this.props.target, this.props.value);
           }.bind(this);
           return (
-            <li>
-              <div>{this.props.value}</div>
-              <div>{this.props.count}</div>
-              <div><button onClick={add}>{this.props.target}</button></div>
-            </li>
+            <tr>
+              <td>{this.props.value}</td>
+              <td>{this.props.count}</td>
+            </tr>
           );
         }
       });
