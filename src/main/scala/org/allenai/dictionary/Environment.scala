@@ -9,7 +9,7 @@ case object ClusterReplacement {
   implicit val format = jsonFormat2(ClusterReplacement.apply)
 }
 
-case class EnvironmentState(query: String, replacements: Seq[ClusterReplacement], dictionaries: Map[String, Seq[String]])
+case class EnvironmentState(query: String, replacements: Seq[ClusterReplacement], dictionaries: Seq[Dictionary])
 case object EnvironmentState {
   implicit val format = jsonFormat3(EnvironmentState.apply)
 }
@@ -22,8 +22,10 @@ case object Environment {
     case head :: rest => s.slice(start, head.offset.start) + s"^${head.clusterPrefix}" + replaceClusters(s, rest, head.offset.end) 
   }
   def interpretDictValue(s: String): QueryExpr = Concat(s.split(" ").map(WordToken):_*)
-  def parseDict(input: Map[String, Seq[String]]): Map[String, Seq[QueryExpr]] =
-    input.mapValues(_.map(interpretDictValue))
+  def parseDict(dicts: Seq[Dictionary]): Map[String, Seq[QueryExpr]] = {
+    val dictMap = dicts.map(d => (d.name, d)).toMap
+    dictMap.mapValues(d => d.positive.map(interpretDictValue).toSeq)
+  }
   def interpret(env: EnvironmentState, parser: String => QueryExpr): Seq[QueryExpr] = {
     val orignalQuery = env.query
     val replaced = replaceClusters(orignalQuery, env.replacements.sortBy(_.offset)) match {

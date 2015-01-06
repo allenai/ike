@@ -37,8 +37,8 @@ class TestEnvironment extends FlatSpec {
   it should "correctly parse a query" in {
     val q = "$this (is a) test"
     val repls = ClusterReplacement(i(13, 17), "10") :: Nil
-    val dicts = Map("this" -> Seq("some thing", "another"))
-    val env = EnvironmentState(q, repls, dicts)
+    val dict = Dictionary("this", Set("some thing", "another"), Set.empty)
+    val env = EnvironmentState(q, repls, Seq(dict))
     val results = Environment.interpret(env, parser).map(QueryExpr.tokens)
     
     val wt = WordToken.apply _

@@ -17,12 +17,12 @@ class TestFullExample extends FlatSpec {
   val reader = LuceneReader(tempDir)
   val parser = (s: String) => QueryExprParser.parse(s).get
   
-  val dict = Map("verb" -> Seq("love", "hate", "drink"))
+  val dict = Dictionary("verb", Set("love", "hate", "drink"), Set.empty)
   
   "FullExample" should "return expected results 1" in {
     
     val queryString = "^0 ($verb ^0)"
-    val env = EnvironmentState(queryString, Nil, dict)
+    val env = EnvironmentState(queryString, Nil, Seq(dict))
     val queries = Environment.interpret(env, parser)
     val results = reader.execute(queries)
     val expected = Seq(LuceneHit("love cats", 1), LuceneHit("hate dogs", 1),
@@ -36,7 +36,7 @@ class TestFullExample extends FlatSpec {
     val expr = parser(queryString)
     val dogsTokenInfo = QueryExpr.tokenPositions(queryString, expr).find(_.index == 0).get
     val repl = ClusterReplacement(dogsTokenInfo.offset, "0")
-    val env = EnvironmentState(queryString, repl :: Nil, dict)
+    val env = EnvironmentState(queryString, repl :: Nil, Seq(dict))
     val queries = Environment.interpret(env, parser)
     val results = reader.execute(queries)
     val expected = Seq(LuceneHit("love", 1), LuceneHit("hate", 1), LuceneHit("drink", 1))
