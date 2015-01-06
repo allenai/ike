@@ -72,6 +72,7 @@ sealed trait QToken extends QueryExpr {
 case class WordToken(value: String) extends QToken
 case class DictToken(value: String) extends QToken
 case class ClustToken(value: String) extends QToken
+case class PosToken(value: String) extends QToken
 case class Capture(expr: QueryExpr) extends QueryExpr
 case class Concat(children: QueryExpr*) extends QueryExpr
 case object Concat {
@@ -84,10 +85,11 @@ case object Concat {
 object QueryExprParser extends RegexParsers {
   def leftParen = "("
   def rightParen = ")"
+  def posToken: Parser[PosToken] = """ADD|CC|CD|DT|EX|FW|HYPH|IN|JJ|JJR|JJS|LS|MD|NFP|NN|NNP|NNPS|NNS|PDT|POS|PRP|PRP$|PUNC|RB|RBR|RBS|RP|SYM|TO|UH|VB|VBD|VBG|VBN|VBP|VBZ|WDT|WP|WP$|WRB""".r ^^ PosToken
   def wordToken: Parser[WordToken] = """[^\^$()\s]+""".r ^^ WordToken
   def dictToken: Parser[DictToken] = """\$[^$()\s]+""".r ^^ { s => DictToken(s.tail) } // strip $
   def clustToken: Parser[ClustToken] = """\^[01]*\b""".r ^^ { s => ClustToken(s.tail) } //strip ^
-  def token: Parser[QToken] = dictToken | clustToken | wordToken
+  def token: Parser[QToken] = dictToken | posToken | clustToken | wordToken
   def tokens: Parser[QueryExpr] = rep1(token) ^^ Concat.fromSeq
   def capture: Parser[Capture] = leftParen ~> queryExpr <~ rightParen ^^ Capture
   def queryExpr: Parser[QueryExpr] = rep1(tokens | capture) ^^ Concat.fromSeq
