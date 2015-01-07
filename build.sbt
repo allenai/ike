@@ -18,7 +18,9 @@ libraryDependencies += "org.apache.lucene" % "lucene-queryparser" % "4.8.1"
 
 libraryDependencies += "org.apache.lucene" % "lucene-highlighter" % "4.8.1"
 
-libraryDependencies += "org.allenai.common" %% "common-core" % "2014.09.09-0"
+libraryDependencies += "org.allenai.common" %% "common-core" % "2014.12.04-0"
+
+libraryDependencies += "org.allenai.scholar" %% "s2-backend" % "2014.09.02-5-SNAPSHOT"
 
 libraryDependencies += "com.typesafe" % "config" % "1.2.1"
 
