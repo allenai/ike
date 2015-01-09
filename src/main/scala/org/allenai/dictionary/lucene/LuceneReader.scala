@@ -14,6 +14,7 @@ import org.apache.lucene.search.highlight.TokenSources
 import scala.collection.mutable.ListBuffer
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
+import org.apache.lucene.search.spans.NearSpansOrdered
 
 case class LuceneReader(path: File) {
   import Lucene._
@@ -37,13 +38,23 @@ case object LuceneReader extends App {
     val zq = new SpanTermQuery(new Term(tokenDataFieldName, z))
     val spanQuery = new SpanNearQuery(Array(pq, wq, zq), 0, true)
     val termContexts = new HashMap[Term, TermContext]
-    val spans = spanQuery.getSpans(reader.arc, reader.bits, termContexts)
+    val spans = spanQuery.getSpans(reader.arc, reader.bits, termContexts).asInstanceOf[NearSpansOrdered]
     while (spans.next) {
       val id = spans.doc
       val start = spans.start()
       val end = spans.end()
       val doc = reader.searcher.doc(id)
-      val tokenStream = TokenSources.getAnyTokenStream(reader.reader, id, tokenDataFieldName, Lucene.analyzer)
+      val sent = IndexableSentence.fromLuceneDoc(doc)
+      val matches = sent.data.slice(start, end)
+      println(matches.mkString(" "))
+      for {
+        (s, k) <- spans.getSubSpans.zipWithIndex
+        i = s.start
+        j = s.end
+        x = sent.data.slice(i, j).mkString(" ")
+      } println (s"Clause $k [$i, $j) = $x")
+      println
+      /*val tokenStream = TokenSources.getAnyTokenStream(reader.reader, id, tokenDataFieldName, Lucene.analyzer)
       val wrapped = new TokenDataFilter(tokenStream)
       val charTermAttribute = wrapped.addAttribute(classOf[CharTermAttribute])
       val posAttr = wrapped.addAttribute(classOf[PositionIncrementAttribute])
@@ -61,7 +72,7 @@ case object LuceneReader extends App {
         tokens += tokenData
       }
       tokens.slice(start, end) foreach println
-      println
+      println*/
     }
   }
   

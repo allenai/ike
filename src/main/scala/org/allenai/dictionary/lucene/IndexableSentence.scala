@@ -9,6 +9,7 @@ import org.allenai.scholar.text.NamedAnnotatedText
 import org.allenai.scholar.text.Sentence
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
+import java.util.regex.Pattern
 
 case class IndexableSentence(data: Seq[TokenData], docId: String, docOffset: Interval)
 
@@ -46,6 +47,17 @@ case object IndexableSentence {
     doc
   }
   def fromLuceneDoc(doc: Document): IndexableSentence = {
-    ???
+    val tokenDataString = getStringField(doc, Lucene.tokenDataFieldName)
+    val tokenData = tokenDataString.split(Pattern.quote(s" $tokenSep ")).map(TokenData.fromString)
+    val docId = getStringField(doc, Lucene.docIdFieldName)
+    val start = getIntField(doc, Lucene.startFieldName)
+    val end = getIntField(doc, Lucene.endFieldName)
+    val offset = Interval.open(start, end)
+    IndexableSentence(tokenData, docId, offset)
   }
+  def getStringField(doc: Document, name: String): String = doc.getField(name) match {
+    case f: Field => f.stringValue
+    case null => throw new IllegalArgumentException(s"Document has no field '$name'")
+  }
+  def getIntField(doc: Document, name: String): Int = getStringField(doc, name).toInt
 }
