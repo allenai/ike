@@ -29,8 +29,8 @@ case object LuceneReader extends App {
   import Lucene._
   override def main(args: Array[String]) = {
     val reader = LuceneReader(new File(args(0)))
-    val x = "POS=DT"
-    val y = "POS=NN"
+    val x = "POS=IN"
+    val y = "POS=JJ"
     val z = "POS=NN"
     val pq = new SpanTermQuery(new Term(tokenDataFieldName, x))
     val wq = new SpanTermQuery(new Term(tokenDataFieldName, y))
@@ -42,23 +42,26 @@ case object LuceneReader extends App {
       val id = spans.doc
       val start = spans.start()
       val end = spans.end()
-      println(id + " " + start + " " + end)
       val doc = reader.searcher.doc(id)
-      val tokenStream = TokenSources.getAnyTokenStream(reader.reader, id, tokenDataFieldName, reader.analyzer)
-      val charTermAttribute = tokenStream.addAttribute(classOf[CharTermAttribute])
-      var terms = new ListBuffer[String]
-      var pos = -1
-      while (tokenStream.incrementToken) {
-        val term = charTermAttribute.toString
-        //if (TokenData.isContent(term)) {
-          pos += 1
-        //}
-        if (start <= pos && pos < end) {
+      val tokenStream = TokenSources.getAnyTokenStream(reader.reader, id, tokenDataFieldName, Lucene.analyzer)
+      val wrapped = new TokenDataFilter(tokenStream)
+      val charTermAttribute = wrapped.addAttribute(classOf[CharTermAttribute])
+      val posAttr = wrapped.addAttribute(classOf[PositionIncrementAttribute])
+      val tokens = new ListBuffer[TokenData]
+      while (wrapped.incrementToken) {
+        val terms = new ListBuffer[String]
+        var term = charTermAttribute.toString
+        var hasNext = true
+        while (term != IndexableSentence.tokenSep && hasNext) {
           terms += term
+          hasNext = wrapped.incrementToken
+          term = charTermAttribute.toString
         }
-        
+        val tokenData = TokenData(terms map Attribute.fromString)
+        tokens += tokenData
       }
-      println(terms.mkString(" "))
+      tokens.slice(start, end) foreach println
+      println
     }
   }
   
