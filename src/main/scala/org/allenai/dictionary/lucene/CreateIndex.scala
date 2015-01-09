@@ -10,8 +10,8 @@ object CreateIndex extends App {
   val documentPath = args(0)
   val indexPath = args(1)
   val lines = Source.fromFile(documentPath).getLines
-  val texts = lines.map(_.parseJson.convertTo[NamedAnnotatedText].text)
-  val strings = texts.flatMap(Text.fromAnnotatedText)
+  val texts = lines.map(_.parseJson.convertTo[NamedAnnotatedText])
+  val isents = texts.flatMap(IndexableSentence.fromText)
   val writer = LuceneWriter(new File(indexPath))
-  writer.write(strings)
+  writer.write(isents)
 }

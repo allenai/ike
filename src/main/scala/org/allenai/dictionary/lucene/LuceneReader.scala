@@ -22,7 +22,7 @@ case class LuceneReader(path: File) {
   val searcher = new IndexSearcher(reader)
   val arc = reader.getContext.leaves().get(0)
   val bits = new Bits.MatchAllBits(reader.numDocs)
-  val analyzer = new TokenAttributeAnalyzer
+  val analyzer = new TokenDataAnalyzer
 }
 
 case object LuceneReader extends App {
@@ -32,9 +32,9 @@ case object LuceneReader extends App {
     val x = "POS=DT"
     val y = "POS=NN"
     val z = "POS=NN"
-    val pq = new SpanTermQuery(new Term(fieldName, x))
-    val wq = new SpanTermQuery(new Term(fieldName, y))
-    val zq = new SpanTermQuery(new Term(fieldName, z))
+    val pq = new SpanTermQuery(new Term(tokenDataFieldName, x))
+    val wq = new SpanTermQuery(new Term(tokenDataFieldName, y))
+    val zq = new SpanTermQuery(new Term(tokenDataFieldName, z))
     val spanQuery = new SpanNearQuery(Array(pq, wq, zq), 0, true)
     val termContexts = new HashMap[Term, TermContext]
     val spans = spanQuery.getSpans(reader.arc, reader.bits, termContexts)
@@ -44,15 +44,15 @@ case object LuceneReader extends App {
       val end = spans.end()
       println(id + " " + start + " " + end)
       val doc = reader.searcher.doc(id)
-      val tokenStream = TokenSources.getAnyTokenStream(reader.reader, id, fieldName, reader.analyzer)
+      val tokenStream = TokenSources.getAnyTokenStream(reader.reader, id, tokenDataFieldName, reader.analyzer)
       val charTermAttribute = tokenStream.addAttribute(classOf[CharTermAttribute])
       var terms = new ListBuffer[String]
       var pos = -1
       while (tokenStream.incrementToken) {
         val term = charTermAttribute.toString
-        if (DocToken.isContent(term)) {
+        //if (TokenData.isContent(term)) {
           pos += 1
-        }
+        //}
         if (start <= pos && pos < end) {
           terms += term
         }

@@ -9,19 +9,12 @@ import org.apache.lucene.document.Field
 
 case class LuceneWriter(path: File) {
   import Lucene._
-  val analyzer = new TokenAttributeAnalyzer
   val directory = new NIOFSDirectory(path)
   val config = new IndexWriterConfig(version, analyzer)
   def writer = new IndexWriter(directory, config)
-  def makeDoc(text: String): Document = {
-    val doc = new Document
-    doc.add(new Field(fieldName, text, fieldType))
-    println(text)
-    doc
-  }
-  def write(texts: Iterator[String]): Unit = {
+  def write(texts: Iterator[IndexableSentence]): Unit = {
     val w = writer
-    val docs = texts map makeDoc foreach w.addDocument 
+    val docs = texts map IndexableSentence.toLuceneDoc foreach w.addDocument 
     w.commit
   }
 }
