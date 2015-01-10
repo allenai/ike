@@ -48,6 +48,10 @@ case class LSeq(parts: Seq[LuceneExpr], slop: Int = 0, inOrder: Boolean = true) 
   }
 }
 
+case object LSeq {
+  def apply(parts: LuceneExpr*): LSeq = LSeq(parts)
+}
+
 case class LCapture(expr: LuceneExpr, name: String, slop: Int = 0, inOrder: Boolean = true) extends LuceneExpr {
   override def spanQuery: SpanQuery = {
     val subQueries = Array(expr.spanQuery)

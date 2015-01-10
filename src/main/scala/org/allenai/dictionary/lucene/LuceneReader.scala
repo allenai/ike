@@ -27,9 +27,9 @@ case object LuceneReader extends App {
   override def main(args: Array[String]): Unit = {
     val reader = LuceneReader(new File(args(0)))
     val nn = LTokenRegex(tokenDataFieldName, "POS=N.*", reader.reader)
-    val any = LTokenRegex(tokenDataFieldName, "POS=.*", reader.reader)
+    val any = LTokenRegex(tokenDataFieldName, "CONTENT=.*ion", reader.reader)
     for {
-      result <- reader.execute(LRepeat(nn, 0, 5))
+      result <- reader.execute(LSeq(nn, any))
       sent = result.sentence
       cap = result.matchOffset
       sub = sent.data.slice(cap.start, cap.end)
@@ -49,7 +49,6 @@ case class LuceneReader(path: File) {
   
   def execute(expr: LuceneExpr, slop: Int = 0): Iterator[LuceneResult] = {
     val query = LuceneExpr.linearSpanNearQuery(expr, slop, true)
-    println(query)
     val spans = getSpans(query)
     new ResultIterator(expr, spans)
   }

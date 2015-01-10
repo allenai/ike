@@ -37,25 +37,19 @@ case object WordTokenInfoRequest {
 }
 
 trait DictionaryToolService extends HttpService with SprayJsonSupport {
-  val tool = DictionaryTool.fromConfig
+  val tool = ???
   val serviceRoute =
     pathPrefix("api" / "wordTokenInfo") {
       post {
         entity(as[WordTokenInfoRequest]) { req =>
-          println(req)
-          val result = tool.wordTokenInfo(req.query)
-          println(result)
-          complete(result)
+          ???
         }
       }
     } ~
     pathPrefix("api" / "execute") {
       post {
         entity(as[EnvironmentState]) { req =>
-          println(req)
-          val result = tool.execute(req)
-          println(result)
-          complete(result)
+          ???
         }
       }
     }
