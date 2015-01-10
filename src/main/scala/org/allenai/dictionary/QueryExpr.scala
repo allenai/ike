@@ -4,96 +4,62 @@ import scala.util.parsing.combinator.RegexParsers
 import org.allenai.common.immutable.Interval
 import spray.json._
 import DefaultJsonProtocol._
+import java.util.regex.Pattern
 
 sealed trait QueryExpr
-object QueryExpr {
-  def tokens(expr: QueryExpr): Seq[QToken] = expr match {
-    case t: QToken => t :: Nil
-    case cap: Capture => tokens(cap.expr)
-    case concat: Concat => concat.children.flatMap(tokens)
-  }
-  def captures(expr: QueryExpr): Seq[Capture] = expr match {
-    case c: Capture => c +: captures(c.expr)
-    case t: QToken => Nil
-    case c: Concat => c.children.flatMap(captures)
-  }
-  def tokensBeforeCapture(expr: QueryExpr): Seq[QToken] = expr match {
-    case cap: Capture => Nil
-    case t: QToken => t :: Nil
-    case cat: Concat => cat.children.map(tokensBeforeCapture).takeWhile(_.nonEmpty).flatten
-  }
-  def evalDicts(expr: QueryExpr, dicts: Map[String, Seq[QueryExpr]]): Seq[QueryExpr] = expr match {
-    case DictToken(name) => dicts.get(name) match {
-      case Some(otherExprs) => otherExprs
-      case None => throw new IllegalArgumentException(s"Cannot resolve dictionary '$name'")
-    }
-    case t: QToken => t :: Nil
-    case cap: Capture => for (replacement <- evalDicts(cap.expr, dicts)) yield Capture(replacement)
-    case c: Concat => {
-      val expandedChildren = c.children.map(evalDicts(_, dicts))
-      for {
-        product <- cartesian(expandedChildren)
-        newExpr = Concat(product:_*)
-      } yield newExpr
-    }
-  }
-  def cartesian[A](xs: Traversable[Traversable[A]]): Seq[Seq[A]] = xs.foldLeft(Seq(Seq.empty[A])) {
-    (x, y) => for (a <- x; b <- y) yield a :+ b 
-  }
-  def tokenOffsets(input: String, tokens: Seq[QToken]): Seq[Interval] =
-    tokenOffsets(input, tokens, 0)
-  def tokenOffsets(input: String, tokens: Seq[QToken], start: Int): Seq[Interval] = tokens match {
-    case Nil => Nil
-    case head :: rest => {
-      val value = head.value
-      val tstart = input.indexOf(value, start)
-      assert(tstart >= 0, s"Could not find offsets for $head")
-      val tend = tstart + value.size
-      val interval = Interval.open(tstart, tend)
-      interval +: tokenOffsets(input, rest, tend)
-    }
-  }
-  
-  def tokenPositions(s: String, expr: QueryExpr): Seq[TokenPosition] = {
-    val tokens = QueryExpr.tokens(expr)
-    val offsets = QueryExpr.tokenOffsets(s, tokens)
-    for ((offset, index) <- offsets.zipWithIndex) yield TokenPosition(index, offset)
-  }
+
+case class Content(value: String) extends QueryExpr
+
+case class ClusterPrefix(value: String) extends QueryExpr
+
+case class PosTag(value: String) extends QueryExpr
+
+object WildCard extends QueryExpr {
+  override def toString: String = "WildCard"
 }
 
-case class TokenPosition(index: Int, offset: Interval)
-case object TokenPosition {
-  implicit val format = jsonFormat2(TokenPosition.apply)
-}
+case class QueryCapture(expr: QueryExpr) extends QueryExpr
 
-sealed trait QToken extends QueryExpr {
-  def value: String
-}
-case class WordToken(value: String) extends QToken
-case class DictToken(value: String) extends QToken
-case class ClustToken(value: String) extends QToken
-case class PosToken(value: String) extends QToken
-case class Capture(expr: QueryExpr) extends QueryExpr
-case class Concat(children: QueryExpr*) extends QueryExpr
-case object Concat {
-  def fromSeq(children: Seq[QueryExpr]): QueryExpr = children match {
+case class QuerySeq(exprs: Seq[QueryExpr]) extends QueryExpr
+case object QuerySeq {
+  def fromSeq(seq: Seq[QueryExpr]): QueryExpr = seq match {
     case expr :: Nil => expr
-    case seq => Concat(seq:_*)
+    case _ => QuerySeq(seq)
   }
 }
+
+case class ContentRef(name: String) extends QueryExpr
+
+case class QueryDisjunction(parts: Seq[QueryExpr]) extends QueryExpr
 
 object QueryExprParser extends RegexParsers {
+  
+  val posTagSet = Seq("PRP$","NNPS","WRB","WP$","WDT","VBZ","VBP","VBN","VBG","VBD","SYM","RBS",
+      "RBR","PRP","POS","PDT","NNS","NNP","JJS","JJR","WP","VB","UH","TO","RP","RB","NN","MD","LS",
+      "JJ","IN","FW","EX","DT","CD","CC")
+  val posTagRegex = posTagSet.map(Pattern.quote).mkString("|").r
+  
   def leftParen = "("
   def rightParen = ")"
-  def posToken: Parser[PosToken] = """ADD|CC|CD|DT|EX|FW|HYPH|IN|JJ|JJR|JJS|LS|MD|NFP|NN|NNP|NNPS|NNS|PDT|POS|PRP|PRP$|PUNC|RB|RBR|RBS|RP|SYM|TO|UH|VB|VBD|VBG|VBN|VBP|VBZ|WDT|WP|WP$|WRB""".r ^^ PosToken
-  def wordToken: Parser[WordToken] = """[^\^$()\s]+""".r ^^ WordToken
-  def dictToken: Parser[DictToken] = """\$[^$()\s]+""".r ^^ { s => DictToken(s.tail) } // strip $
-  def clustToken: Parser[ClustToken] = """\^[01]*\b""".r ^^ { s => ClustToken(s.tail) } //strip ^
-  def token: Parser[QToken] = dictToken | posToken | clustToken | wordToken
-  def tokens: Parser[QueryExpr] = rep1(token) ^^ Concat.fromSeq
-  def capture: Parser[Capture] = leftParen ~> queryExpr <~ rightParen ^^ Capture
-  def queryExpr: Parser[QueryExpr] = rep1(tokens | capture) ^^ Concat.fromSeq
+    
+  def wildcard: Parser[QueryExpr] = "\\.".r ^^ { _ => WildCard }
+  def content: Parser[Content] = """[^\^$()\s]+""".r ^^ Content
+  def contentRef: Parser[ContentRef] = """\$[^$()\s]+""".r ^^ { s => ContentRef(s.tail) }
+  def clusterPrefix: Parser[ClusterPrefix] = """\^[01]+\b""".r ^^ { s => ClusterPrefix(s.tail) }
+  def posTag: Parser[PosTag] = posTagRegex ^^ PosTag
+  
+  def atom: Parser[QueryExpr] = wildcard | posTag | contentRef | clusterPrefix | content
+  def atoms: Parser[QueryExpr] = rep1(atom) ^^ QuerySeq.fromSeq
+  
+  def capture: Parser[QueryCapture] = leftParen ~> queryExpr <~ rightParen ^^ QueryCapture
+  
+  def queryExpr: Parser[QueryExpr] = rep1(atoms | capture) ^^ QuerySeq.fromSeq
+  
   def parse(s: String): ParseResult[QueryExpr] = parseAll(queryExpr, s)
-  def tokenize(s: String): Seq[QToken] = QueryExpr.tokens(parse(s).get)
 }
 
+object Foo extends App {
+  import sext._
+  val q = args.mkString(" ")
+  println(QueryExprParser.parse(q).treeString)
+}
