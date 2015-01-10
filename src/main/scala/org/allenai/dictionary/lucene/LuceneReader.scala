@@ -22,6 +22,22 @@ import org.apache.lucene.search.spans.SpanQuery
 import org.apache.lucene.search.spans.NearSpansOrdered2
 import org.allenai.common.immutable.Interval
 
+case object LuceneReader extends App {
+  import Lucene._
+  override def main(args: Array[String]): Unit = {
+    val reader = LuceneReader(new File(args(0)))
+    val nn = LTokenRegex(tokenDataFieldName, "POS=N.*", reader.reader)
+    val any = LTokenRegex(tokenDataFieldName, "POS=.*", reader.reader)
+    for {
+      result <- reader.execute(LRepeat(nn, 0, 5))
+      sent = result.sentence
+      cap = result.matchOffset
+      sub = sent.data.slice(cap.start, cap.end)
+      s = sub.flatMap(_.attributes.filter(_.key == "CONTENT")).map(_.value).mkString(" ")
+    } println(s)
+  }
+}
+
 case class LuceneReader(path: File) {
   import Lucene._
   val directory = new NIOFSDirectory(path)
@@ -33,6 +49,7 @@ case class LuceneReader(path: File) {
   
   def execute(expr: LuceneExpr, slop: Int = 0): Iterator[LuceneResult] = {
     val query = LuceneExpr.linearSpanNearQuery(expr, slop, true)
+    println(query)
     val spans = getSpans(query)
     new ResultIterator(expr, spans)
   }
