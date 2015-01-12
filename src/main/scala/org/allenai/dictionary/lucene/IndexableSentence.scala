@@ -11,7 +11,15 @@ import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import java.util.regex.Pattern
 
-case class IndexableSentence(data: Seq[TokenData], docId: String, docOffset: Interval)
+case class IndexableSentence(data: Seq[TokenData], docId: String, docOffset: Interval) {
+  def attributeSeq(key: String): Seq[String] = for {
+    elt <- data
+    attr = elt.attributes.find(a => a.key == key) match {
+      case Some(Attribute(_, value)) => value
+      case None => throw new IllegalArgumentException(s"Could not find attribute $key in $data")
+    }
+  } yield attr
+}
 
 case object IndexableSentence {
   val contentAttr = "CONTENT"
