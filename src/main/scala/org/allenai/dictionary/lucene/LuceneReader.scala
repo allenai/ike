@@ -21,9 +21,20 @@ import org.apache.lucene.search.spans.Spans
 import org.apache.lucene.search.spans.SpanQuery
 import org.apache.lucene.search.spans.NearSpansOrdered2
 import org.allenai.common.immutable.Interval
+import org.allenai.dictionary.QueryExpr
+import org.allenai.dictionary.Content
+import org.allenai.dictionary.PosTag
+import org.allenai.dictionary.ClusterPrefix
+import org.allenai.dictionary.QueryCapture
+import org.allenai.dictionary.QueryNonCapture
+import org.allenai.dictionary.WildCard
+import org.allenai.dictionary.QuerySeq
+import org.allenai.dictionary.QueryDisjunction
+import org.allenai.dictionary.QueryExprParser
 
 case object LuceneReader extends App {
   import Lucene._
+  
   override def main(args: Array[String]): Unit = {
     val reader = LuceneReader(new File(args(0)))
     val nn = LTokenRegex(tokenDataFieldName, "POS=N.*", reader.reader)
@@ -46,6 +57,20 @@ case class LuceneReader(path: File) {
   val arc = reader.getContext.leaves().get(0)
   val bits = new Bits.MatchAllBits(reader.numDocs)
   val analyzer = new TokenDataAnalyzer
+  
+  import IndexableSentence._
+  
+  def querySemantics(qexpr: QueryExpr): LuceneExpr = qexpr match {
+    case Content(value) => LTokenMatch(tokenDataFieldName, Attribute(contentAttr, value).toString)
+    case PosTag(value) => LTokenMatch(tokenDataFieldName, Attribute(posTagAttr, value).toString)
+    case ClusterPrefix(value) => LTokenRegex(tokenDataFieldName, Attribute(clusterTagAttr, value).toString, reader)
+    case QueryCapture(expr) => LCapture(querySemantics(expr), expr.toString)
+    case QueryNonCapture(expr) => querySemantics(expr)
+    case WildCard => LTokenRegex(tokenDataFieldName, Attribute(posTagAttr, ".*").toString, reader)
+    case QuerySeq(children) => LSeq(children map querySemantics)
+    case QueryDisjunction(children) => LDisjunction(children map querySemantics)
+    case _ => throw new IllegalArgumentException(s"Unimplemented!")
+  }
   
   def execute(expr: LuceneExpr, slop: Int = 0): Iterator[LuceneResult] = {
     val query = LuceneExpr.linearSpanNearQuery(expr, slop, true)
@@ -102,4 +127,23 @@ case class LuceneReader(path: File) {
     }
   }
   
+}
+
+
+object Foo extends App {
+  import sext._
+  val q = args.mkString(" ")
+  val qexpr = QueryExprParser.parse(q).get
+  val r = LuceneReader(new File("foo"))
+  val result = r.querySemantics(qexpr)
+  println(result.spanQuery)
+  println
+  val rows = r.execute(result)
+  for (row <- rows) {
+    val tokens = row.sentence.data
+    val words = tokens.map(_.attributes.filter(_.key == "CONTENT").map(_.value).head)
+    val intervals = row.captureGroups.values.toList.sorted
+    val strs = intervals.map(i => words.slice(i.start, i.end).mkString(" "))
+    println(strs.mkString("\t"))
+  }
 }

@@ -70,9 +70,3 @@ object QueryExprParser extends RegexParsers {
   def expr = repsep(branch, pipe) ^^ QueryDisjunction.fromSeq
   def parse(s: String) = parseAll(expr, s)
 }
-
-object Foo extends App {
-  import sext._
-  val q = args.mkString(" ")
-  println(QueryExprParser.parse(q).treeString)
-}
