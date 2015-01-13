@@ -26,6 +26,8 @@ libraryDependencies += "org.allenai.scholar" %% "s2-backend" % "2014.09.02-5-SNA
 
 libraryDependencies += "com.typesafe" % "config" % "1.2.1"
 
+libraryDependencies += "org.scala-sbt" % "command" % "0.13.0"
+
 libraryDependencies ++= {
   val akkaV = "2.3.6"
   val sprayV = "1.3.1"
@@ -38,3 +40,7 @@ libraryDependencies ++= {
     "org.specs2"          %%  "specs2-core"   % "2.3.7" % "test"
   )
 }
+
+fork in run := true
+
+connectInput in run := true

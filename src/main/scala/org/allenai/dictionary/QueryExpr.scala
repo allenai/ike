@@ -5,8 +5,9 @@ import org.allenai.common.immutable.Interval
 import spray.json._
 import DefaultJsonProtocol._
 import java.util.regex.Pattern
+import scala.util.parsing.input.Positional
 
-sealed trait QueryExpr
+sealed trait QueryExpr extends Positional
 
 case class Content(value: String) extends QueryExpr
 
@@ -19,6 +20,7 @@ object WildCard extends QueryExpr {
 }
 
 case class QueryCapture(expr: QueryExpr) extends QueryExpr
+case class NamedQueryCapture(expr: QueryExpr, name: String) extends QueryExpr
 case class QueryNonCapture(expr: QueryExpr) extends QueryExpr
 
 case class QuerySeq(exprs: Seq[QueryExpr]) extends QueryExpr
@@ -53,20 +55,22 @@ object QueryExprParser extends RegexParsers {
   def pipe = "|"
   def star = "*"
   def plus = "+"
-  def wildcard = "\\.".r ^^^ WildCard
-  def content = """[^|\^$()\s*+]+""".r ^^ Content
-  def contentRef = """\$[^$()\s*+|]+""".r ^^ { s => ContentRef(s.tail) }
-  def clusterPrefix = """\^[01]+""".r ^^ { s => ClusterPrefix(s.tail) }
-  def posTag = posTagRegex ^^ PosTag
-  def atom = wildcard | posTag | contentRef | clusterPrefix | content
-  def capture = leftParen ~> expr <~ rightParen ^^ QueryCapture
-  def nonCapture = nonCapLeftParen ~> expr <~ rightParen ^^ QueryNonCapture
-  def operand = nonCapture | capture | atom
-  def starred = operand <~ star ^^ QueryStar
-  def plussed = operand <~ plus ^^ QueryPlus
-  def modified = starred | plussed
-  def piece: Parser[QueryExpr] = (modified | operand)
-  def branch = rep1(piece) ^^ QuerySeq.fromSeq
-  def expr = repsep(branch, pipe) ^^ QueryDisjunction.fromSeq
+  def wildcard = positioned("\\.".r ^^^ WildCard)
+  def content = positioned("""[^|\^$()\s*+]+""".r ^^ Content)
+  def contentRef = positioned("""\$[^$()\s*+|]+""".r ^^ { s => ContentRef(s.tail) })
+  def clusterPrefix = positioned("""\^[01]+""".r ^^ { s => ClusterPrefix(s.tail) })
+  def posTag = positioned(posTagRegex ^^ PosTag)
+  def atom = positioned(wildcard | posTag | contentRef | clusterPrefix | content)
+  def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
+  def namedCapture = positioned(leftParen ~> captureName ~ expr <~ rightParen ^^ { x => NamedQueryCapture(x._2, x._1) })
+  def capture = positioned(leftParen ~> expr <~ rightParen ^^ QueryCapture)
+  def nonCapture = positioned(nonCapLeftParen ~> expr <~ rightParen ^^ QueryNonCapture)
+  def operand = positioned(namedCapture | nonCapture | capture | atom)
+  def starred = positioned(operand <~ star ^^ QueryStar)
+  def plussed = positioned(operand <~ plus ^^ QueryPlus)
+  def modified = positioned(starred | plussed)
+  def piece: Parser[QueryExpr] = positioned((modified | operand))
+  def branch = positioned(rep1(piece) ^^ QuerySeq.fromSeq)
+  def expr = positioned(repsep(branch, pipe) ^^ QueryDisjunction.fromSeq)
   def parse(s: String) = parseAll(expr, s)
 }

@@ -72,6 +72,6 @@ case class LRepeat(expr: LuceneExpr, min: Int, max: Int) extends LuceneExpr {
       i <- min to max
       seq = List.fill(i)(expr)
     } yield LSeq(seq).spanQuery
-    new SpanOrQuery(parts:_*)
+    new SpanOrQuery(parts.reverse:_*)
   }
 }

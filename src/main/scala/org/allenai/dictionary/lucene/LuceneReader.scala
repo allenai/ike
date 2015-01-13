@@ -31,6 +31,9 @@ import org.allenai.dictionary.WildCard
 import org.allenai.dictionary.QuerySeq
 import org.allenai.dictionary.QueryDisjunction
 import org.allenai.dictionary.QueryExprParser
+import org.allenai.dictionary.NamedQueryCapture
+import org.allenai.dictionary.QueryStar
+import org.allenai.dictionary.QueryPlus
 
 case object LuceneReader extends App {
   import Lucene._
@@ -64,15 +67,20 @@ case class LuceneReader(path: File) {
     case Content(value) => LTokenMatch(tokenDataFieldName, Attribute(contentAttr, value).toString)
     case PosTag(value) => LTokenMatch(tokenDataFieldName, Attribute(posTagAttr, value).toString)
     case ClusterPrefix(value) => LTokenRegex(tokenDataFieldName, Attribute(clusterTagAttr, value).toString, reader)
-    case QueryCapture(expr) => LCapture(querySemantics(expr), expr.toString)
+    case QueryCapture(expr) => LCapture(querySemantics(expr), expr.pos.toString)
+    case NamedQueryCapture(expr, name) => LCapture(querySemantics(expr), name)
     case QueryNonCapture(expr) => querySemantics(expr)
     case WildCard => LTokenRegex(tokenDataFieldName, Attribute(posTagAttr, ".*").toString, reader)
     case QuerySeq(children) => LSeq(children map querySemantics)
     case QueryDisjunction(children) => LDisjunction(children map querySemantics)
+    case QueryPlus(expr) => LRepeat(querySemantics(expr), 1, 2)
     case _ => throw new IllegalArgumentException(s"Unimplemented!")
   }
   
+  import sext._
   def execute(expr: LuceneExpr, slop: Int = 0): Iterator[LuceneResult] = {
+    LuceneExpr.linearParts(expr) foreach println
+    println
     val query = LuceneExpr.linearSpanNearQuery(expr, slop, true)
     val spans = getSpans(query)
     new ResultIterator(expr, spans)
@@ -129,21 +137,21 @@ case class LuceneReader(path: File) {
   
 }
 
-
 object Foo extends App {
   import sext._
-  val q = args.mkString(" ")
-  val qexpr = QueryExprParser.parse(q).get
-  val r = LuceneReader(new File("foo"))
-  val result = r.querySemantics(qexpr)
-  println(result.spanQuery)
-  println
-  val rows = r.execute(result)
-  for (row <- rows) {
-    val tokens = row.sentence.data
-    val words = tokens.map(_.attributes.filter(_.key == "CONTENT").map(_.value).head)
-    val intervals = row.captureGroups.values.toList.sorted
-    val strs = intervals.map(i => words.slice(i.start, i.end).mkString(" "))
-    println(strs.mkString("\t"))
-  }
+  val input = args.mkString(" ")
+  val reader = LuceneReader(new File("foo"))
+  val q = QueryExprParser.parse(input).get
+  val l = reader.querySemantics(q)
+  for {
+    r <- reader.execute(l)
+    sent = r.sentence
+    words = sent.attributeSeq("CONTENT")
+    matchWords = words.slice(r.matchOffset.start, r.matchOffset.end).mkString(" ")
+    groups = for {
+      (key, value) <- r.captureGroups
+      valueWords = words.slice(value.start, value.end).mkString(" ")
+    } yield s"$key = $valueWords"
+  } { println(words.mkString(" ")); println(matchWords); println(groups.mkString("\n")); println}
+
 }
