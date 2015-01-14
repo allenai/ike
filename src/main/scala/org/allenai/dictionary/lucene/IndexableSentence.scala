@@ -19,6 +19,7 @@ case class IndexableSentence(data: Seq[TokenData], docId: String, docOffset: Int
       case None => throw new IllegalArgumentException(s"Could not find attribute $key in $data")
     }
   } yield attr
+  def attributeSeqs(keys: Seq[String]): Seq[Seq[String]] = (keys map attributeSeq).transpose
 }
 
 case object IndexableSentence {

@@ -82,6 +82,8 @@ case class LuceneReader(path: File) {
     LuceneExpr.linearParts(expr) foreach println
     println
     val query = LuceneExpr.linearSpanNearQuery(expr, slop, true)
+    println(query)
+    println
     val spans = getSpans(query)
     new ResultIterator(expr, spans)
   }
@@ -135,23 +137,4 @@ case class LuceneReader(path: File) {
     }
   }
   
-}
-
-object Foo extends App {
-  import sext._
-  val input = args.mkString(" ")
-  val reader = LuceneReader(new File("foo"))
-  val q = QueryExprParser.parse(input).get
-  val l = reader.querySemantics(q)
-  for {
-    r <- reader.execute(l)
-    sent = r.sentence
-    words = sent.attributeSeq("CONTENT")
-    matchWords = words.slice(r.matchOffset.start, r.matchOffset.end).mkString(" ")
-    groups = for {
-      (key, value) <- r.captureGroups
-      valueWords = words.slice(value.start, value.end).mkString(" ")
-    } yield s"$key = $valueWords"
-  } { println(words.mkString(" ")); println(matchWords); println(groups.mkString("\n")); println}
-
 }

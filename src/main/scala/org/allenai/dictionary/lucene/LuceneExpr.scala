@@ -9,6 +9,7 @@ import org.apache.lucene.search.spans.SpanNearQuery
 import org.apache.lucene.search.spans.SpanMultiTermQueryWrapper
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.search.RegexpQuery
+import org.apache.lucene.search.spans.SpanOrQuery2
 
 sealed trait LuceneExpr {
   def spanQuery: SpanQuery
@@ -62,7 +63,7 @@ case class LCapture(expr: LuceneExpr, name: String, slop: Int = 0, inOrder: Bool
 case class LDisjunction(exprs: Seq[LuceneExpr]) extends LuceneExpr {
   override def spanQuery: SpanQuery = {
     val queries = exprs.map(_.spanQuery)
-    new SpanOrQuery(queries:_*)
+    new SpanOrQuery2(queries:_*)
   }
 }
 
@@ -72,6 +73,6 @@ case class LRepeat(expr: LuceneExpr, min: Int, max: Int) extends LuceneExpr {
       i <- min to max
       seq = List.fill(i)(expr)
     } yield LSeq(seq).spanQuery
-    new SpanOrQuery(parts.reverse:_*)
+    new SpanOrQuery2(parts.reverse:_*)
   }
 }
