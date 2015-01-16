@@ -1,4 +1,4 @@
-package org.allenai.dictionary.lucene.spans
+package org.allenai.dictionary.lucene.spans;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more

@@ -1,15 +1,13 @@
 package org.allenai.dictionary.lucene
 
-import org.apache.lucene.search.spans.SpanQuery
-import org.apache.lucene.search.spans.SpanTermQuery
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.spans.SpanOrQuery
-import org.apache.lucene.search.spans.SpanNearQuery2
-import org.apache.lucene.search.spans.SpanNearQuery
-import org.apache.lucene.search.spans.SpanMultiTermQueryWrapper
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.search.RegexpQuery
-import org.apache.lucene.search.spans.SpanOrQuery2
+import org.allenai.dictionary.lucene.spans.SpanQuery
+import org.allenai.dictionary.lucene.spans.SpanNearQuery
+import org.allenai.dictionary.lucene.spans.SpanMultiTermQueryWrapper
+import org.allenai.dictionary.lucene.spans.SpanTermQuery
+import org.allenai.dictionary.lucene.spans.SpanOrQuery
 
 sealed trait LuceneExpr {
   def spanQuery: SpanQuery
@@ -24,9 +22,9 @@ object LuceneExpr {
     case dis: LDisjunction => Seq(dis)
     case rep: LRepeat => Seq(rep)
   }
-  def linearSpanNearQuery(expr: LuceneExpr, slop: Int = 0, inOrder: Boolean = true): SpanNearQuery2 = {
+  def linearSpanNearQuery(expr: LuceneExpr, slop: Int = 0, inOrder: Boolean = true): SpanNearQuery = {
     val subQueries = linearParts(expr).map(_.spanQuery).toArray
-    new SpanNearQuery2(subQueries, slop, inOrder)
+    new SpanNearQuery(subQueries, slop, inOrder)
   }
 }
 
@@ -45,7 +43,7 @@ case class LTokenMatch(fieldName: String, fieldValue: String) extends LuceneExpr
 case class LSeq(parts: Seq[LuceneExpr], slop: Int = 0, inOrder: Boolean = true) extends LuceneExpr {
   override def spanQuery: SpanQuery = {
     val subQueries = parts.map(_.spanQuery).toArray
-    new SpanNearQuery2(subQueries, slop, inOrder)
+    new SpanNearQuery(subQueries, slop, inOrder)
   }
 }
 
@@ -56,14 +54,14 @@ case object LSeq {
 case class LCapture(expr: LuceneExpr, name: String, slop: Int = 0, inOrder: Boolean = true) extends LuceneExpr {
   override def spanQuery: SpanQuery = {
     val subQueries = Array(expr.spanQuery)
-    new SpanNearQuery2(subQueries, slop, inOrder)
+    new SpanNearQuery(subQueries, slop, inOrder)
   }
 }
 
 case class LDisjunction(exprs: Seq[LuceneExpr]) extends LuceneExpr {
   override def spanQuery: SpanQuery = {
     val queries = exprs.map(_.spanQuery)
-    new SpanOrQuery2(queries:_*)
+    new SpanOrQuery(queries:_*)
   }
 }
 
@@ -73,6 +71,6 @@ case class LRepeat(expr: LuceneExpr, min: Int, max: Int) extends LuceneExpr {
       i <- min to max
       seq = List.fill(i)(expr)
     } yield LSeq(seq).spanQuery
-    new SpanOrQuery2(parts.reverse:_*)
+    new SpanOrQuery(parts.reverse:_*)
   }
 }
