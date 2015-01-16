@@ -1,4 +1,4 @@
-package org.apache.lucene.search.spans;
+package org.allenai.dictionary.lucene.spans;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -38,7 +38,7 @@ import org.apache.lucene.util.ToStringUtils;
 /** Matches spans which are near one another.  One can specify <i>slop</i>, the
  * maximum number of intervening unmatched positions, as well as whether
  * matches are required to be in-order. */
-public class SpanNearQuery2 extends SpanQuery implements Cloneable {
+public class SpanNearQuery extends SpanQuery implements Cloneable {
   protected List<SpanQuery> clauses;
   protected int slop;
   protected boolean inOrder;
@@ -54,11 +54,11 @@ public class SpanNearQuery2 extends SpanQuery implements Cloneable {
    * @param slop The slop value
    * @param inOrder true if order is important
    * */
-  public SpanNearQuery2(SpanQuery[] clauses, int slop, boolean inOrder) {
+  public SpanNearQuery(SpanQuery[] clauses, int slop, boolean inOrder) {
     this(clauses, slop, inOrder, true);     
   }
   
-  public SpanNearQuery2(SpanQuery[] clauses, int slop, boolean inOrder, boolean collectPayloads) {
+  public SpanNearQuery(SpanQuery[] clauses, int slop, boolean inOrder, boolean collectPayloads) {
 
     // copy clauses array into an ArrayList
     this.clauses = new ArrayList<>(clauses.length);
@@ -127,7 +127,9 @@ public class SpanNearQuery2 extends SpanQuery implements Cloneable {
     if (clauses.size() == 1)                      // optimize 1-clause case
       return clauses.get(0).getSpans(context, acceptDocs, termContexts);
 
-    return (Spans) new NearSpansOrdered2(this, context, acceptDocs, termContexts, collectPayloads);
+    return inOrder
+            ? (Spans) new NearSpansOrdered(this, context, acceptDocs, termContexts, collectPayloads)
+            : (Spans) new NearSpansUnordered(this, context, acceptDocs, termContexts);
   }
 
   @Override

@@ -1,4 +1,4 @@
-package org.apache.lucene.search.spans;
+package org.allenai.dictionary.lucene.spans;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -56,21 +56,13 @@ import java.util.Set;
  * Expert:
  * Only public for subclassing.  Most implementations should not need this class
  */
-public class NearSpansOrdered2 extends Spans {
+public class NearSpansOrdered extends Spans {
   private final int allowedSlop;
   private boolean firstTime = true;
   private boolean more = false;
 
   /** The spans in the same order as the SpanNearQuery */
   private final Spans[] subSpans;
-  private int[] starts;
-  public int[] getStarts() {
-	  return starts;
-  }
-  private int[] ends;
-  public int[] getEnds() {
-	  return ends;
-  }
 
   /** Indicates that all subSpans have same doc() */
   private boolean inSameDoc = false;
@@ -94,14 +86,14 @@ public class NearSpansOrdered2 extends Spans {
     }
   };
 
-  private SpanNearQuery2 query;
+  private SpanNearQuery query;
   private boolean collectPayloads = true;
   
-  public NearSpansOrdered2(SpanNearQuery2 spanNearQuery, AtomicReaderContext context, Bits acceptDocs, Map<Term,TermContext> termContexts) throws IOException {
+  public NearSpansOrdered(SpanNearQuery spanNearQuery, AtomicReaderContext context, Bits acceptDocs, Map<Term,TermContext> termContexts) throws IOException {
     this(spanNearQuery, context, acceptDocs, termContexts, true);
   }
 
-  public NearSpansOrdered2(SpanNearQuery2 spanNearQuery, AtomicReaderContext context, Bits acceptDocs, Map<Term,TermContext> termContexts, boolean collectPayloads)
+  public NearSpansOrdered(SpanNearQuery spanNearQuery, AtomicReaderContext context, Bits acceptDocs, Map<Term,TermContext> termContexts, boolean collectPayloads)
   throws IOException {
     if (spanNearQuery.getClauses().length < 2) {
       throw new IllegalArgumentException("Less than 2 clauses: "
@@ -113,16 +105,11 @@ public class NearSpansOrdered2 extends Spans {
     subSpans = new Spans[clauses.length];
     matchPayload = new LinkedList<>();
     subSpansByDoc = new Spans[clauses.length];
-    starts = new int[clauses.length];
-    ends = new int[clauses.length];
     for (int i = 0; i < clauses.length; i++) {
       subSpans[i] = clauses[i].getSpans(context, acceptDocs, termContexts);
       subSpansByDoc[i] = subSpans[i]; // used in toSameDoc()
-      starts[i] = -1;
-      ends[i] = -1;
     }
     query = spanNearQuery; // kept for toString() only.
-    
   }
 
   // inherit javadocs
@@ -305,8 +292,6 @@ public class NearSpansOrdered2 extends Spans {
     int matchSlop = 0;
     int lastStart = matchStart;
     int lastEnd = matchEnd;
-    starts[subSpans.length - 1] = matchStart;
-    ends[subSpans.length - 1] = matchEnd;
     for (int i = subSpans.length - 2; i >= 0; i--) {
       Spans prevSpans = subSpans[i];
       if (collectPayloads && prevSpans.isPayloadAvailable()) {
@@ -341,8 +326,6 @@ public class NearSpansOrdered2 extends Spans {
           }
         }
       }
-      starts[i] = prevStart;
-      ends[i] = prevEnd;
 
       if (collectPayloads && possiblePayload != null) {
         possibleMatchPayloads.addAll(possiblePayload);

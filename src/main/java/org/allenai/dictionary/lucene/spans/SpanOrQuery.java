@@ -1,4 +1,4 @@
-package org.apache.lucene.search.spans;
+package org.allenai.dictionary.lucene.spans;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -36,12 +36,12 @@ import org.apache.lucene.util.ToStringUtils;
 import org.apache.lucene.search.Query;
 
 /** Matches the union of its clauses.*/
-public class SpanOrQuery2 extends SpanQuery implements Cloneable {
+public class SpanOrQuery extends SpanQuery implements Cloneable {
   private List<SpanQuery> clauses;
   private String field;
 
   /** Construct a SpanOrQuery merging the provided clauses. */
-  public SpanOrQuery2(SpanQuery... clauses) {
+  public SpanOrQuery(SpanQuery... clauses) {
 
     // copy clauses array into an ArrayList
     this.clauses = new ArrayList<>(clauses.length);
@@ -76,21 +76,21 @@ public class SpanOrQuery2 extends SpanQuery implements Cloneable {
   }
   
   @Override
-  public SpanOrQuery2 clone() {
+  public SpanOrQuery clone() {
     int sz = clauses.size();
     SpanQuery[] newClauses = new SpanQuery[sz];
 
     for (int i = 0; i < sz; i++) {
       newClauses[i] = (SpanQuery) clauses.get(i).clone();
     }
-    SpanOrQuery2 soq = new SpanOrQuery2(newClauses);
+    SpanOrQuery soq = new SpanOrQuery(newClauses);
     soq.setBoost(getBoost());
     return soq;
   }
 
   @Override
   public Query rewrite(IndexReader reader) throws IOException {
-    SpanOrQuery2 clone = null;
+    SpanOrQuery clone = null;
     for (int i = 0 ; i < clauses.size(); i++) {
       SpanQuery c = clauses.get(i);
       SpanQuery query = (SpanQuery) c.rewrite(reader);
@@ -129,7 +129,7 @@ public class SpanOrQuery2 extends SpanQuery implements Cloneable {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
 
-    final SpanOrQuery2 that = (SpanOrQuery2) o;
+    final SpanOrQuery that = (SpanOrQuery) o;
 
     if (!clauses.equals(that.clauses)) return false;
 
@@ -192,11 +192,11 @@ public class SpanOrQuery2 extends SpanQuery implements Cloneable {
           if (queue == null) {
             return initSpanQueue(-1);
           }
-          
+
           if (queue.size() == 0) { // all done
             return false;
           }
-          
+
           if (top().next()) { // move to next
             queue.updateTop();
             return true;
@@ -255,7 +255,7 @@ public class SpanOrQuery2 extends SpanQuery implements Cloneable {
 
       @Override
       public String toString() {
-          return "spans("+SpanOrQuery2.this+")@"+
+          return "spans("+SpanOrQuery.this+")@"+
             ((queue == null)?"START"
              :(queue.size()>0?(doc()+":"+start()+"-"+end()):"END"));
         }
