@@ -41,7 +41,7 @@ object CreateTestData extends App {
     AnnotateNlp.annotate(text)
   }
   override def main(args: Array[String]): Unit = {
-    val doc1 = annotate("doc1", "I love the mango chunks. I love a mango chunks.")
+    val doc1 = annotate("doc1", "I love the mango chunks. I love a mango chunks. I love a mango chunk.")
     val doc2 = annotate("doc2", "")
     val namedAnnotatedText = Seq(doc1, doc2)
     val docNames = namedAnnotatedText.map(_.name)

@@ -3,11 +3,11 @@ package org.allenai.dictionary.lucene
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.search.RegexpQuery
-import org.allenai.dictionary.lucene.spans.SpanQuery
-import org.allenai.dictionary.lucene.spans.SpanNearQuery
-import org.allenai.dictionary.lucene.spans.SpanMultiTermQueryWrapper
-import org.allenai.dictionary.lucene.spans.SpanTermQuery
-import org.allenai.dictionary.lucene.spans.SpanOrQuery
+import org.apache.lucene.search.spans.SpanQuery
+import org.apache.lucene.search.spans.SpanNearQuery
+import org.apache.lucene.search.spans.SpanMultiTermQueryWrapper
+import org.allenai.lucene.spans.SpanOrQuery
+import org.allenai.lucene.spans.SpanTermQuery
 
 sealed trait LuceneExpr {
   def spanQuery: SpanQuery

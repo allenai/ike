@@ -27,9 +27,10 @@ import org.allenai.dictionary.QueryExprParser
 import org.allenai.dictionary.NamedQueryCapture
 import org.allenai.dictionary.QueryStar
 import org.allenai.dictionary.QueryPlus
-import org.allenai.dictionary.lucene.spans.SpanQuery
-import org.allenai.dictionary.lucene.spans.Spans
-import org.allenai.dictionary.lucene.spans.NearSpansOrdered
+import org.apache.lucene.search.spans.SpanQuery
+import org.apache.lucene.search.spans.Spans
+import org.apache.lucene.search.spans.NearSpansOrdered
+import org.allenai.lucene.spans.OrSpans
 
 case object LuceneReader extends App {
   import Lucene._
@@ -75,11 +76,7 @@ case class LuceneReader(path: File) {
   
   import sext._
   def execute(expr: LuceneExpr, slop: Int = 0): Iterator[LuceneResult] = {
-    LuceneExpr.linearParts(expr) foreach println
-    println
     val query = LuceneExpr.linearSpanNearQuery(expr, slop, true)
-    println(query)
-    println
     val spans = getSpans(query)
     new ResultIterator(expr, spans)
   }
@@ -124,12 +121,20 @@ case class LuceneReader(path: File) {
       IndexableSentence.fromLuceneDoc(doc)
     }
     private def subOffsets(multiSpans: NearSpansOrdered): Array[Interval] = {
-      val starts: Array[Int] = ???
-      val ends: Array[Int] = ???
+      val starts: Array[Int] = multiSpans.getSubSpans.map(getStart)
+      val ends: Array[Int] = multiSpans.getSubSpans.map(getEnd)
       for {
         (start, end) <- starts.zip(ends)
         i = Interval.open(start, end)
       } yield i
+    }
+    def getStart(spans: Spans): Int = spans match {
+      case os: OrSpans => os.start
+      case _ => spans.start 
+    }
+    def getEnd(spans: Spans): Int = spans match {
+      case os: OrSpans => os.end
+      case _ => spans.end
     }
   }
   
