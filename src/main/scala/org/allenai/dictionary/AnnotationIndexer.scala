@@ -1,4 +1,4 @@
-package org.allenai.dictionary.blacklab
+package org.allenai.dictionary
 
 import nl.inl.blacklab.index.DocIndexerXmlHandlers
 import nl.inl.blacklab.index.Indexer
