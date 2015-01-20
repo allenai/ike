@@ -28,9 +28,12 @@ import org.allenai.dictionary.NamedQueryCapture
 import org.allenai.dictionary.QueryStar
 import org.allenai.dictionary.QueryPlus
 import org.apache.lucene.search.spans.SpanQuery
-import org.apache.lucene.search.spans.Spans
 import org.apache.lucene.search.spans.NearSpansOrdered
-import org.allenai.lucene.spans.OrSpans
+import nl.inl.blacklab.search.lucene.BLSpans
+import nl.inl.blacklab.search.Span
+import org.apache.lucene.search.spans.Spans
+import nl.inl.blacklab.search.Searcher
+import nl.inl.blacklab.search.Hits
 
 case object LuceneReader extends App {
   import Lucene._
@@ -57,6 +60,7 @@ case class LuceneReader(path: File) {
   val arc = reader.getContext.leaves().get(0)
   val bits = new Bits.MatchAllBits(reader.numDocs)
   val analyzer = new TokenDataAnalyzer
+  val bsearcher = Searcher.open(path)
   
   import IndexableSentence._
   
@@ -77,8 +81,16 @@ case class LuceneReader(path: File) {
   import sext._
   def execute(expr: LuceneExpr, slop: Int = 0): Iterator[LuceneResult] = {
     val query = LuceneExpr.linearSpanNearQuery(expr, slop, true)
-    val spans = getSpans(query)
-    new ResultIterator(expr, spans)
+    val hits = new Hits(bsearcher, query)
+    val result = for {
+      hit <- hits.asScala
+      offset = Interval.open(hit.start, hit.end)
+      groups = hits.getCapturedGroups(hit)
+      offsets = groups.map(spans => Interval.open(spans.start, spans.end))
+      names = hits.getCapturedGroupNames      
+      sent = IndexableSentence.fromLuceneDoc(reader.document(hit.doc))
+    } yield LuceneResult(sent, offset, names.asScala.zip(offsets).toMap)
+    result.iterator
   }
   
   def getSpans(spanQuery: SpanQuery): Spans = {
@@ -87,6 +99,7 @@ case class LuceneReader(path: File) {
   }
   
   class ResultIterator(expr: LuceneExpr, spans: Spans) extends Iterator[LuceneResult] {
+    var parts = LuceneExpr.linearParts(expr)
     var first = true
     var savedHasNext = false
     override def hasNext: Boolean = if (first) {
@@ -97,14 +110,14 @@ case class LuceneReader(path: File) {
     override def next: LuceneResult = {
       first = false
       val offsets = spans match {
-        case nso: NearSpansOrdered => captureOffsets(nso)
+        case bls: BLSpans => captureOffsets(bls)
         case _ => Map.empty[String, Interval]
       }
       val result = LuceneResult(currentSentence, currentMatchOffset, offsets)
       savedHasNext = spans.next
       result
     }
-    private def captureOffsets(multiSpans: NearSpansOrdered): Map[String, Interval] = {
+    private def captureOffsets(multiSpans: BLSpans): Map[String, Interval] = {
       val offsets = subOffsets(multiSpans)
       val pairs = for {
         (part, i) <- LuceneExpr.linearParts(expr).zipWithIndex
@@ -120,21 +133,13 @@ case class LuceneReader(path: File) {
       val doc = reader.document(spans.doc)
       IndexableSentence.fromLuceneDoc(doc)
     }
-    private def subOffsets(multiSpans: NearSpansOrdered): Array[Interval] = {
-      val starts: Array[Int] = multiSpans.getSubSpans.map(getStart)
-      val ends: Array[Int] = multiSpans.getSubSpans.map(getEnd)
-      for {
-        (start, end) <- starts.zip(ends)
-        i = Interval.open(start, end)
-      } yield i
-    }
-    def getStart(spans: Spans): Int = spans match {
-      case os: OrSpans => os.start
-      case _ => spans.start 
-    }
-    def getEnd(spans: Spans): Int = spans match {
-      case os: OrSpans => os.end
-      case _ => spans.end
+    private def subOffsets(multiSpans: BLSpans): Array[Interval] = {
+      println(multiSpans)
+      val array: Array[Span] = Array.fill(parts.size)(null)
+      array foreach println
+      multiSpans.getCapturedGroups(array)
+      array foreach println
+      array map { span => Interval.open(span.start, span.end) }
     }
   }
   

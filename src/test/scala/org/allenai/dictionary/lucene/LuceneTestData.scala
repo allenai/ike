@@ -12,17 +12,24 @@ import org.allenai.scholar.text.AnnotatedText
 import org.allenai.scholar.pipeline.annotate.AnnotateNlp
 import java.io.PrintWriter
 import org.allenai.dictionary.QueryExprParser
+import nl.inl.blacklab.index.Indexer
+import org.allenai.dictionary.blacklab.AnnotationIndexer
+import org.allenai.dictionary.blacklab.BlackLabFormat
+import java.io.StringReader
 
 object LuceneTestData {
   import Lucene._
   val resource = getClass.getResourceAsStream(s"/${CreateTestData.resourceName}")
   val lines = Source.fromInputStream(resource).getLines
   val namedAnnotatedText = lines.map(_.parseJson.convertTo[NamedAnnotatedText]).toSeq
-  def writeTestIndex(path: File): LuceneWriter = {
-    val isents = namedAnnotatedText.flatMap(IndexableSentence.fromText)
-    val writer = LuceneWriter(path)
-    writer.write(isents.iterator)
-    writer
+  def writeTestIndex(path: File): Unit = {
+    val indexer = new Indexer(path, true, classOf[AnnotationIndexer])
+    for {
+      named <- namedAnnotatedText
+      name = named.name
+      xml = BlackLabFormat.fromAnnotations(named)
+    } indexer.index(name, new StringReader(xml.toString))
+    indexer.close
   }
   def contentEq(s: String): LuceneExpr =
     LTokenMatch(tokenDataFieldName, Attribute(contentAttr, s).toString)

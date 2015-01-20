@@ -8,7 +8,7 @@ import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper
 import scala.collection.JavaConverters._
 
 object Lucene {
-  val version = Version.LUCENE_48
+  val version = Version.LUCENE_42
   val docIdFieldName = "docId"
   val docIdFieldType = {
     val f = new FieldType
