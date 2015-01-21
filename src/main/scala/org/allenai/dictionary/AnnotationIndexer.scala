@@ -13,7 +13,7 @@ class AnnotationIndexer(indexer: Indexer, fileName: String, reader: Reader) exte
   val posProp = addProperty("pos", SensitivitySetting.SENSITIVE_AND_INSENSITIVE)
   val clusterProp = addProperty("cluster", SensitivitySetting.ONLY_SENSITIVE)
   addHandler("/document", new DocumentElementHandler())
-  addHandler("token", new WordHandlerBase() {
+  addHandler("word", new WordHandlerBase() {
     def addAttribute(name: String, attrs: Attributes, prop: ComplexFieldProperty): Unit = {
       if (attrs.getValue(name) != null) prop.addValue(attrs.getValue(name))
     }
