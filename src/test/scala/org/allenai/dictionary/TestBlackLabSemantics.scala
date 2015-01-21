@@ -2,20 +2,32 @@ package org.allenai.dictionary
 
 import org.allenai.common.testkit.ScratchDirectory
 import org.allenai.common.testkit.UnitSpec
+import nl.inl.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
 
 class TestBlackLabSemantics extends UnitSpec with ScratchDirectory {
   TestData.createTestIndex(scratchDir)
   val searcher = TestData.testSearcher(scratchDir)
   val semantics = BlackLabSemantics(searcher)
-  def search(s: String) = {
+  def results(s: String) = {
     val e = QExprParser.parse(s).get
     val q = semantics.blackLabQuery(e)
     val hits = searcher.find(q)
-    val results = BlackLabResult.fromHits(hits)
+    BlackLabResult.fromHits(hits)
+  }
+  def search(s: String) = {
     for {
-      result <- results
+      result <- results(s)
       words = result.matchWords mkString(" ")
     } yield words
+  }.toSet
+  def searchGroups(s: String) = {
+    for {
+      result <- results(s)
+      (groupName, offsets) <- result.captureGroups
+      data = result.wordData.slice(offsets.start, offsets.end)
+      words = data map (_.word) mkString " "
+      named = s"$groupName $words"
+    } yield named
   }.toSet
   
   "BlackLabSemantics" should "handle single word queries" in {
@@ -44,6 +56,16 @@ class TestBlackLabSemantics extends UnitSpec with ScratchDirectory {
   
   it should "handle disjunctive queries" in {
     assert(search("like|hate") == Set("like", "hate"))
+  }
+  
+  it should "handle repetition queries" in {
+    assert(search("RB* JJ") == Set("great", "not great"))
+    assert(search("RB+ JJ") == Set("not great"))
+  }
+  
+  it should "handle groups" in {
+    assert(searchGroups("I (?<x>VBP) DT* (?<y>NN|NNS)") == Set("x like", "y mango", "x hate", "y bananas"))
+    assert(searchGroups("I (?<x>.*) (?<y>NN|NNS)") == Set("x like", "y mango", "x hate those", "y bananas"))
   }
   
 }

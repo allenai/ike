@@ -38,4 +38,14 @@ class TestSearcher extends UnitSpec with ScratchDirectory {
     val expected = Set("myGroup1 like", "myGroup1 hate", "myGroup2 mango", "myGroup2 those")
     assert(results.toSet == expected)
   }
+  it should "handle repetition" in {
+    val results = search(""" [pos="RB"]{0,1} [pos="JJ"] """)
+    val resultStrings = results.map(r => r.matchWords.mkString(" ")).toSet
+    assert(resultStrings == Set("great", "not great"))
+  }
+  it should "handle repitition and groupign" in {
+    val results = groups(""" group1:([pos="RB"]{0,1} [pos="JJ"]) """)
+    val expected = Set("group1 not great", "group1 great")
+    assert(results.toSet == expected)
+  }
 }
