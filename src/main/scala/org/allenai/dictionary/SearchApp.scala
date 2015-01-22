@@ -4,7 +4,7 @@ import com.typesafe.config.ConfigFactory
 import java.io.File
 import nl.inl.blacklab.search.Searcher
 
-case class SearchRequest(query: String)
+case class SearchRequest(query: String, limit: Int = 100)
 
 object SearchApp {
   val config = ConfigFactory.load
@@ -14,7 +14,7 @@ object SearchApp {
   def search(r: SearchRequest): Seq[BlackLabResult] = {
     val query = QExprParser.parse(r.query).get
     val sem = semantics.blackLabQuery(query)
-    val hits = searcher.find(sem)
+    val hits = searcher.find(sem).window(0, r.limit)
     BlackLabResult.fromHits(hits).toSeq
   }
 }

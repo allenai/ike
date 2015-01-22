@@ -25,27 +25,36 @@ var WordDataSeq = React.createClass({
   }
 });
 
+var CaptureGroup = React.createClass({
+  render: function() {
+    var name = this.props.name;
+    var groupSeq = this.props.groupSeq;
+    return (
+      <td className="captureGroup">
+        <div className="captureGroupName">{name}</div>
+        <WordDataSeq data={groupSeq}/>
+      </td>
+    );
+  }
+});
+
 var BlackLabResult = React.createClass({
   render: function() {
     var result = this.props.result;
     var seq = result.wordData;
     var matchOffset = result.matchOffset;
-    var matchSeq = seq.slice(matchOffset.start, matchOffset.end);
+    var matchSeq = seq.slice(matchOffset[0], matchOffset[1]);
     var groupNames = Object.keys(result.captureGroups);
     var createGroup = function(name) {
       var offsets = result.captureGroups[name];
-      var groupSeq = seq.slice(offsets.start, offsets.end);
-      return (
-        <td className="captureGroup">
-          <div className="captureGroupName">{name}</div>
-          <WordDataSeq data={groupSeq}/>
-        </td>
-      );
+      var groupSeq = seq.slice(offsets[0], offsets[1]);
+      var key = result.id + name;
+      return <CaptureGroup name={name} groupSeq={groupSeq} key={key}/>;
     };
     return (
       <tr className="blackLabResultRow">
-      <td className="resultContext"><WordDataSeq data={seq}/></td>
       {groupNames.map(createGroup)}
+      <td className="resultContext"><WordDataSeq data={seq}/></td>
       </tr>
     );
   }
@@ -55,7 +64,7 @@ var BlackLabResults = React.createClass({
   render: function() {
     var results = this.props.results;
     var createResult = function(result, i) {
-      return <BlackLabResult result={result} key={i}/>;
+      return <BlackLabResult result={result} key={result.id}/>;
     };
     return (
       <table className="blackLabResults">
@@ -67,7 +76,7 @@ var BlackLabResults = React.createClass({
 
 var SearchInterface = React.createClass({
   getInitialState: function() {
-    return {query: ""};
+    return {query: "", limit: 100};
   },
   handleSubmit: function(e) {
     e.preventDefault();
@@ -98,6 +107,9 @@ var CorpusSearcher = React.createClass({
       data: JSON.stringify(queryObj)
     };
     $.ajax(request).success(function(results) {
+      for (var i = 0; i < results.length; i++) {
+        results[i]['id'] = queryObj.query + i;
+      }
       this.setState({results: results});
     }.bind(this));
   },

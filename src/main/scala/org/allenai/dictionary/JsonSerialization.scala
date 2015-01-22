@@ -6,5 +6,5 @@ import DefaultJsonProtocol._
 object JsonSerialization {
   implicit val wordDataFormat = jsonFormat2(WordData.apply)
   implicit val blackLabResultFormat = jsonFormat3(BlackLabResult.apply)
-  implicit val requestFormat = jsonFormat1(SearchRequest.apply)
+  implicit val requestFormat = jsonFormat2(SearchRequest.apply)
 }
