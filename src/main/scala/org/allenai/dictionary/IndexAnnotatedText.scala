@@ -16,10 +16,10 @@ class IndexAnnotatedText(config: Config) {
   val indexPath = new File(config.getString("indexPath"))
   val sentencePerDoc = config.getBoolean("sentencePerDoc")
   var numIndexed = 0
-  
+
   def makeBlackLabDocs(named: NamedAnnotatedText): Seq[BlackLabDocument] =
     if (sentencePerDoc) toBlackLabSentenceDocs(named) else Seq(toBlackLabDocument(named))
-  
+
   val indexer = new Indexer(indexPath, true, classOf[AnnotationIndexer])
   def add(s: String): Unit = try {
     val text = s.parseJson.convertTo[NamedAnnotatedText]
@@ -35,7 +35,7 @@ class IndexAnnotatedText(config: Config) {
       numIndexed += 1
     }
   }
-  def close: Unit = indexer.close
+  def close(): Unit = indexer.close
 }
 
 object IndexAnnotatedText extends App {

@@ -7,7 +7,8 @@ import nl.inl.blacklab.index.complex.ComplexFieldProperty.SensitivitySetting
 import org.xml.sax.Attributes
 import nl.inl.blacklab.index.complex.ComplexFieldProperty
 
-class AnnotationIndexer(indexer: Indexer, fileName: String, reader: Reader) extends DocIndexerXmlHandlers(indexer, fileName, reader) {
+class AnnotationIndexer(indexer: Indexer, fileName: String, reader: Reader)
+    extends DocIndexerXmlHandlers(indexer, fileName, reader) {
   val mainProp = getMainProperty
   val punctProp = getPropPunct
   val posProp = addProperty("pos", SensitivitySetting.SENSITIVE_AND_INSENSITIVE)
@@ -23,8 +24,8 @@ class AnnotationIndexer(indexer: Indexer, fileName: String, reader: Reader) exte
       addPos(attrs)
       addCluster(attrs)
     }
-    override def startElement(uri: String, localName: String, qName: String, attrs: Attributes): Unit = {
-      super.startElement(uri, localName, qName, attrs)
+    override def startElement(uri: String, ln: String, qName: String, attrs: Attributes): Unit = {
+      super.startElement(uri, ln, qName, attrs)
       addAttrs(attrs)
       punctProp.addValue(consumeCharacterContent)
     }

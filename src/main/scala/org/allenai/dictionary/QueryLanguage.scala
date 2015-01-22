@@ -31,10 +31,12 @@ case object QDisj {
 }
 
 object QExprParser extends RegexParsers {
-  val posTagSet = Seq("PRP$","NNPS","WRB","WP$","WDT","VBZ","VBP","VBN","VBG","VBD","SYM","RBS",
-      "RBR","PRP","POS","PDT","NNS","NNP","JJS","JJR","WP","VB","UH","TO","RP","RB","NN","MD","LS",
-      "JJ","IN","FW","EX","DT","CD","CC")
+  val posTagSet = Seq("PRP$", "NNPS", "WRB", "WP$", "WDT", "VBZ", "VBP", "VBN", "VBG", "VBD", "SYM",
+    "RBS", "RBR", "PRP", "POS", "PDT", "NNS", "NNP", "JJS", "JJR", "WP", "VB", "UH", "TO", "RP",
+    "RB", "NN", "MD", "LS", "JJ", "IN", "FW", "EX", "DT", "CD", "CC")
   val posTagRegex = posTagSet.map(Pattern.quote).mkString("|").r
+  // Turn off style---these are all just Parser[QExpr] definitions
+  // scalastyle:off
   def word = positioned("""[^|\^$()\s*+]+""".r ^^ QWord)
   def cluster = positioned("""\^[01]+""".r ^^ { s => QCluster(s.tail) })
   def pos = positioned(posTagRegex ^^ QPos)
@@ -53,4 +55,5 @@ object QExprParser extends RegexParsers {
   def branch = positioned(rep1(piece) ^^ QSeq.fromSeq)
   def expr = positioned(repsep(branch, "|") ^^ QDisj.fromSeq)
   def parse(s: String) = parseAll(expr, s)
+  // scalastyle:on
 }

@@ -20,6 +20,7 @@ import akka.pattern.ask
 import spray.json._
 import DefaultJsonProtocol._
 import JsonSerialization._
+import akka.actor.ActorContext
 
 object DictionaryToolWebapp {
   val name = "dictionary-tool"
@@ -53,13 +54,13 @@ trait BasicService extends HttpService {
         getFromFile(staticContentRoot + "/index.html")
       }
     } ~
-    get {
-      unmatchedPath { p => getFromFile(staticContentRoot + p) }
-    }
+      get {
+        unmatchedPath { p => getFromFile(staticContentRoot + p) }
+      }
 }
 
 class DictionaryToolActor extends Actor with BasicService with SearchService {
-  implicit def myExceptionHandler(implicit log: LoggingContext) =
+  implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
       case e: Exception =>
         requestUri { uri =>
@@ -67,7 +68,7 @@ class DictionaryToolActor extends Actor with BasicService with SearchService {
           complete(StatusCodes.InternalServerError -> e.getMessage)
         }
     }
-  def actorRefFactory = context
+  def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
-  def receive = runRoute(basicRoute ~ serviceRoute)
+  def receive: Actor.Receive = runRoute(basicRoute ~ serviceRoute)
 }

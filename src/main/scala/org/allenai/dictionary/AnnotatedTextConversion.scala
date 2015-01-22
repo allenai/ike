@@ -2,18 +2,18 @@ package org.allenai.dictionary
 
 import org.allenai.scholar.text.Token
 import org.allenai.scholar.text.AnnotatedText
-import org.allenai.scholar.mentions.{BrownClusterAnnotation => TokenCluster}
-import org.allenai.scholar.text.{PosTag => TokenPos}
+import org.allenai.scholar.text.WordCluster
+import org.allenai.scholar.text.PosTag
 import org.allenai.scholar.text.NamedAnnotatedText
 import org.allenai.scholar.text.Sentence
 
 object AnnotatedTextConversion {
   def wordData(token: Token, text: AnnotatedText): WordData = {
     val wordValue = text.content(token)
-    val posTag = text.typedAnnotationsUnder[TokenPos](token).headOption map {
+    val posTag = text.typedAnnotationsUnder[PosTag](token).headOption map {
       case pos => ("pos", pos.string)
     }
-    val cluster = text.typedAnnotationsUnder[TokenCluster](token).headOption map {
+    val cluster = text.typedAnnotationsUnder[WordCluster](token).headOption map {
       case cl => ("cluster", cl.clusterId)
     }
     val attrs = Seq(posTag, cluster).flatten.toMap

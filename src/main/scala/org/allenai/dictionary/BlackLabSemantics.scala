@@ -30,8 +30,8 @@ case class BlackLabSemantics(searcher: Searcher) {
       case QNonCap(e: QExpr) => blqHelper(e)
       case QStar(e: QExpr) => new TextPatternRepetition(blqHelper(e), 0, -1)
       case QPlus(e: QExpr) => new TextPatternRepetition(blqHelper(e), 1, -1)
-      case QSeq(es: Seq[QExpr]) => new TextPatternSequence(es.map(blqHelper):_*)
-      case QDisj(es: Seq[QExpr]) => new TextPatternOr(es.map(blqHelper):_*)
+      case QSeq(es: Seq[QExpr]) => new TextPatternSequence(es.map(blqHelper): _*)
+      case QDisj(es: Seq[QExpr]) => new TextPatternOr(es.map(blqHelper): _*)
     }
     blqHelper(qexpr)
   }
