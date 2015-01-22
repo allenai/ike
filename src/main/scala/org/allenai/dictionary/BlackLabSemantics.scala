@@ -14,18 +14,25 @@ import nl.inl.blacklab.search.TextPatternCaptureGroup
 
 case class BlackLabSemantics(searcher: Searcher) {
   def notImplemented: Exception = new UnsupportedOperationException
-  def blackLabQuery(qexpr: QExpr): TextPattern = qexpr match {
-    case QWord(w) => new TextPatternTerm(w)
-    case QCluster(c) => new TextPatternProperty("cluster", new TextPatternPrefix(c))
-    case QPos(p) => new TextPatternProperty("pos", new TextPatternTerm(p))
-    case QDict(d) => throw notImplemented
-    case QWildcard => new TextPatternAnyToken(1, 1)
-    case QNamed(e: QExpr, name: String) => new TextPatternCaptureGroup(blackLabQuery(e), name)
-    case QUnnamed(e: QExpr) => blackLabQuery(QNamed(e, s"pos${e.pos.toString}"))
-    case QNonCap(e: QExpr) => blackLabQuery(e)
-    case QStar(e: QExpr) => new TextPatternRepetition(blackLabQuery(e), 0, -1)
-    case QPlus(e: QExpr) => new TextPatternRepetition(blackLabQuery(e), 1, -1)
-    case QSeq(es: Seq[QExpr]) => new TextPatternSequence(es.map(blackLabQuery):_*)
-    case QDisj(es: Seq[QExpr]) => new TextPatternOr(es.map(blackLabQuery):_*)
+  def blackLabQuery(qexpr: QExpr): TextPattern = {
+    var unnamedCnt = 0
+    def blqHelper(qexpr: QExpr): TextPattern = qexpr match {
+      case QWord(w) => new TextPatternTerm(w)
+      case QCluster(c) => new TextPatternProperty("cluster", new TextPatternPrefix(c))
+      case QPos(p) => new TextPatternProperty("pos", new TextPatternTerm(p))
+      case QDict(d) => throw notImplemented
+      case QWildcard => new TextPatternProperty("pos", new TextPatternPrefix(""))
+      case QNamed(e: QExpr, name: String) => new TextPatternCaptureGroup(blqHelper(e), name)
+      case QUnnamed(e) =>
+        unnamedCnt += 1
+        val result = blqHelper(QNamed(e, s"${unnamedCnt}"))
+        result
+      case QNonCap(e: QExpr) => blqHelper(e)
+      case QStar(e: QExpr) => new TextPatternRepetition(blqHelper(e), 0, -1)
+      case QPlus(e: QExpr) => new TextPatternRepetition(blqHelper(e), 1, -1)
+      case QSeq(es: Seq[QExpr]) => new TextPatternSequence(es.map(blqHelper):_*)
+      case QDisj(es: Seq[QExpr]) => new TextPatternOr(es.map(blqHelper):_*)
+    }
+    blqHelper(qexpr)
   }
 }
