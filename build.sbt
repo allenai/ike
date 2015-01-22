@@ -2,7 +2,7 @@ import Dependencies._
 
 val myProject = project.in(file(".")).enablePlugins(DeployPlugin)
 
-name := "dictionarybuilder"
+name := "dictionary-builder"
 
 description := "buildin' them electric dictionaries"
 
