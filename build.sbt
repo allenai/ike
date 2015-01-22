@@ -45,3 +45,4 @@ fork in run := true
 
 connectInput in run := true
 
+javaOptions in run ++= Seq("-Xms2G", "-Xmx8G") 

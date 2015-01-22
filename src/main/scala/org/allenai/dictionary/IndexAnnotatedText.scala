@@ -14,6 +14,12 @@ import java.io.StringReader
 class IndexAnnotatedText(val indexPath: File) {
   var numIndexed = 0
   val indexer = new Indexer(indexPath, true, classOf[AnnotationIndexer])
+  def add(s: String): Unit = try {
+    val text = s.parseJson.convertTo[NamedAnnotatedText]
+    add(text)
+  } catch {
+    case e: Exception => System.err.println(s"Could not parse line: ${e.getMessage}")
+  }
   def add(named: NamedAnnotatedText): Unit = {
     val doc = blackLabDocument(named)
     val name = named.name
@@ -29,12 +35,12 @@ object IndexAnnotatedText extends App {
     val config = ConfigFactory.load
     val indexPath = new File(config.getString("indexPath"))
     val inputPath = new File(config.getString("annotatedText"))
-    val lines = Source.fromFile(inputPath).getLines
-    val annotatedText = lines map (_.parseJson.convertTo[NamedAnnotatedText])
     val indexer = new IndexAnnotatedText(indexPath)
-    for (text <- annotatedText) {
-      indexer.add(text)
-      if (indexer.numIndexed % 1000 == 0) println(indexer.numIndexed)
+    val lines = Source.fromFile(inputPath).getLines
+    val chunkSize = 100
+    val groups = lines.grouped(chunkSize)
+    groups foreach { group =>
+      group.par foreach indexer.add
     }
     indexer.close
   }
