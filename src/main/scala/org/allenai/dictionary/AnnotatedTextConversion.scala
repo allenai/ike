@@ -19,14 +19,18 @@ object AnnotatedTextConversion {
     val attrs = Seq(posTag, cluster).flatten.toMap
     WordData(wordValue, attrs)
   }
-  def blackLabDocument(named: NamedAnnotatedText): BlackLabDocument = {
-    val name = named.name
-    val text = named.text
-    val sentences = for {
-      sentence <- text.typedAnnotations[Sentence]
-      tokens = text.typedAnnotationsUnder[Token](sentence)
-      wordDatas = tokens.map(wordData(_, text))
-    } yield wordDatas
-    BlackLabDocument(name, sentences)
+  def sentenceWordData(text: AnnotatedText): Seq[Seq[WordData]] = for {
+    sentence <- text.typedAnnotations[Sentence]
+    tokens = text.typedAnnotationsUnder[Token](sentence)
+    wordDatas = tokens.map(wordData(_, text))
+  } yield wordDatas
+  def toBlackLabDocument(named: NamedAnnotatedText): BlackLabDocument = {
+    val sentences = sentenceWordData(named.text)
+    BlackLabDocument(named.name, sentences)
   }
+  def toBlackLabSentenceDocs(named: NamedAnnotatedText): Seq[BlackLabDocument] = for {
+    (sentence, i) <- sentenceWordData(named.text).zipWithIndex
+    docName = s"${named.name}-$i"
+    doc = BlackLabDocument(docName, Seq(sentence))
+  } yield doc
 }
