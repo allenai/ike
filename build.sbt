@@ -9,6 +9,7 @@ description := "buildin' them electric dictionaries"
 libraryDependencies ++= Seq(
     allenAiCommon exclude("com.typesafe", "config"),
     allenAiTestkit,
+    allenAiDatastore,
     lucene("core"),
     lucene("analyzers-common"),
     lucene("highlighter"),
@@ -21,3 +22,5 @@ fork in run := true
 javaOptions in run ++= Seq("-Xms2G", "-Xmx8G")
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
+
+dependencyOverrides ++= Set(allenAiCommon)

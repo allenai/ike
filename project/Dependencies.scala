@@ -7,4 +7,5 @@ object Dependencies extends CoreDependencies {
   val luceneGroup = "org.apache.lucene"
   val luceneVersion = "4.2.1"
   def lucene(part: String) = luceneGroup % s"lucene-${part}" % luceneVersion
+  val allenAiDatastore = "org.allenai" %% "datastore" % "2014.11.24-0"
 }
