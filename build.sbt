@@ -1,4 +1,5 @@
 import Dependencies._
+import com.typesafe.sbt.SbtNativePackager.NativePackagerHelper._
 
 val dictionaryBuilder = project.in(file(".")).enablePlugins(WebappPlugin)
 
