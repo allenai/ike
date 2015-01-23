@@ -1,4 +1,5 @@
 var React = require('react');
+var xhr = require('xhr');
 var WordData = require('./WordData.js');
 
 var WordDataSeq = React.createClass({
@@ -87,17 +88,15 @@ var CorpusSearcher = React.createClass({
     return {results: []};
   },
   executeSearch: function(queryObj) {
-    var request = {
-      type: "POST",
-      url: "/api/search",
-      contentType: "application/json",
-      data: JSON.stringify(queryObj)
-    };
-    $.ajax(request).success(function(results) {
-      for (var i = 0; i < results.length; i++) {
-        results[i]['id'] = queryObj.query + i;
-      }
-      this.setState({results: results});
+    xhr({
+      body: JSON.stringify(queryObj),
+      uri: '/api/search',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      method: 'POST'
+    }, function(err, resp, body) {
+      this.setState({results: JSON.parse(body)});
     }.bind(this));
   },
   render: function() {
