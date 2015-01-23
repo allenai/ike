@@ -21,6 +21,7 @@ import spray.json._
 import DefaultJsonProtocol._
 import JsonSerialization._
 import akka.actor.ActorContext
+import com.typesafe.config.ConfigFactory
 
 object DictionaryToolWebapp extends App {
   val name = "dictionary-tool"
@@ -33,17 +34,6 @@ object DictionaryToolWebapp extends App {
       IO(Http) ? Http.Bind(service, interface = "0.0.0.0", port = 8080)
     }
   }
-}
-
-trait SearchService extends HttpService with SprayJsonSupport {
-  val serviceRoute =
-    pathPrefix("api" / "search") {
-      post {
-        entity(as[SearchRequest]) { req =>
-          complete(SearchApp.search(req))
-        }
-      }
-    }
 }
 
 trait BasicService extends HttpService {
@@ -59,7 +49,19 @@ trait BasicService extends HttpService {
       }
 }
 
-class DictionaryToolActor extends Actor with BasicService with SearchService {
+class DictionaryToolActor extends Actor with BasicService with SprayJsonSupport {
+  import JsonSerialization._
+  val config = ConfigFactory.load
+  val searchApp = SearchApp(config.getConfig("index"))
+  val serviceRoute =
+    pathPrefix("api" / "search") {
+      post {
+        entity(as[SearchRequest]) { req =>
+          complete(searchApp.search(req))
+        }
+      }
+    }
+  
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
       case e: Exception =>
