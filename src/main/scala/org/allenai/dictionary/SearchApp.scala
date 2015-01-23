@@ -10,10 +10,9 @@ object SearchApp {
   val config = ConfigFactory.load
   val indexPath = new File(config.getString("indexPath"))
   val searcher = Searcher.open(indexPath)
-  val semantics = BlackLabSemantics(searcher)
   def search(r: SearchRequest): Seq[BlackLabResult] = {
     val query = QExprParser.parse(r.query).get
-    val sem = semantics.blackLabQuery(query)
+    val sem = BlackLabSemantics.blackLabQuery(query)
     val hits = searcher.find(sem).window(0, r.limit)
     BlackLabResult.fromHits(hits).toSeq
   }

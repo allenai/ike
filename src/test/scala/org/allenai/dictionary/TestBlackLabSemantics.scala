@@ -7,10 +7,9 @@ import nl.inl.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
 class TestBlackLabSemantics extends UnitSpec with ScratchDirectory {
   TestData.createTestIndex(scratchDir)
   val searcher = TestData.testSearcher(scratchDir)
-  val semantics = BlackLabSemantics(searcher)
   def results(s: String): Iterator[BlackLabResult] = {
     val e = QExprParser.parse(s).get
-    val q = semantics.blackLabQuery(e)
+    val q = BlackLabSemantics.blackLabQuery(e)
     val hits = searcher.find(q)
     BlackLabResult.fromHits(hits)
   }

@@ -12,7 +12,7 @@ import nl.inl.blacklab.search.TextPatternOr
 import nl.inl.blacklab.search.sequences.TextPatternRepetition
 import nl.inl.blacklab.search.TextPatternCaptureGroup
 
-case class BlackLabSemantics(searcher: Searcher) {
+object BlackLabSemantics {
   def notImplemented: Exception = new UnsupportedOperationException
   def blackLabQuery(qexpr: QExpr): TextPattern = {
     var unnamedCnt = 0
