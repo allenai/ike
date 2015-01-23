@@ -22,9 +22,9 @@ import DefaultJsonProtocol._
 import JsonSerialization._
 import akka.actor.ActorContext
 
-object DictionaryToolWebapp {
+object DictionaryToolWebapp extends App {
   val name = "dictionary-tool"
-  def main(args: Array[String]): Unit = {
+  override def main(args: Array[String]): Unit = {
     implicit val system = ActorSystem("dictionary-tool")
     val service = system.actorOf(Props[DictionaryToolActor], "webapp-actor")
 
