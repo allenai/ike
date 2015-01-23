@@ -16,8 +16,7 @@ libraryDependencies ++= Seq(
     lucene("analyzers-common"),
     lucene("highlighter"),
     lucene("queries"),
-    lucene("queryparser"),
-    "org.apache.logging.log4j" % "log4j-core" % "2.1"
+    lucene("queryparser")
 )
 
 fork in run := true
