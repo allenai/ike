@@ -1,6 +1,6 @@
 import Dependencies._
 
-val dictionaryBuilder = project.in(file(".")).enablePlugins(DeployPlugin)
+val dictionaryBuilder = project.in(file(".")).enablePlugins(DeployPlugin, WebappPlugin)
 
 name := "dictionary-builder"
 
