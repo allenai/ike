@@ -11,44 +11,65 @@ import AnnotatedTextConversion._
 import XmlSerialization._
 import java.io.StringReader
 import com.typesafe.config.Config
+import java.io.File
 
 class IndexAnnotatedText(config: Config) {
-  val indexPath = new File(config.getString("indexPath"))
+  
+  val fileName = config.getString("input.fileName")
+  val input = config.getConfig("input")
+  val inputDir = input.getString("location") match {
+    case "file" => new File(input.getString("path"))
+    case "datastore" =>
+      val ref = DatastoreRef.fromConfig(input.getConfig("item"))
+      ref.directoryPath.toFile
+    case  _ =>
+      throw new IllegalArgumentException(s"'location' must be either 'file' or 'datastore'")
+  }
+  val inputFile = new File(inputDir, fileName)
+  val outputDir = new File(config.getString("output.path"))
   val sentencePerDoc = config.getBoolean("sentencePerDoc")
-  var numIndexed = 0
-
+  val chunkSize = config.getInt("chunkSize")
+  
+  def lines: Iterator[String] = Source.fromFile(inputFile).getLines
+  
+  def annotatedText: Iterator[NamedAnnotatedText] =
+    lines map (_.parseJson.convertTo[NamedAnnotatedText])
+  
   def makeBlackLabDocs(named: NamedAnnotatedText): Seq[BlackLabDocument] =
     if (sentencePerDoc) toBlackLabSentenceDocs(named) else Seq(toBlackLabDocument(named))
-
-  val indexer = new Indexer(indexPath, true, classOf[AnnotationIndexer])
+    
+  val indexer = new Indexer(outputDir, true, classOf[AnnotationIndexer])
+  
   def add(s: String): Unit = try {
     val text = s.parseJson.convertTo[NamedAnnotatedText]
     add(text)
   } catch {
     case e: Exception => System.err.println(s"Could not parse line: ${e.getMessage}")
   }
+
   def add(named: NamedAnnotatedText): Unit = {
     for (doc <- makeBlackLabDocs(named)) {
       val name = named.name
       val xml = toXml(doc)
       indexer.index(name, new StringReader(xml.toString))
-      numIndexed += 1
     }
   }
+  
   def close(): Unit = indexer.close
+  
+  def index(): Unit = {
+    val groups = annotatedText.grouped(chunkSize)
+    groups foreach {
+      group => group.par foreach add
+    }
+    close
+  }
 }
 
 object IndexAnnotatedText extends App {
   override def main(args: Array[String]): Unit = {
     val config = ConfigFactory.load
-    val indexer = new IndexAnnotatedText(config)
-    val inputPath = new File(config.getString("annotatedText"))
-    val lines = Source.fromFile(inputPath).getLines
-    val chunkSize = 100
-    val groups = lines.grouped(chunkSize)
-    groups foreach { group =>
-      group.par foreach indexer.add
-    }
-    indexer.close
+    val indexer = new IndexAnnotatedText(config.getConfig("buildIndex"))
+    indexer.index
   }
 }
