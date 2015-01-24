@@ -10,7 +10,7 @@ case class SearchRequest(query: String, limit: Int = 100)
 case class SearchApp(config: Config) {
   val indexDir = config.getString("location") match {
     case "file" => new File(config.getString("path"))
-    case "datastore" => 
+    case "datastore" =>
       val ref = DatastoreRef.fromConfig(config.getConfig("item"))
       ref.directoryPath.toFile
     case _ => throw new IllegalArgumentException(s"'location' must be either 'file' or 'datastore")

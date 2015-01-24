@@ -61,7 +61,7 @@ class DictionaryToolActor extends Actor with BasicService with SprayJsonSupport 
         }
       }
     }
-  
+
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
       case e: Exception =>

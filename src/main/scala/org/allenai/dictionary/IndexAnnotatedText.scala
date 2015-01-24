@@ -14,7 +14,7 @@ import com.typesafe.config.Config
 import java.io.File
 
 class IndexAnnotatedText(config: Config) {
-  
+
   val fileName = config.getString("input.fileName")
   val input = config.getConfig("input")
   val inputDir = input.getString("location") match {
@@ -22,24 +22,24 @@ class IndexAnnotatedText(config: Config) {
     case "datastore" =>
       val ref = DatastoreRef.fromConfig(input.getConfig("item"))
       ref.directoryPath.toFile
-    case  _ =>
+    case _ =>
       throw new IllegalArgumentException(s"'location' must be either 'file' or 'datastore'")
   }
   val inputFile = new File(inputDir, fileName)
   val outputDir = new File(config.getString("output.path"))
   val sentencePerDoc = config.getBoolean("sentencePerDoc")
   val chunkSize = config.getInt("chunkSize")
-  
+
   def lines: Iterator[String] = Source.fromFile(inputFile).getLines
-  
+
   def annotatedText: Iterator[NamedAnnotatedText] =
     lines map (_.parseJson.convertTo[NamedAnnotatedText])
-  
+
   def makeBlackLabDocs(named: NamedAnnotatedText): Seq[BlackLabDocument] =
     if (sentencePerDoc) toBlackLabSentenceDocs(named) else Seq(toBlackLabDocument(named))
-    
+
   val indexer = new Indexer(outputDir, true, classOf[AnnotationIndexer])
-  
+
   def add(s: String): Unit = try {
     val text = s.parseJson.convertTo[NamedAnnotatedText]
     add(text)
@@ -54,9 +54,9 @@ class IndexAnnotatedText(config: Config) {
       indexer.index(name, new StringReader(xml.toString))
     }
   }
-  
+
   def close(): Unit = indexer.close
-  
+
   def index(): Unit = {
     val groups = annotatedText.grouped(chunkSize)
     groups foreach {
