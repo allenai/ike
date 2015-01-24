@@ -13,7 +13,7 @@ var SearchInterface = React.createClass({
   render: function() {
     return (
       <form className="searchInterface" onSubmit={this.handleSubmit}>
-        <input onChange={this.onChange} value={this.state.query}/>
+        <input placeholder="Enter Pattern" type="text" onChange={this.onChange} value={this.state.query}/>
         <button>Search</button>
       </form>
     );
