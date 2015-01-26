@@ -1,7 +1,7 @@
 module.exports = {
   base: __dirname,
   html: 'app/**/*.html',
-  less: 'app/css/main.less',
+  less: 'app/css/*.less',
   allLess: 'app/css/**/*.less',
   js: 'app/**/*.js',
   jsMain: 'app/js/App.js',

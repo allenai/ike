@@ -20,10 +20,14 @@ var CorpusSearcher = React.createClass({
   },
   render: function() {
     return (
-      <div>
-        <SearchInterface callback={this.executeSearch}/>
-        <BlackLabResults results={this.state.results}/>
-      </div>
+      <section>
+        <div className="col-md-4">
+          <SearchInterface callback={this.executeSearch}/>
+        </div>
+        <div className="col-md-8">
+          <BlackLabResults results={this.state.results}/>
+        </div>
+      </section>
     );
   }
 });
