@@ -37,17 +37,18 @@ object QExprParser extends RegexParsers {
   val posTagRegex = posTagSet.map(Pattern.quote).mkString("|").r
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
-  def word = positioned("""[^|\^$()\s*+]+""".r ^^ QWord)
+  def word = positioned("""[^|\^$(){}\s*+,]+""".r ^^ QWord)
   def cluster = positioned("""\^[01]+""".r ^^ { s => QCluster(s.tail) })
   def pos = positioned(posTagRegex ^^ QPos)
-  def dict = positioned("""\$[^$()\s*+|]+""".r ^^ { s => QDict(s.tail) })
+  def dict = positioned("""\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) })
   def wildcard = positioned("\\.".r ^^^ QWildcard)
   def atom = positioned(wildcard | pos | dict | cluster | word)
   def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
   def named = positioned("(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) })
   def unnamed = positioned("(" ~> expr <~ ")" ^^ QUnnamed)
   def nonCap = positioned("(?:" ~> expr <~ ")" ^^ QNonCap)
-  def operand = positioned(named | nonCap | unnamed | atom)
+  def curlyDisj = positioned("{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq)
+  def operand = positioned(named | nonCap | unnamed | curlyDisj | atom)
   def starred = positioned(operand <~ "*" ^^ QStar)
   def plussed = positioned(operand <~ "+" ^^ QPlus)
   def modified = positioned(starred | plussed)

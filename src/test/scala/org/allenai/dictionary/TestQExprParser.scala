@@ -59,5 +59,9 @@ class TestQExprParser extends UnitSpec with ScratchDirectory {
     val e9 = qs(star(wc), w("is"), w("a"), w("test"))
     assert(parse(q9) == e9)
 
+    val q10 = "{this, that} is a test"
+    val e10 = qs(or(w("this"), w("that")), w("is"), w("a"), w("test"))
+    assert(parse(q10) == e10)
+
   }
 }
