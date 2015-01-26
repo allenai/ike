@@ -66,8 +66,8 @@ class IndexAnnotatedText(config: Config) {
   }
 }
 
-object IndexAnnotatedText extends App {
-  override def main(args: Array[String]): Unit = {
+object IndexAnnotatedText {
+  def main(args: Array[String]): Unit = {
     val config = ConfigFactory.load
     val indexer = new IndexAnnotatedText(config.getConfig("buildIndex"))
     indexer.index
