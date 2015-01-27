@@ -8,8 +8,10 @@ import nl.inl.blacklab.search.Searcher
 object TestData {
 
   val docSents = Map(
-    "doc1" -> Seq("I like mango .", "It tastes great ."),
-    "doc2" -> Seq("I hate those bananas .", "They taste not great .")
+    "doc1" -> Seq("I like mango ."),
+    "doc2" -> Seq("It tastes great ."),
+    "doc3" -> Seq("I hate those bananas ."),
+    "doc4" -> Seq("They taste not great .")
   )
 
   val posTags = Map(
