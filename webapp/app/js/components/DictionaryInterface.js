@@ -9,8 +9,30 @@ var Glyphicon = bs.Glyphicon;
 var Button = bs.Button;
 var TabbedArea = bs.TabbedArea;
 var TabPane = bs.TabPane;
+var Button = bs.Button;
 
 var DictionaryAdder = React.createClass({
+  getInitialState: function() {
+    return {value: ''};
+  },
+  handleSubmit: function(e) {
+    e.preventDefault();
+    this.props.callback(this.state.value);
+    this.setState({value: ''});
+  },
+  onChange: function(e) {
+    this.setState({value: e.target.value});
+  },
+  render: function() {
+    return (
+      <form onSubmit={this.handleSubmit}>
+        <Input type="text" onChange={this.onChange} value={this.state.value} placeholder="Create New Dictionary"/>
+      </form>
+    );
+  }
+});
+
+var EntryAdder = React.createClass({
   getInitialState: function() {
     return {value: ''};
   },
@@ -46,9 +68,19 @@ var DictionaryList = React.createClass({
   render: function() {
     var name = this.props.name;
     var entries = this.props.entries;
-    var makeEntry = function(entry) {
+    var callbacks = this.props.callbacks;
+    var type = this.props.type;
+    var makeEntry = function(entry, i) {
       var key = name + '.' + entry;
-      return <ListGroupItem key={key}>{entry}</ListGroupItem>;
+      var deleteEntry = function() {
+        callbacks.deleteEntry(name, type, entry);
+      };
+      return (
+        <ListGroupItem key={key}>
+          {entry}
+          <Button onClick={deleteEntry} bsSize="xsmall" className="pull-right" bsStyle="danger"><Glyphicon glyph="remove"/></Button>
+        </ListGroupItem>
+      );
     };
     return (
       <div className="dictList">
@@ -68,21 +100,23 @@ var DictionaryViewer = React.createClass({
     var addPos = function(entry) { callbacks.addEntry(name, "positive", entry); }
     var addNeg = function(entry) { callbacks.addEntry(name, "negative", entry); }
     var header = <h3>{name}</h3>;
+    var posTab = "Positive Instances (" + dictionary.positive.length + ")";
+    var negTab = "Positive Instances (" + dictionary.negative.length + ")";
     return (
-      <Panel header={header}> 
+      <div>
 
-        <TabbedArea defaultActiveKey={1} animation={false}>
-          <TabPane eventKey={1} tab="Positive Instances">
-            <DictionaryList name={name} entries={dictionary.positive}/>
-            <DictionaryAdder label="Positive" callback={addPos} />
+        <TabbedArea eventKey={1} animation={false}>
+          <TabPane eventKey={1} tab={posTab}>
+            <DictionaryList name={name} entries={dictionary.positive} callbacks={callbacks} type="positive"/>
+            <EntryAdder label="Positive" callback={addPos} />
           </TabPane>
-          <TabPane eventKey={2} tab="Negative Instances">
-            <DictionaryList name={name} entries={dictionary.negative}/>
-            <DictionaryAdder label="Negative" callback={addNeg} />
+          <TabPane eventKey={2} tab={negTab}>
+            <DictionaryList name={name} entries={dictionary.negative} callbacks={callbacks} type="negative"/>
+            <EntryAdder label="Negative" callback={addNeg} />
           </TabPane>
         </TabbedArea>
 
-      </Panel>
+      </div>
     );
   }
 });
@@ -94,15 +128,26 @@ var DictionaryInterface = React.createClass({
   render: function() {
     var callbacks = this.props.callbacks;
     var dictionaries = this.props.dictionaries;
-    var makeDict = function(name) {
+    var makeDict = function(name, i) {
       var dict = dictionaries[name];
-      return <DictionaryViewer key={name} dictionary={dict} callbacks={callbacks} />;
+      var deleteDict = function() {
+        callbacks.deleteDictionary(name);
+      };
+      var header = <div>{name}<Button onClick={deleteDict} bsSize="xsmall" className="pull-right" bsStyle="danger"><Glyphicon glyph="remove"/></Button></div>;
+      return (
+        <Panel header={header} eventKey={i}>
+          <DictionaryViewer key={name} dictionary={dict} callbacks={callbacks}/>
+        </Panel>
+      );
     };
     var dictNames = Object.keys(dictionaries);
     return (
-      <PanelGroup accordion>
-        {dictNames.map(makeDict)}
-      </PanelGroup>
+      <div>
+        <DictionaryAdder callback={callbacks.createDictionary}/>
+        <PanelGroup accordion>
+          {dictNames.map(makeDict)}
+        </PanelGroup>
+      </div>
     );
   }
 });

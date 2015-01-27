@@ -10,11 +10,19 @@ var TabPane = bs.TabPane;
 var CorpusSearcher = React.createClass({
 
   createDictionary: function(name) {
-    alert('create dictionary: ' + name);
+    var dicts = this.state.dictionaries;
+    if (!(name in dicts)) {
+      dicts[name] = {name: name, positive: [], negative: []};
+      this.setState({dictionaries: dicts});
+    }
   },
 
   deleteDictionary: function(name) {
-    alert('delete dictionary: ' + name);
+    var dicts = this.state.dictionaries;
+    if (name in dicts) {
+      delete dicts[name];
+      this.setState({dictionaries: dicts});
+    }
   },
 
   addEntry: function(name, type, entry) {
@@ -27,11 +35,14 @@ var CorpusSearcher = React.createClass({
     this.setState({dictionaries: dicts});
   },
 
-  deleteEntry: function(name, type, i) {
+  deleteEntry: function(name, type, entry) {
     var dicts = this.state.dictionaries;
     var dict = dicts[name];
     var entries = dict[type];
-    entries.splice(i, i+1);
+    var index = entries.indexOf(entry);
+    if (index >= 0) {
+      entries.splice(index, 1);
+    }
     this.setState({dictionaries: dicts});
   },
 
@@ -67,7 +78,10 @@ var CorpusSearcher = React.createClass({
   },
   render: function() {
     var dictionaryCallbacks = {
-      addEntry: this.addEntry
+      addEntry: this.addEntry,
+      deleteEntry: this.deleteEntry,
+      createDictionary: this.createDictionary,
+      deleteDictionary: this.deleteDictionary
     };
     return (
       <section>
