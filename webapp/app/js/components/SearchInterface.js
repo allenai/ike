@@ -19,7 +19,7 @@ var SearchInterface = React.createClass({
   render: function() {
     return (
       <form onSubmit={this.handleSubmit}>
-        <Input type="text" label="Pattern Search" onChange={this.onPatternChange} value={this.state.query}/> 
+        <Input type="text" label="Input Pattern" onChange={this.onPatternChange} value={this.state.query}/> 
         <Input type="select" label="Maximum Number of Results" onChange={this.onLimitChange} value={this.state.limit}>
           <option value="10">10</option>
           <option value="100">100</option>
