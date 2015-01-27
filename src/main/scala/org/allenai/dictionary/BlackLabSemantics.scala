@@ -21,7 +21,7 @@ object BlackLabSemantics {
       case QCluster(c) => new TextPatternProperty("cluster", new TextPatternPrefix(c))
       case QPos(p) => new TextPatternProperty("pos", new TextPatternTerm(p))
       case QDict(d) => throw notImplemented
-      case QWildcard => new TextPatternProperty("pos", new TextPatternPrefix(""))
+      case QWildcard => new TextPatternAnyToken(1, 1)
       case QNamed(e: QExpr, name: String) => new TextPatternCaptureGroup(blqHelper(e), name)
       case QUnnamed(e) =>
         unnamedCnt += 1
