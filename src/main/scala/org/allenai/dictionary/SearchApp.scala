@@ -35,7 +35,9 @@ case class SearchApp(config: Config) {
       name <- req.groupBy
       i <- result.captureGroups.get(name)
     } yield i
-    val keyInterval = providedInterval.getOrElse(result.matchOffset)
+    val firstInterval = result.captureGroups.values.toSeq.headOption
+    val candidateIntervals = Seq(providedInterval, firstInterval, Some(result.matchOffset))
+    val keyInterval = candidateIntervals.flatten.head
     KeyedBlackLabResult(keyInterval, result)
   }
   def keyString(kr: KeyedBlackLabResult): String = {
