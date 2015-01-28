@@ -9,11 +9,13 @@ var KeyedBlackLabResults = React.createClass({
       return <KeyedBlackLabResult key={i} keyedResult={keyedResult}/>;
     };
     return (
-      <Table striped bordered hover>
-        <tbody>
-          {keyedResults.map(makeRow)}
-        </tbody>
-      </Table>
+      <div className="keyedBlackLabResults">
+        <table>
+          <tbody>
+            {keyedResults.map(makeRow)}
+          </tbody>
+        </table>
+      </div>
     );
   }
 });
