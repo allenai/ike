@@ -3,6 +3,8 @@ package org.allenai.dictionary
 import scala.util.parsing.input.Positional
 import scala.util.parsing.combinator.RegexParsers
 import java.util.regex.Pattern
+import scala.util.{ Try, Failure, Success }
+import java.text.ParseException
 
 sealed trait QExpr extends Positional
 case class QWord(value: String) extends QExpr
@@ -57,4 +59,15 @@ object QExprParser extends RegexParsers {
   def expr = positioned(repsep(branch, "|") ^^ QDisj.fromSeq)
   def parse(s: String) = parseAll(expr, s)
   // scalastyle:on
+}
+
+// Use this so parser combinator objects are not in scope
+object QueryLanguage {
+  val parser = QExprParser
+  def parse(s: String): Try[QExpr] = parser.parse(s) match {
+    case parser.Success(result, _) => Success(result)
+    case parser.NoSuccess(message, next) =>
+      val exception = new ParseException(message, next.pos.column)
+      Failure(exception)
+  }
 }

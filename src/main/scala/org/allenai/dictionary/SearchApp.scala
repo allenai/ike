@@ -5,10 +5,15 @@ import java.io.File
 import nl.inl.blacklab.search.Searcher
 import com.typesafe.config.Config
 import org.allenai.common.immutable.Interval
+import nl.inl.blacklab.search.TextPattern
+import scala.util.Try
+import nl.inl.blacklab.search.HitsWindow
 
-case class SearchRequest(query: String, limit: Int = 100, groupBy: Option[String] = None)
+case class SearchRequest(query: String, limit: Int = 100, evidenceLimit: Int = 10,
+  groupBy: Option[String] = None)
 
 case class SearchApp(config: Config) {
+
   val indexDir = config.getString("location") match {
     case "file" => new File(config.getString("path"))
     case "datastore" =>
@@ -16,20 +21,38 @@ case class SearchApp(config: Config) {
       ref.directoryPath.toFile
     case _ => throw new IllegalArgumentException(s"'location' must be either 'file' or 'datastore")
   }
+
   val searcher = Searcher.open(indexDir)
-  def search(r: SearchRequest): Seq[BlackLabResult] = {
-    val query = QExprParser.parse(r.query).get
-    val sem = BlackLabSemantics.blackLabQuery(query)
-    val hits = searcher.find(sem).window(0, r.limit)
+
+  def blackLabHits(textPattern: TextPattern, limit: Int): Try[HitsWindow] = Try {
+    searcher.find(textPattern).window(0, limit)
+  }
+
+  def fromHits(hits: HitsWindow): Try[Seq[BlackLabResult]] = Try {
     BlackLabResult.fromHits(hits).toSeq
   }
-  def groupedSearch(req: SearchRequest): Seq[GroupedBlackLabResult] = {
-    val results = search(req)
-    val keyed = results map (keyResult(req, _))
-    val grouped = keyed groupBy keyString
-    val mapped = grouped map { case (key, results) => GroupedBlackLabResult(key, results) }
-    mapped.toSeq
-  }
+
+  def semantics(query: QExpr): Try[TextPattern] = Try(BlackLabSemantics.blackLabQuery(query))
+
+  def search(r: SearchRequest): Try[Seq[BlackLabResult]] = for {
+    query <- QueryLanguage.parse(r.query)
+    textPattern <- semantics(query)
+    hits <- blackLabHits(textPattern, r.limit)
+    results <- fromHits(hits)
+  } yield results
+
+  def groupedSearch(req: SearchRequest): Try[Seq[GroupedBlackLabResult]] = for {
+    results <- search(req)
+    keyed = results map (keyResult(req, _))
+    grouped = keyed groupBy keyString
+    groupedLimit = grouped mapValues (_.take(req.evidenceLimit))
+    mapped = grouped map {
+      case (key, results) =>
+        val count = results.size
+        val topResults = results.take(req.evidenceLimit)
+        GroupedBlackLabResult(key, count, topResults)
+    }
+  } yield mapped.toSeq
   def keyResult(req: SearchRequest, result: BlackLabResult): KeyedBlackLabResult = {
     val providedInterval = for {
       name <- req.groupBy
