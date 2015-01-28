@@ -18,9 +18,9 @@ var KeyedBlackLabResult = React.createClass({
     var right = wordData("right", keyEnd, n);
     return (
       <tr>
-        <td style={{width: "30%"}}>{left}</td>
+        <td>{left}</td>
         <td>{middle}</td>
-        <td style={{width: "30%"}}>{right}</td>
+        <td>{right}</td>
       </tr>
     );
   }
