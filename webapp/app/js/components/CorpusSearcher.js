@@ -1,7 +1,7 @@
 var React = require('react');
 var xhr = require('xhr');
 var SearchInterface = require('./SearchInterface.js');
-var BlackLabResults = require('./BlackLabResults.js');
+var GroupedBlackLabResults = require('./GroupedBlackLabResults.js');
 var DictionaryInterface = require('./DictionaryInterface.js');
 var bs = require('react-bootstrap');
 var TabbedArea = bs.TabbedArea;
@@ -49,6 +49,7 @@ var CorpusSearcher = React.createClass({
   getInitialState: function() {
     return {
       results: [], 
+      groupedResults: [],
       dictionaries: {
         technique: {
           name: 'technique',
@@ -67,13 +68,13 @@ var CorpusSearcher = React.createClass({
   executeSearch: function(queryObj) {
     xhr({
       body: JSON.stringify(queryObj),
-      uri: '/api/search',
+      uri: '/api/groupedSearch',
       headers: {
         'Content-Type': 'application/json'
       },
       method: 'POST'
     }, function(err, resp, body) {
-      this.setState({results: JSON.parse(body)});
+      this.setState({groupedResults: JSON.parse(body)});
     }.bind(this));
   },
   render: function() {
@@ -100,7 +101,7 @@ var CorpusSearcher = React.createClass({
         </div>
         <div className="col-md-8">
 
-          <BlackLabResults results={this.state.results}/>
+          <GroupedBlackLabResults results={this.state.groupedResults}/>
 
         </div>
       </section>
