@@ -4,7 +4,6 @@ var Table = bs.Table;
 var Button = bs.Button;
 var PageItem = bs.PageItem;
 var Pager = bs.Pager;
-var GroupedBlackLabPager = require('./GroupedBlackLabPager.js');
 var KeyedBlackLabResults = require('./KeyedBlackLabResults.js');
 
 var GroupedBlackLabResult = React.createClass({
