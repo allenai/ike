@@ -3,6 +3,8 @@ var bs = require('react-bootstrap');
 var Table = bs.Table;
 var Pager = bs.Pager;
 var Button = bs.Button;
+var ButtonToolbar = bs.ButtonToolbar;
+var ButtonGroup = bs.ButtonGroup;
 var PageItem = bs.PageItem;
 var KeyedBlackLabResults = require('./KeyedBlackLabResults.js');
 
@@ -35,27 +37,53 @@ var GroupedBlackLabPager = React.createClass({
       var disabled = i == currentPage;
       var handleClick = function(e) { e.preventDefault(); callback(i); };
       var button = <Button
+        className="pageButton"
+        bsSize="small"
         key={"page" + i}
         href="#"
         disabled={disabled}
         onClick={handleClick}>{i+1}</Button>;
       return button;
     };
-    var buttons = [];
+    var allButtons = [];
     for (var i = 0; i < numPages; i++) {
-      buttons.push(makeButton(i));
+      allButtons.push(makeButton(i));
+    }
+
+    var wsize = 3;
+    var buttons = [];
+    var dots = <Button className="pageButton" bsSize="small" disabled>&middot;&middot;&middot;</Button>;
+
+    if (currentPage - wsize <= 1) {
+      buttons = buttons.concat(allButtons.slice(0, currentPage));
+    } else {
+      var left = allButtons.slice(currentPage - wsize, currentPage);
+      buttons = buttons.concat([allButtons[0], dots], left);
+    }
+    if (currentPage + wsize >= numPages) {
+      buttons = buttons.concat(allButtons.slice(currentPage, numPages));
+    } else {
+      var right = allButtons.slice(currentPage, currentPage + wsize);
+      buttons = buttons.concat(right, [dots, allButtons.slice(numPages-1, numPages)]);
     }
     var hasPrev = currentPage != 0;
     var hasNext = currentPage < numPages - 1;
     if (numPages > 1) {
       var nextFn = function(e) { e.preventDefault(); callback(currentPage + 1); };
       var prevFn = function(e) { e.preventDefault(); callback(currentPage - 1); };
-      var prev = <Button key="pageprev" href="#" disabled={!hasPrev} onClick={prevFn}>Prev</Button>;
-      var next = <Button key="pagenext" href="#" disabled={!hasNext} onClick={nextFn}>Next</Button>;
-      buttons.push(next);
-      buttons.unshift(prev);
+      var prev = <Button className="pageButton" bsSize="small" key="pageprev" href="#" disabled={!hasPrev} onClick={prevFn}>Prev</Button>;
+      var next = <Button className="pageButton" bsSize="small" key="pagenext" href="#" disabled={!hasNext} onClick={nextFn}>Next</Button>;
+
+      return (
+        <ButtonToolbar justified>
+          <ButtonGroup>{prev}</ButtonGroup>
+          <ButtonGroup>{buttons}</ButtonGroup>
+          <ButtonGroup>{next}</ButtonGroup>
+        </ButtonToolbar>
+        );
+    } else {
+      return <div></div>;
     }
-    return <div>{buttons}</div>;
   }
 });
 
@@ -79,7 +107,7 @@ var GroupedBlackLabResults = React.createClass({
   },
   getInitialState: function() {
     return {
-      resultsPerPage: 20,
+      resultsPerPage: 50,
       currentPage: 0
     };
   },
