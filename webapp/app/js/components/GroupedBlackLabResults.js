@@ -9,8 +9,13 @@ var KeyedBlackLabResults = require('./KeyedBlackLabResults.js');
 var GroupedBlackLabResult = React.createClass({
   render: function() {
     var result = this.props.result;
+    var add = this.props.callbacks.addEntry;
+    var target = this.props.targetDictionary;
+    var addEntry = function(e) { add(result.key) };
+    var button = (target == null) ? null : <button onClick={addEntry}>{target}</button>;
     return (
       <tr>
+        <td>{button}</td>
         <td>{result.key}</td>
         <td>{result.size}</td>
         <td>
@@ -30,6 +35,7 @@ var GroupedBlackLabPager = React.createClass({
       var disabled = i == currentPage;
       var handleClick = function(e) { e.preventDefault(); callback(i); };
       var button = <Button
+        key={"page" + i}
         href="#"
         disabled={disabled}
         onClick={handleClick}>{i+1}</Button>;
@@ -44,8 +50,8 @@ var GroupedBlackLabPager = React.createClass({
     if (numPages > 1) {
       var nextFn = function(e) { e.preventDefault(); callback(currentPage + 1); };
       var prevFn = function(e) { e.preventDefault(); callback(currentPage - 1); };
-      var prev = <Button href="#" disabled={!hasPrev} onClick={prevFn}>Prev</Button>;
-      var next = <Button href="#" disabled={!hasNext} onClick={nextFn}>Next</Button>;
+      var prev = <Button key="pageprev" href="#" disabled={!hasPrev} onClick={prevFn}>Prev</Button>;
+      var next = <Button key="pagenext" href="#" disabled={!hasNext} onClick={nextFn}>Next</Button>;
       buttons.push(next);
       buttons.unshift(prev);
     }
@@ -89,11 +95,16 @@ var GroupedBlackLabResults = React.createClass({
   },
   render: function() {
     this.props.results.sort(function(r1, r2) {
-      return r2.size - r1.size;
+      var diff = r2.size - r1.size;
+      if (diff == 0) {
+        return r1.key > r2.key ? 1 : -1;
+      } else {
+        return diff;
+      }
     });
     var makeRow = function(r) {
-      return <GroupedBlackLabResult key={r.key} result={r}/>;
-    };
+      return <GroupedBlackLabResult key={r.key} result={r} callbacks={this.props.callbacks} targetDictionary={this.props.targetDictionary}/>;
+    }.bind(this);
     var pager = <GroupedBlackLabPager numPages={this.numPages()} currentPage={this.state.currentPage} callback={this.toPage}/>;
     return (
       <div>
@@ -101,6 +112,7 @@ var GroupedBlackLabResults = React.createClass({
         <Table striped bordered condensed hover>
           <thead>
             <tr>
+              <th>&nbsp;</th>
               <th>Group</th>
               <th># Hits</th>
               <th>Hits</th>

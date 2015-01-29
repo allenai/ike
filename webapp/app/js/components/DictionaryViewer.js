@@ -12,8 +12,8 @@ var DictionaryViewer = React.createClass({
     var addPos = function(e) { callbacks.addEntry(name, "positive", e); }
     var addNeg = function(e) { callbacks.addEntry(name, "negative", e); }
     var header = <h3>{name}</h3>;
-    var posTab = "Positive Instances (" + dictionary.positive.length + ")";
-    var negTab = "Negative Instances (" + dictionary.negative.length + ")";
+    var posTab = "Positive (" + dictionary.positive.length + ")";
+    var negTab = "Negative (" + dictionary.negative.length + ")";
     return (
       <div>
         <TabbedArea eventKey={1} animation={false}>

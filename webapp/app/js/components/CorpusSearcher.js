@@ -10,11 +10,16 @@ var Alert = bs.Alert;
 
 var CorpusSearcher = React.createClass({
 
+  setTargetDictionary: function(name) {
+    console.log('updating to ' + name);
+    this.setState({targetDictionary: name});
+  },
+
   createDictionary: function(name) {
     var dicts = this.state.dictionaries;
     if (!(name in dicts)) {
       dicts[name] = {name: name, positive: [], negative: []};
-      this.setState({dictionaries: dicts});
+      this.setState({dictionaries: dicts, targetDictionary: name});
     }
   },
 
@@ -22,7 +27,11 @@ var CorpusSearcher = React.createClass({
     var dicts = this.state.dictionaries;
     if (name in dicts) {
       delete dicts[name];
-      this.setState({dictionaries: dicts});
+      var newState = {dictionaries: dicts};
+      if (this.state.targetDictionary == name) {
+        newState['targetDictionary'] = null;
+      }
+      this.setState(newState);
     }
   },
 
@@ -55,23 +64,14 @@ var CorpusSearcher = React.createClass({
       errorMessage: null,
       hasContent: false,
       loading: false,
-      dictionaries: {
-        technique: {
-          name: 'technique',
-          positive: [],
-          negative: []
-        },
-        task: {
-          name: 'task',
-          positive: ['pos tagging', 'semantic parsing', 'machine translation'],
-          negative: ['mert', 'joe smith', 'conll shared task']
-        }
-      }
+      targetDictionary: null,
+      dictionaries: {}
     };
   },
 
   executeSearch: function(queryObj) {
     this.setState({loading: true});
+    queryObj['dictionaries'] = this.state.dictionaries;
     xhr({
       body: JSON.stringify(queryObj),
       uri: '/api/groupedSearch',
@@ -106,13 +106,21 @@ var CorpusSearcher = React.createClass({
       createDictionary: this.createDictionary,
       deleteDictionary: this.deleteDictionary
     };
+    var targetDictionary = this.state.targetDictionary;
+    var searchCallbacks = {
+      executeSearch: this.executeSearch,
+      setTargetDictionary: this.setTargetDictionary,
+      addEntry: function(name) {
+        this.addEntry(targetDictionary, 'positive', name);
+      }.bind(this)
+    };
     var content;
     if (this.state.error) {
       content = <Alert bsStyle="danger">{this.state.errorMessage}</Alert>;
     } else if (this.state.loading) {
       content = "Loading...";
     } else if (this.state.hasContent) {
-      content = <GroupedBlackLabResults results={this.state.groupedResults}/>;
+      content = <GroupedBlackLabResults results={this.state.groupedResults} callbacks={searchCallbacks} targetDictionary={targetDictionary} />;
     } else {
       content = null;
     }
@@ -121,10 +129,10 @@ var CorpusSearcher = React.createClass({
         <div className="col-md-4">
           <TabbedArea defaultActiveKey={1} animation={false}>
             <TabPane tab="Search" eventKey={1}>
-              <SearchInterface callback={this.executeSearch}/>
+              <SearchInterface callbacks={searchCallbacks} targetDictionary={this.state.targetDictionary} dictionaries={this.state.dictionaries}/>
             </TabPane>
             <TabPane tab="Dictionaries" eventKey={2}>
-              <DictionaryInterface dictionaries={this.state.dictionaries} callbacks={dictionaryCallbacks} /> 
+              <DictionaryInterface dictionaries={this.state.dictionaries} callbacks={dictionaryCallbacks} targetDictionary={targetDictionary}/> 
             </TabPane>
           </TabbedArea>
         </div>

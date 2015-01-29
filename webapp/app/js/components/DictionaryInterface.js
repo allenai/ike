@@ -28,7 +28,7 @@ var DictionaryInterface = React.createClass({
         </div>
       );
       return (
-        <Panel header={header} eventKey={i}>
+        <Panel header={header} eventKey={name} key={name}>
           <DictionaryViewer
             key={name}
             dictionary={dict}
@@ -37,6 +37,7 @@ var DictionaryInterface = React.createClass({
       );
     };
     var dictNames = Object.keys(dictionaries);
+    var target = this.props.targetDictionary;
     return (
       <div>
         <DictionaryAdder callback={callbacks.createDictionary}/>

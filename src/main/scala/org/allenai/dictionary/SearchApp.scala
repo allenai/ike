@@ -9,8 +9,8 @@ import nl.inl.blacklab.search.TextPattern
 import scala.util.Try
 import nl.inl.blacklab.search.HitsWindow
 
-case class SearchRequest(query: String, limit: Int = 100, evidenceLimit: Int = 10,
-  groupBy: Option[String] = None)
+case class SearchRequest(query: String, dictionaries: Map[String, Dictionary], limit: Int = 100,
+    evidenceLimit: Int = 10, groupBy: Option[String] = None)
 
 case class SearchApp(config: Config) {
 
@@ -36,7 +36,8 @@ case class SearchApp(config: Config) {
 
   def search(r: SearchRequest): Try[Seq[BlackLabResult]] = for {
     query <- QueryLanguage.parse(r.query)
-    textPattern <- semantics(query)
+    interpolated <- QueryLanguage.interpolateDictionaries(query, r.dictionaries)
+    textPattern <- semantics(interpolated)
     hits <- blackLabHits(textPattern, r.limit)
     results <- fromHits(hits)
   } yield results

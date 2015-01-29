@@ -2,13 +2,34 @@ var React = require('react');
 var bs = require('react-bootstrap');
 var Input = bs.Input;
 
+var DictionarySelector = React.createClass({
+  setTargetDictionary: function(e) {
+    this.props.callbacks.setTargetDictionary(e.target.value);
+  },
+  render: function() {
+    var dicts = Object.keys(this.props.dictionaries);
+    if (dicts.length == 0) {
+      return null;
+    }
+    var target = this.props.targetDictionary;
+    var makeDict = function(name) {
+      return <option key={name} value={name}>{name}</option>;
+    }
+    return (
+      <Input type="select" label="Target Dictionary" onChange={this.setTargetDictionary} value={target}>
+        {dicts.map(makeDict)}
+      </Input>
+    );
+  }
+});
+
 var SearchInterface = React.createClass({
   getInitialState: function() {
-    return {query: "(JJ) information extraction", limit: 100, evidenceLimit: 5};
+    return {query: "(JJ) information extraction", limit: 100, evidenceLimit: 1};
   },
   handleSubmit: function(e) {
     e.preventDefault();
-    this.props.callback(this.state);
+    this.props.callbacks.executeSearch(this.state);
   },
   onPatternChange: function(e) {
     this.setState({query: e.target.value});
@@ -22,6 +43,7 @@ var SearchInterface = React.createClass({
   render: function() {
     return (
       <form onSubmit={this.handleSubmit}>
+        <DictionarySelector callbacks={this.props.callbacks} targetDictionary={this.props.targetDictionary} dictionaries={this.props.dictionaries}/>
         <Input type="text" label="Input Pattern" onChange={this.onPatternChange} value={this.state.query}/> 
         <Input type="select" label="Maximum Number of Rows" onChange={this.onLimitChange} value={this.state.limit}>
           <option value="10">10</option>

@@ -7,11 +7,12 @@ import scala.util.{ Try, Failure, Success }
 import java.text.ParseException
 
 sealed trait QExpr extends Positional
-case class QWord(value: String) extends QExpr
-case class QCluster(value: String) extends QExpr
-case class QPos(value: String) extends QExpr
-case class QDict(value: String) extends QExpr
-object QWildcard extends QExpr
+sealed trait QLeaf extends QExpr
+case class QWord(value: String) extends QExpr with QLeaf
+case class QCluster(value: String) extends QExpr with QLeaf
+case class QPos(value: String) extends QExpr with QLeaf
+case class QDict(value: String) extends QExpr with QLeaf
+object QWildcard extends QExpr with QLeaf
 case class QNamed(qexpr: QExpr, name: String) extends QExpr
 case class QUnnamed(qexpr: QExpr) extends QExpr
 case class QNonCap(qexpr: QExpr) extends QExpr
@@ -69,5 +70,24 @@ object QueryLanguage {
     case parser.NoSuccess(message, next) =>
       val exception = new ParseException(message, next.pos.column)
       Failure(exception)
+  }
+  def interpolateDictionaries(expr: QExpr, dicts: Map[String, Dictionary]): Try[QExpr] = {
+    def interp(value: String): QDisj = dicts.get(value) match {
+      case Some(dict) => Dictionary.positiveDisj(dict)
+      case None => 
+        throw new IllegalArgumentException(s"Could not find dictionary '$value'")
+    }
+    def recurse(expr: QExpr): QExpr = expr match {
+      case QDict(value) => interp(value)
+      case l: QLeaf => l 
+      case QSeq(children) => QSeq(children.map(recurse))
+      case QDisj(children) => QDisj(children.map(recurse))
+      case QNamed(expr, name) => QNamed(recurse(expr), name)
+      case QNonCap(expr) => QNonCap(recurse(expr))
+      case QPlus(expr) => QPlus(recurse(expr))
+      case QStar(expr) => QStar(recurse(expr))
+      case QUnnamed(expr) => QUnnamed(recurse(expr))
+    }
+    Try(recurse(expr))
   }
 }
