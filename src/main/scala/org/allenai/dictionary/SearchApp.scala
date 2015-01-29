@@ -8,6 +8,7 @@ import org.allenai.common.immutable.Interval
 import nl.inl.blacklab.search.TextPattern
 import scala.util.Try
 import nl.inl.blacklab.search.HitsWindow
+import scala.util.Failure
 
 case class SearchRequest(query: String, dictionaries: Map[String, Dictionary], limit: Int = 100,
     evidenceLimit: Int = 10, groupBy: Option[String] = None)
@@ -41,7 +42,6 @@ case class SearchApp(config: Config) {
     hits <- blackLabHits(textPattern, r.limit)
     results <- fromHits(hits)
   } yield results
-
   def groupedSearch(req: SearchRequest): Try[Seq[GroupedBlackLabResult]] = for {
     results <- search(req)
     keyed = results map (keyResult(req, _))
