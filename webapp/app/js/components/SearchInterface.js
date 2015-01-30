@@ -25,7 +25,7 @@ var DictionarySelector = React.createClass({
 
 var SearchInterface = React.createClass({
   getInitialState: function() {
-    return {query: "{IN, TO} the (NNP+) system", limit: 10000, evidenceLimit: 1};
+    return {query: "JJ parsing", limit: 10000, evidenceLimit: 1};
   },
   handleSubmit: function(e) {
     e.preventDefault();

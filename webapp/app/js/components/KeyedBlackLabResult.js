@@ -1,4 +1,4 @@
-var React = require('react');
+var React = require('react/addons');
 var bs = require('react-bootstrap');
 var WordDataSeq = require('./WordDataSeq.js');
 var KeyedBlackLabResult = React.createClass({
@@ -8,7 +8,12 @@ var KeyedBlackLabResult = React.createClass({
     var result = keyedResult.result;
     var wordData = function(key, start, end, hl) {
       var data = result.wordData.slice(start, end);
-      return <WordDataSeq key={key} data={data} highlighted={hl}/>;
+      var words = data.map(function(d) { return d.word; });
+      var cx = React.addons.classSet;
+      var classes = cx({
+        'highlighted': hl
+      });
+      return <span className={classes}>{words.join(" ")}</span>;
     };
     var keyStart = keyInterval[0];
     var keyEnd = keyInterval[1];
@@ -17,11 +22,7 @@ var KeyedBlackLabResult = React.createClass({
     var middle = wordData("middle", keyStart, keyEnd, true);
     var right = wordData("right", keyEnd, n, false);
     return (
-      <tr>
-        <td className="leftContext">{left}</td>
-        <td className="hit">{middle}</td>
-        <td className="rightContext">{right}</td>
-      </tr>
+      <div>{left} {middle} {right}</div>
     );
   }
 });

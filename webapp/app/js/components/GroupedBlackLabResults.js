@@ -4,27 +4,7 @@ var Table = bs.Table;
 var Button = bs.Button;
 var PageItem = bs.PageItem;
 var Pager = bs.Pager;
-var KeyedBlackLabResults = require('./KeyedBlackLabResults.js');
-
-var GroupedBlackLabResult = React.createClass({
-  render: function() {
-    var result = this.props.result;
-    var add = this.props.callbacks.addEntry;
-    var target = this.props.targetDictionary;
-    var addEntry = function(e) { add(result.key) };
-    var button = (target == null) ? null : <button onClick={addEntry}>{target}</button>;
-    return (
-      <tr>
-        <td>{button}</td>
-        <td>{result.key}</td>
-        <td>{result.size}</td>
-        <td>
-          <KeyedBlackLabResults keyedResults={result.group}/>
-        </td>
-      </tr>
-    );
-  }
-});
+var GroupedBlackLabResult = require('./GroupedBlackLabResult.js');
 
 var GroupedBlackLabResults = React.createClass({
   startAt: function() {
@@ -68,13 +48,11 @@ var GroupedBlackLabResults = React.createClass({
     this.props.results.sort(this.bySize);
   },
   makeRow: function(result) {
-    return (
-      <GroupedBlackLabResult
+    return <GroupedBlackLabResult
         key={result.key}
         result={result}
         callbacks={this.props.callbacks}
-        targetDictionary={this.props.targetDictionary}/>
-    );
+        targetDictionary={this.props.targetDictionary}/>;
   },
   makePager: function() {
     var numPages = this.numPages();
@@ -106,13 +84,13 @@ var GroupedBlackLabResults = React.createClass({
         <Table striped bordered condensed hover>
           <thead>
             <tr>
-              <th>&nbsp;</th>
+              <th width="120px">Add to Dict.</th>
               <th>Group</th>
               <th>Count</th>
               <th>Evidence</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="resultTable">
             {this.pageResults().map(this.makeRow)}
           </tbody>
         </Table>

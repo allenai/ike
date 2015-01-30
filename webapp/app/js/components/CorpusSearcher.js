@@ -64,8 +64,10 @@ var CorpusSearcher = React.createClass({
       errorMessage: null,
       hasContent: false,
       loading: false,
-      targetDictionary: null,
-      dictionaries: {}
+      targetDictionary: 'task',
+      dictionaries: {
+        task: {name: 'task', positive: [], negative: []}
+      }
     };
   },
 
@@ -107,11 +109,25 @@ var CorpusSearcher = React.createClass({
       deleteDictionary: this.deleteDictionary
     };
     var targetDictionary = this.state.targetDictionary;
+    var dictionaries = this.state.dictionaries;
     var searchCallbacks = {
       executeSearch: this.executeSearch,
       setTargetDictionary: this.setTargetDictionary,
-      addEntry: function(name) {
-        this.addEntry(targetDictionary, 'positive', name);
+      addEntry: function(name, type) {
+        this.addEntry(targetDictionary, type, name);
+      }.bind(this),
+      isPositive: function(name, entry) {
+        return dictionaries[name]['positive'].indexOf(entry) >= 0;
+      }.bind(this),
+      isNegative: function(name, entry) {
+        return dictionaries[name]['negative'].indexOf(entry) >= 0;
+      }.bind(this),
+      toggle: function(name, type, entry) {
+        if (dictionaries[name][type].indexOf(entry) >= 0) {
+          this.deleteEntry(name, type, entry);
+        } else {
+          this.addEntry(name, type, entry);
+        }
       }.bind(this)
     };
     var content;
