@@ -67,7 +67,8 @@ var CorpusSearcher = React.createClass({
       targetDictionary: 'task',
       dictionaries: {
         task: {name: 'task', positive: [], negative: []}
-      }
+      },
+      showAdded: false
     };
   },
 
@@ -113,6 +114,10 @@ var CorpusSearcher = React.createClass({
     var searchCallbacks = {
       executeSearch: this.executeSearch,
       setTargetDictionary: this.setTargetDictionary,
+      showAdded: function(x) {
+        console.log('setting showAdded to ' + x);
+        this.setState({showAdded: x});
+      }.bind(this),
       addEntry: function(name, type) {
         this.addEntry(targetDictionary, type, name);
       }.bind(this),
@@ -122,6 +127,11 @@ var CorpusSearcher = React.createClass({
       isNegative: function(name, entry) {
         return dictionaries[name]['negative'].indexOf(entry) >= 0;
       }.bind(this),
+      hasEntry: function(name, entry) {
+        var pos = dictionaries[name]['positive'].indexOf(entry) >= 0;
+        var neg = dictionaries[name]['negative'].indexOf(entry) >= 0;
+        return pos || neg;
+      },
       toggle: function(name, type, entry) {
         if (dictionaries[name][type].indexOf(entry) >= 0) {
           this.deleteEntry(name, type, entry);
@@ -136,7 +146,7 @@ var CorpusSearcher = React.createClass({
     } else if (this.state.loading) {
       content = "Loading...";
     } else if (this.state.hasContent) {
-      content = <GroupedBlackLabResults results={this.state.groupedResults} callbacks={searchCallbacks} targetDictionary={targetDictionary} />;
+      content = <GroupedBlackLabResults showAdded={this.state.showAdded} results={this.state.groupedResults} callbacks={searchCallbacks} targetDictionary={targetDictionary} />;
     } else {
       content = null;
     }
@@ -145,7 +155,7 @@ var CorpusSearcher = React.createClass({
         <div className="col-md-4">
           <TabbedArea defaultActiveKey={1} animation={false}>
             <TabPane tab="Search" eventKey={1}>
-              <SearchInterface callbacks={searchCallbacks} targetDictionary={this.state.targetDictionary} dictionaries={this.state.dictionaries}/>
+              <SearchInterface showAdded={this.state.showAdded} callbacks={searchCallbacks} targetDictionary={this.state.targetDictionary} dictionaries={this.state.dictionaries}/>
             </TabPane>
             <TabPane tab="Dictionaries" eventKey={2}>
               <DictionaryInterface dictionaries={this.state.dictionaries} callbacks={dictionaryCallbacks} targetDictionary={targetDictionary}/> 

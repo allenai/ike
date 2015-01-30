@@ -23,7 +23,7 @@ var GroupedBlackLabResults = React.createClass({
   getInitialState: function() {
     return {
       resultsPerPage: 50,
-      currentPage: 0
+      currentPage: 0,
     };
   },
   hasNextPage: function() {
@@ -32,9 +32,21 @@ var GroupedBlackLabResults = React.createClass({
   hasPrevPage: function() {
     return this.state.currentPage > 0;
   },
+  filteredResults: function() {
+    var target = this.props.targetDictionary;
+    var hasEntry = this.props.callbacks.hasEntry;
+    var results = this.props.results;
+    var showAdded = this.props.showAdded;
+    var filtered = results.filter(function(r) {
+      var entry = r.key;
+      return showAdded || !hasEntry(target, entry);
+    });
+    return filtered;
+  },
   pageResults: function() {
     var start = this.startAt();
-    return this.props.results.slice(start, start + this.state.resultsPerPage);
+    var filtered = this.filteredResults();
+    return filtered.slice(start, start + this.state.resultsPerPage);
   },
   bySize: function(r1, r2) {
     var diff = r2.size - r1.size;

@@ -40,6 +40,9 @@ var SearchInterface = React.createClass({
   onEvidenceLimitChange: function(e) {
     this.setState({evidenceLimit: parseInt(e.target.value)});
   },
+  toggleShowAdded: function() {
+    this.props.callbacks.showAdded(!this.props.showAdded);
+  },
   render: function() {
     return (
       <form onSubmit={this.handleSubmit}>
@@ -61,6 +64,7 @@ var SearchInterface = React.createClass({
           <option value="1000">1000</option>
           <option value="10000">10000</option>
         </Input>
+        <Input type="checkbox" label="Hide Added Rows" checked={!this.props.showAdded} onChange={this.toggleShowAdded}/>
         <Input type="submit" value="Search"/>
       </form>
     );
