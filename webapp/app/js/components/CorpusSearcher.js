@@ -122,15 +122,27 @@ var CorpusSearcher = React.createClass({
         this.addEntry(targetDictionary, type, name);
       }.bind(this),
       isPositive: function(name, entry) {
-        return dictionaries[name]['positive'].indexOf(entry) >= 0;
+        if (name in dictionaries) {
+          return dictionaries[name]['positive'].indexOf(entry) >= 0;
+        } else {
+          return false;
+        }
       }.bind(this),
       isNegative: function(name, entry) {
-        return dictionaries[name]['negative'].indexOf(entry) >= 0;
+        if (name in dictionaries) {
+          return dictionaries[name]['negative'].indexOf(entry) >= 0;
+        } else {
+          return false;
+        }
       }.bind(this),
       hasEntry: function(name, entry) {
-        var pos = dictionaries[name]['positive'].indexOf(entry) >= 0;
-        var neg = dictionaries[name]['negative'].indexOf(entry) >= 0;
-        return pos || neg;
+        if (name in dictionaries) {
+          var pos = dictionaries[name]['positive'].indexOf(entry) >= 0;
+          var neg = dictionaries[name]['negative'].indexOf(entry) >= 0;
+         return pos || neg;
+       } else {
+        return false;
+       }
       },
       toggle: function(name, type, entry) {
         if (dictionaries[name][type].indexOf(entry) >= 0) {

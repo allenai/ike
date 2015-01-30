@@ -22,15 +22,14 @@ var GroupedBlackLabResult = React.createClass({
     if (target != null) {
       var posStyle = isPositive(target, entry) ? 'primary' : 'default';
       var negStyle = isNegative(target, entry) ? 'warning' : 'default';
+      var style = {'float': 'none', 'display': 'inline-block'}; 
       return (
-        <div>
         <ButtonToolbar>
-          <ButtonGroup bsSize="small">
-            <Button onClick={togglePos} bsStyle={posStyle}>{target}</Button>
-            <Button onClick={toggleNeg} bsStyle={negStyle}>not {target}</Button>
+          <ButtonGroup bsSize="small" style={{"white-space": "nowrap"}}>
+            <Button style={style} onClick={togglePos} bsStyle={posStyle}>{target}</Button>
+            <Button style={style} onClick={toggleNeg} bsStyle={negStyle}>not {target}</Button>
           </ButtonGroup>
         </ButtonToolbar>
-        </div>
       );
     }
   },
@@ -39,7 +38,7 @@ var GroupedBlackLabResult = React.createClass({
     var button = this.makeButton();
     return (
       <tr>
-        <td>{button}</td>
+        <td style={{width: "1%", "white-space":"nowrap"}}>{button}</td>
         <td>{result.key}</td>
         <td>{result.size}</td>
         <td>

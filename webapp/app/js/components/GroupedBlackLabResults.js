@@ -96,7 +96,7 @@ var GroupedBlackLabResults = React.createClass({
         <Table striped bordered condensed hover>
           <thead>
             <tr>
-              <th width="120px">Add to Dict.</th>
+              <th>Add</th>
               <th>Group</th>
               <th>Count</th>
               <th>Evidence</th>
