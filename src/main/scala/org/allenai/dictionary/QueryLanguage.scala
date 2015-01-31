@@ -6,7 +6,28 @@ import java.util.regex.Pattern
 import scala.util.{ Try, Failure, Success }
 import java.text.ParseException
 
-sealed trait QExpr extends Positional
+trait EndPositional {
+  this: Positional =>
+  var _end = -1
+  def setEnd(i: Int): Unit = _end = i
+  def end: Int = _end
+  def start: Int = this.pos.column - 1
+}
+sealed trait QExpr extends Positional with EndPositional
+case object QExpr {
+  // TODO(tonyf): set up so recursive calls are simplified
+  def children(qexpr: QExpr): Seq[QExpr] = qexpr match {
+    case l: QLeaf => Nil
+    case n: QNamed => children(n.qexpr)
+    case u: QUnnamed => children(u.qexpr)
+    case n: QNonCap => children(n.qexpr)
+    case s: QStar => children(s.qexpr)
+    case p: QPlus => children(p.qexpr)
+    case s: QSeq => s.qexprs
+    case d: QDisj => d.qexprs
+  }
+}
+
 sealed trait QLeaf extends QExpr
 case class QWord(value: String) extends QExpr with QLeaf
 case class QCluster(value: String) extends QExpr with QLeaf
@@ -34,30 +55,43 @@ case object QDisj {
 }
 
 object QExprParser extends RegexParsers {
+  def endPositioned(p: => Parser[QExpr]): Parser[QExpr] = {
+    val pp = positioned(p)
+    new Parser[QExpr] {
+      def apply(in: Input): ParseResult[QExpr] = {
+        pp(in) match {
+          case Success(t, in1) =>
+            t.setEnd(in1.offset)
+            Success(t, in1)
+          case ns: NoSuccess => ns
+        }
+      }
+    }
+  }
   val posTagSet = Seq("PRP$", "NNPS", "WRB", "WP$", "WDT", "VBZ", "VBP", "VBN", "VBG", "VBD", "SYM",
     "RBS", "RBR", "PRP", "POS", "PDT", "NNS", "NNP", "JJS", "JJR", "WP", "VB", "UH", "TO", "RP",
     "RB", "NN", "MD", "LS", "JJ", "IN", "FW", "EX", "DT", "CD", "CC")
   val posTagRegex = posTagSet.map(Pattern.quote).mkString("|").r
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
-  def word = positioned("""[^|\^$(){}\s*+,]+""".r ^^ QWord)
-  def cluster = positioned("""\^[01]+""".r ^^ { s => QCluster(s.tail) })
-  def pos = positioned(posTagRegex ^^ QPos)
-  def dict = positioned("""\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) })
-  def wildcard = positioned("\\.".r ^^^ QWildcard)
-  def atom = positioned(wildcard | pos | dict | cluster | word)
+  def word = endPositioned("""[^|\^$(){}\s*+,]+""".r ^^ QWord)
+  def cluster = endPositioned("""\^[01]+""".r ^^ { s => QCluster(s.tail) })
+  def pos = endPositioned(posTagRegex ^^ QPos)
+  def dict = endPositioned("""\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) })
+  def wildcard = endPositioned("\\.".r ^^^ QWildcard)
+  def atom = endPositioned(wildcard | pos | dict | cluster | word)
   def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
-  def named = positioned("(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) })
-  def unnamed = positioned("(" ~> expr <~ ")" ^^ QUnnamed)
-  def nonCap = positioned("(?:" ~> expr <~ ")" ^^ QNonCap)
-  def curlyDisj = positioned("{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq)
-  def operand = positioned(named | nonCap | unnamed | curlyDisj | atom)
-  def starred = positioned(operand <~ "*" ^^ QStar)
-  def plussed = positioned(operand <~ "+" ^^ QPlus)
-  def modified = positioned(starred | plussed)
-  def piece: Parser[QExpr] = positioned((modified | operand))
-  def branch = positioned(rep1(piece) ^^ QSeq.fromSeq)
-  def expr = positioned(repsep(branch, "|") ^^ QDisj.fromSeq)
+  def named = endPositioned("(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) })
+  def unnamed = endPositioned("(" ~> expr <~ ")" ^^ QUnnamed)
+  def nonCap = endPositioned("(?:" ~> expr <~ ")" ^^ QNonCap)
+  def curlyDisj = endPositioned("{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq)
+  def operand = endPositioned(named | nonCap | unnamed | curlyDisj | atom)
+  def starred = endPositioned(operand <~ "*" ^^ QStar)
+  def plussed = endPositioned(operand <~ "+" ^^ QPlus)
+  def modified = endPositioned(starred | plussed)
+  def piece: Parser[QExpr] = endPositioned((modified | operand))
+  def branch = endPositioned(rep1(piece) ^^ QSeq.fromSeq)
+  def expr = endPositioned(repsep(branch, "|") ^^ QDisj.fromSeq)
   def parse(s: String) = parseAll(expr, s)
   // scalastyle:on
 }
@@ -74,12 +108,12 @@ object QueryLanguage {
   def interpolateDictionaries(expr: QExpr, dicts: Map[String, Dictionary]): Try[QExpr] = {
     def interp(value: String): QDisj = dicts.get(value) match {
       case Some(dict) => Dictionary.positiveDisj(dict)
-      case None => 
+      case None =>
         throw new IllegalArgumentException(s"Could not find dictionary '$value'")
     }
     def recurse(expr: QExpr): QExpr = expr match {
       case QDict(value) => interp(value)
-      case l: QLeaf => l 
+      case l: QLeaf => l
       case QSeq(children) => QSeq(children.map(recurse))
       case QDisj(children) => QDisj(children.map(recurse))
       case QNamed(expr, name) => QNamed(recurse(expr), name)
