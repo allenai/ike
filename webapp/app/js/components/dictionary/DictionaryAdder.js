@@ -1,29 +1,34 @@
 var React = require('react');
 var bs = require('react-bootstrap');
 var Input = bs.Input;
-var EntryAdder = React.createClass({
+var DictionaryAdder = React.createClass({
   getInitialState: function() {
     return {value: ''};
   },
   handleSubmit: function(e) {
     e.preventDefault();
-    this.props.callback(this.state.value);
+    var name = this.state.value;
+    var dicts = this.props.dictionaries;
+    var update = this.props.updateDictionaries;
+    if (!(name in dicts)) {
+      dicts[name] = {name: name, positive: [], negative: []};
+      update(dicts);
+    }
     this.setState({value: ''});
   },
   onChange: function(e) {
     this.setState({value: e.target.value});
   },
   render: function() {
-    var text = "Add " + this.props.label + " Entry";
     return (
       <form onSubmit={this.handleSubmit}>
         <Input
           type="text"
           onChange={this.onChange}
           value={this.state.value}
-          placeholder={text}/>
+          placeholder="Create New Dictionary"/>
       </form>
     );
-  },
+  }
 });
-module.exports = EntryAdder;
+module.exports = DictionaryAdder;

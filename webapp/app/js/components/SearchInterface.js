@@ -1,33 +1,23 @@
 var React = require('react');
 var bs = require('react-bootstrap');
+var Navbar = bs.Navbar;
+var Nav = bs.Nav;
+var NavItem = bs.NavItem;
 var Input = bs.Input;
-
+var Glyphicon = bs.Glyphicon;
 var SearchInterface = React.createClass({
   getInitialState: function() {
-    return {query: "(JJ) information extraction", limit: 100};
-  },
-  handleSubmit: function(e) {
-    e.preventDefault();
-    this.props.callback(this.state);
-  },
-  onPatternChange: function(e) {
-    this.setState({query: e.target.value});
-  },
-  onLimitChange: function(e) {
-    this.setState({limit: parseInt(e.target.value)});
+    return {};
   },
   render: function() {
+    var divStyle = {
+    };
     return (
-      <form onSubmit={this.handleSubmit}>
-        <Input type="text" label="Input Pattern" onChange={this.onPatternChange} value={this.state.query}/> 
-        <Input type="select" label="Maximum Number of Results" onChange={this.onLimitChange} value={this.state.limit}>
-          <option value="10">10</option>
-          <option value="100">100</option>
-          <option value="200">200</option>
-          <option value="500">500</option>
-        </Input>
-        <Input type="submit" value="Search"/>
-      </form>
+      <Navbar fluid>
+        <div style={{marginTop:'10px'}}>
+          <Input type="text" placeholder="Enter Query"/>
+        </div>
+      </Navbar>
     );
   }
 });
