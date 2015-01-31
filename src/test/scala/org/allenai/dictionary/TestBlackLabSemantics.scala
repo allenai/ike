@@ -80,7 +80,7 @@ class TestBlackLabSemantics extends UnitSpec with ScratchDirectory {
     val expected = Set("x I", "x hate", "x They", "x taste", "x It")
     assert(searchGroups(q) == expected)
   }
-  
+
   it should "handle disjunctions at the beginning" in {
     val q = "{I, They} (?<x>VBP)"
     val expected = Set("x like", "x hate", "x taste")
