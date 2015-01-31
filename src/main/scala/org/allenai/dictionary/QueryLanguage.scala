@@ -18,11 +18,11 @@ case object QExpr {
   // TODO(tonyf): set up so recursive calls are simplified
   def children(qexpr: QExpr): Seq[QExpr] = qexpr match {
     case l: QLeaf => Nil
-    case n: QNamed => children(n.qexpr)
-    case u: QUnnamed => children(u.qexpr)
-    case n: QNonCap => children(n.qexpr)
-    case s: QStar => children(s.qexpr)
-    case p: QPlus => children(p.qexpr)
+    case n: QNamed => n.qexpr :: Nil
+    case u: QUnnamed => u.qexpr :: Nil
+    case n: QNonCap => n.qexpr :: Nil
+    case s: QStar => s.qexpr :: Nil
+    case p: QPlus => p.qexpr :: Nil
     case s: QSeq => s.qexprs
     case d: QDisj => d.qexprs
   }
