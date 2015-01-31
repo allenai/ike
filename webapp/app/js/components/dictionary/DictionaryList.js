@@ -4,6 +4,7 @@ var Panel = bs.Panel;
 var PanelGroup = bs.PanelGroup;
 var Button = bs.Button;
 var Glyphicon = bs.Glyphicon;
+var EntryManager = require('./EntryManager.js');
 var DictionaryList = React.createClass({
   deleteButton: function(name) {
     var dicts = this.props.dictionaries;
@@ -21,12 +22,18 @@ var DictionaryList = React.createClass({
              bsStyle="danger"><Glyphicon glyph="remove"/></Button>
   },
   dictionaryPanel: function(name) {
-    var dict = this.props.dictionaries[name];
+    var dicts = this.props.dictionaries;
+    var dict = dicts[name];
     var button = this.deleteButton(name);
     var header = <div>{name} {button}</div>;
+    var entryList = 
+      <EntryManager
+        name={name}
+        dictionaries={dicts}
+        updateDictionaries={this.props.updateDictionaries}/>;
     return (
       <Panel header={header} key={name} eventKey={name}>
-        Contents.
+        {entryList}
       </Panel>
     );
   },
