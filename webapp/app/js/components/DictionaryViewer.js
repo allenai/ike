@@ -16,7 +16,7 @@ var DictionaryViewer = React.createClass({
     var negTab = "Negative (" + dictionary.negative.length + ")";
     return (
       <div>
-        <TabbedArea eventKey={1} animation={false}>
+        <TabbedArea animation={false}>
           <TabPane eventKey={1} tab={posTab}>
             <DictionaryList
               name={name}

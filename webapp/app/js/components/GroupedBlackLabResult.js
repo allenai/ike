@@ -38,8 +38,8 @@ var GroupedBlackLabResult = React.createClass({
     var button = this.makeButton();
     return (
       <tr>
-        <td style={{width: "1%", "white-space":"nowrap"}}>{button}</td>
-        <td>{result.key}</td>
+        <td>{button}</td>
+        <td style={{'white-space': 'nowrap'}}>{result.key}</td>
         <td>{result.size}</td>
         <td>
           <KeyedBlackLabResults keyedResults={result.group}/>

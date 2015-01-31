@@ -9,7 +9,7 @@ var KeyedBlackLabResults = React.createClass({
       return <KeyedBlackLabResult key={i} keyedResult={keyedResult}/>;
     };
     return (
-      <div className="keyedBlackLabResults">
+      <div>
         {keyedResults.map(makeRow)}
       </div>
     );
