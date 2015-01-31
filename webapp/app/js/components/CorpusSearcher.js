@@ -3,10 +3,111 @@ var xhr = require('xhr');
 var SearchInterface = require('./SearchInterface.js');
 var GroupedBlackLabResults = require('./GroupedBlackLabResults.js');
 var DictionaryInterface = require('./DictionaryInterface.js');
+var QueryVisualization = require('./QueryVisualization.js');
 var bs = require('react-bootstrap');
 var TabbedArea = bs.TabbedArea;
 var TabPane = bs.TabPane;
 var Alert = bs.Alert;
+
+var canned = {
+    "name": "QSeq",
+    "interval": [
+        0,
+        41
+    ],
+    "data": {},
+    "children": [
+        {
+            "name": "QNamed",
+            "interval": [
+                0,
+                11
+            ],
+            "data": {
+                "name": "foo"
+            },
+            "children": [
+                {
+                    "name": "QPos",
+                    "interval": [
+                        7,
+                        10
+                    ],
+                    "data": {
+                        "value": "NNP"
+                    },
+                    "children": []
+                }
+            ]
+        },
+        {
+            "name": "QPos",
+            "interval": [
+                12,
+                14
+            ],
+            "data": {
+                "value": "IN"
+            },
+            "children": []
+        },
+        {
+            "name": "QWord",
+            "interval": [
+                15,
+                18
+            ],
+            "data": {
+                "value": "the"
+            },
+            "children": []
+        },
+        {
+            "name": "QCluster",
+            "interval": [
+                19,
+                23
+            ],
+            "data": {
+                "value": "111"
+            },
+            "children": []
+        },
+        {
+            "name": "QDisj",
+            "interval": [
+                24,
+                41
+            ],
+            "data": {},
+            "children": [
+                {
+                    "name": "QWord",
+                    "interval": [
+                        25,
+                        33
+                    ],
+                    "data": {
+                        "value": "whatever"
+                    },
+                    "children": []
+                },
+                {
+                    "name": "QWord",
+                    "interval": [
+                        35,
+                        40
+                    ],
+                    "data": {
+                        "value": "stuff"
+                    },
+                    "children": []
+                }
+            ]
+        }
+    ]
+};
+
 
 var CorpusSearcher = React.createClass({
 
@@ -65,11 +166,43 @@ var CorpusSearcher = React.createClass({
       hasContent: false,
       loading: false,
       targetDictionary: 'task',
+      queryParse: canned,
       dictionaries: {
         task: {name: 'task', positive: [], negative: []}
       },
       showAdded: false
     };
+  },
+
+  parseQuery: function(queryObj) {
+    this.setState({loading: true});
+    queryObj['dictionaries'] = this.state.dictionaries;
+    xhr({
+      body: JSON.stringify(queryObj),
+      uri: '/api/parse',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      method: 'POST'
+    }, function(err, resp, body) {
+      var updatedState;
+      if (resp.statusCode == 200) {
+        updatedState = {
+          queryParse: JSON.parse(body),
+          error: false,
+          hasContent: true,
+          loading: false
+        };
+      } else {
+        updatedState = {
+          error: true,
+          hasContent: false,
+          errorMessage: resp.body,
+          loading: false
+        };
+      }
+      this.setState(updatedState);
+    }.bind(this));
   },
 
   executeSearch: function(queryObj) {
@@ -112,7 +245,7 @@ var CorpusSearcher = React.createClass({
     var targetDictionary = this.state.targetDictionary;
     var dictionaries = this.state.dictionaries;
     var searchCallbacks = {
-      executeSearch: this.executeSearch,
+      executeSearch: this.parseQuery,
       setTargetDictionary: this.setTargetDictionary,
       showAdded: function(x) {
         console.log('setting showAdded to ' + x);
@@ -158,7 +291,8 @@ var CorpusSearcher = React.createClass({
     } else if (this.state.loading) {
       content = "Loading...";
     } else if (this.state.hasContent) {
-      content = <GroupedBlackLabResults showAdded={this.state.showAdded} results={this.state.groupedResults} callbacks={searchCallbacks} targetDictionary={targetDictionary} />;
+      //content = <GroupedBlackLabResults showAdded={this.state.showAdded} results={this.state.groupedResults} callbacks={searchCallbacks} targetDictionary={targetDictionary} />;
+      content = <QueryVisualization node={this.state.queryParse}/>;
     } else {
       content = null;
     }
