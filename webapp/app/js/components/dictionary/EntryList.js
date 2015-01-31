@@ -1,6 +1,8 @@
 var React = require('react');
 var bs = require('react-bootstrap');
 var ListGroup = bs.ListGroup;
+var Button = bs.Button;
+var Glyphicon = bs.Glyphicon;
 var ListGroupItem = bs.ListGroupItem;
 var EntryAdder = require('./EntryAdder.js');
 var EntryList = React.createClass({
@@ -15,8 +17,21 @@ var EntryList = React.createClass({
       update(dicts);
     }
   },
+  deleteButton: function(entry) {
+    var deleteThis = function() { this.deleteEntry(entry); }.bind(this);
+    return (
+      <Button
+        onClick={deleteThis}
+        bsSize="xsmall"
+        className="pull-right"
+        bsStyle="danger">
+        <Glyphicon glyph="remove"/>
+      </Button>
+      );
+  },
   entryItem: function(entry) {
-    return <ListGroupItem key={entry}>{entry}</ListGroupItem>;
+    var button = this.deleteButton(entry);
+    return <ListGroupItem key={entry}>{entry} {button}</ListGroupItem>;
   },
   render: function() {
     var dicts = this.props.dictionaries;
@@ -31,10 +46,12 @@ var EntryList = React.createClass({
         dictionaries={this.props.dictionaries}
         updateDictionaries={this.props.updateDictionaries}/>;
     return (
-      <ListGroup>
-        <ListGroupItem>{adder}</ListGroupItem>
-        {items}
-      </ListGroup>
+      <div className="dictList">
+        <ListGroup>
+          <ListGroupItem>{adder}</ListGroupItem>
+          {items}
+        </ListGroup>
+      </div>
     );
   }
 });

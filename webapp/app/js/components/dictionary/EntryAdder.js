@@ -7,7 +7,10 @@ var EntryAdder = React.createClass({
   },
   handleSubmit: function(e) {
     e.preventDefault();
-    var entry = this.state.value;
+    var entry = this.state.value.trim();
+    if (entry == '') {
+      return;
+    }
     var dicts = this.props.dictionaries;
     var update = this.props.updateDictionaries;
     var name = this.props.name;
