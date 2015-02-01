@@ -5,22 +5,20 @@ var PanelGroup = bs.PanelGroup;
 var Button = bs.Button;
 var Glyphicon = bs.Glyphicon;
 var EntryManager = require('./EntryManager.js');
-var DictionaryList = React.createClass({
+var DictList = React.createClass({
   deleteButton: function(name) {
-    var dictLink = this.props.dictionaryLink;
-    var targetLink = this.props.targetLink;
-    var dicts = dictLink.value;
-    var update = dictLink.requestChange;
+    var dicts = this.props.dicts;
+    var target = this.props.target;
     var deleteEntry = function() {
-      if (name in dicts) {
-        delete dicts[name];
-        update(dicts);
-        if (targetLink.value == name) {
-          var dictNames = Object.keys(dicts);
+      if (name in dicts.value) {
+        delete dicts.value[name];
+        dicts.requestChange(dicts);
+        if (target.value == name) {
+          var dictNames = Object.keys(dicts.value);
           if (dictNames.length > 0) {
-            targetLink.requestChange(dictNames[0]);
+            target.requestChange(dictNames[0]);
           } else {
-            targetLink.requestChange(null);
+            target.requestChange(null);
           }
         }
       }
@@ -31,14 +29,12 @@ var DictionaryList = React.createClass({
              className="pull-right"
              bsStyle="danger"><Glyphicon glyph="remove"/></Button>
   },
-  dictionaryPanel: function(name) {
-    var dictLink = this.props.dictionaryLink;
-    var dicts = dictLink.value;
-    var dict = dicts[name];
+  dictPanel: function(name) {
+    var dicts = this.props.dicts;
+    var dict = dicts.value[name];
     var button = this.deleteButton(name);
     var header = <div>{name} {button}</div>;
-    var entryList = 
-      <EntryManager dictionaryLink={dictLink} name={name}/>;
+    var entryList = <EntryManager dicts={dicts} name={name}/>;
     return (
       <Panel header={header} key={name} eventKey={name}>
         {entryList}
@@ -46,13 +42,12 @@ var DictionaryList = React.createClass({
     );
   },
   render: function() {
-    var dictLink = this.props.dictionaryLink;
-    var dictionaries = dictLink.value;
+    var dicts = this.props.dicts;
     return (
       <PanelGroup accordion>
-        {Object.keys(dictionaries).map(this.dictionaryPanel)}
+        {Object.keys(dicts.value).map(this.dictPanel)}
       </PanelGroup>
     );
   }
 });
-module.exports = DictionaryList;
+module.exports = DictList;

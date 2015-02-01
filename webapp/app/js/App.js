@@ -1,54 +1,35 @@
 var React = require('react/addons');
 var SearchInterface = require('./components/search/SearchInterface.js');
 var ResultsInterface = require('./components/ResultsInterface.js');
-var DictionaryInterface = require('./components/dictionary/DictionaryInterface.js');
+var DictInterface = require('./components/dict/DictInterface.js');
 
-var DictionaryApp = React.createClass({
+var DictApp = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
-  updateDictionaries: function(updated) {
-    this.setState({dictionaries: updated});
-  },
-  updateResults: function(updated) {
-    this.setState({results: updated});
-  },
-  getDefaultProps: function() {
-    return {};
-  },
   getInitialState: function() {
     return {
       results: [],
-      dictionaries: {},
+      dicts: {},
       target: null
     };
   },
   render: function() {
-    var dictLink = this.linkState('dictionaries');
-    var targetLink = this.linkState('target');
-    var resultsLink = this.linkState('results');
-    var search = <SearchInterface resultsLink={resultsLink}/>;
-    var dictionary = 
-      <DictionaryInterface 
-        targetLink={targetLink}
-        dictionaryLink={dictLink}/>;
-    var results = 
-      <ResultsInterface
-        dictionaryLink={dictLink}
-        resultsLink={resultsLink}/>;
+    var dicts = this.linkState('dicts');
+    var target = this.linkState('target');
+    var results = this.linkState('results');
+    var searchInterface = <SearchInterface resultsLink={results}/>;
+    var dictInterface = <DictInterface target={target} dicts={dicts}/>;
+    var resultsInterface = <ResultsInterface dicts={dicts} results={results}/>;
     return (
       <div>
-        {search}
+        {searchInterface}
         <div className="fluid" style={{margin: 20}}>
           <div className="row">
-            <div className="col-md-3">{dictionary}</div>
-            <div className="col-md-9">{results}</div>
+            <div className="col-md-3">{dictInterface}</div>
+            <div className="col-md-9">{resultsInterface}</div>
           </div>
         </div>
       </div>
     );
   }
 });
-
-React.render(
-  <DictionaryApp/>,
-  document.body
-);
+React.render(<DictApp/>, document.body);

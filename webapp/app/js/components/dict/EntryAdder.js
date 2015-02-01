@@ -11,15 +11,13 @@ var EntryAdder = React.createClass({
     if (entry == '') {
       return;
     }
-    var dictLink = this.props.dictionaryLink;
-    var dicts = dictLink.value;
-    var update = dictLink.requestChange;
+    var dicts = this.props.dicts;
     var name = this.props.name;
     var type = this.props.type;
-    var entries = dicts[name][type];
+    var entries = dicts.value[name][type];
     if (entries.indexOf(entry) < 0) {
       entries.unshift(entry);
-      update(dicts);
+      dicts.requestChange(dicts.value);
     }
     this.setState({value: ''});
   },

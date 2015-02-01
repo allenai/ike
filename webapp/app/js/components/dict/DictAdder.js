@@ -1,20 +1,19 @@
 var React = require('react');
 var bs = require('react-bootstrap');
 var Input = bs.Input;
-var DictionaryAdder = React.createClass({
+var DictAdder = React.createClass({
   getInitialState: function() {
     return {value: ''};
   },
   handleSubmit: function(e) {
     e.preventDefault();
     var name = this.state.value;
-    var dictLink = this.props.dictionaryLink;
-    var targetLink = this.props.targetLink;
-    var dicts = dictLink.value;
-    if (!(name in dicts)) {
-      dicts[name] = {name: name, positive: [], negative: []};
-      dictLink.requestChange(dicts);
-      targetLink.requestChange(name);
+    var dicts = this.props.dicts;
+    var target = this.props.target;
+    if (!(name in dicts.value)) {
+      dicts.value[name] = {name: name, positive: [], negative: []};
+      dicts.requestChange(dicts.value);
+      target.requestChange(name);
     }
     this.setState({value: ''});
   },
@@ -33,4 +32,4 @@ var DictionaryAdder = React.createClass({
     );
   }
 });
-module.exports = DictionaryAdder;
+module.exports = DictAdder;
