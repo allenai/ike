@@ -1,13 +1,16 @@
 var React = require('react/addons');
 var SearchInterface = require('./components/search/SearchInterface.js');
-var ResultsInterface = require('./components/ResultsInterface.js');
+var ResultsInterface = require('./components/results/ResultsInterface.js');
 var DictInterface = require('./components/dict/DictInterface.js');
-
 var DictApp = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
   getInitialState: function() {
     return {
-      results: [],
+      results: {
+        rows: [],
+        errorMessage: null,
+        hideAdded: true
+      },
       dicts: {},
       target: null
     };
@@ -16,7 +19,7 @@ var DictApp = React.createClass({
     var dicts = this.linkState('dicts');
     var target = this.linkState('target');
     var results = this.linkState('results');
-    var searchInterface = <SearchInterface resultsLink={results}/>;
+    var searchInterface = <SearchInterface results={results}/>;
     var dictInterface = <DictInterface target={target} dicts={dicts}/>;
     var resultsInterface = <ResultsInterface dicts={dicts} results={results}/>;
     return (
