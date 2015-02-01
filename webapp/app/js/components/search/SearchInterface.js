@@ -7,11 +7,13 @@ var Input = bs.Input;
 var Glyphicon = bs.Glyphicon;
 var SearchInterface = React.createClass({
   getInitialState: function() {
-    return {};
+    return {
+      query: '',
+      limit: 1000,
+      evidenceLimit: 1
+    };
   },
   render: function() {
-    var divStyle = {
-    };
     return (
       <Navbar fluid>
         <div style={{marginTop:'10px'}}>

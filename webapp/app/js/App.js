@@ -1,5 +1,5 @@
 var React = require('react/addons');
-var SearchInterface = require('./components/SearchInterface.js');
+var SearchInterface = require('./components/search/SearchInterface.js');
 var ResultsInterface = require('./components/ResultsInterface.js');
 var DictionaryInterface = require('./components/dictionary/DictionaryInterface.js');
 
@@ -37,7 +37,7 @@ var DictionaryApp = React.createClass({
     return (
       <div>
         {search}
-        <div className="fluid">
+        <div className="fluid" style={{margin: 20}}>
           <div className="row">
             <div className="col-md-3">{dictionary}</div>
             <div className="col-md-9">{results}</div>
