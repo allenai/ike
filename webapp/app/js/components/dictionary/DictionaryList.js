@@ -7,12 +7,22 @@ var Glyphicon = bs.Glyphicon;
 var EntryManager = require('./EntryManager.js');
 var DictionaryList = React.createClass({
   deleteButton: function(name) {
-    var dicts = this.props.dictionaries;
-    var update = this.props.updateDictionaries;
+    var dictLink = this.props.dictionaryLink;
+    var targetLink = this.props.targetLink;
+    var dicts = dictLink.value;
+    var update = dictLink.requestChange;
     var deleteEntry = function() {
       if (name in dicts) {
         delete dicts[name];
         update(dicts);
+        if (targetLink.value == name) {
+          var dictNames = Object.keys(dicts);
+          if (dictNames.length > 0) {
+            targetLink.requestChange(dictNames[0]);
+          } else {
+            targetLink.requestChange(null);
+          }
+        }
       }
     };
     return <Button 
@@ -22,15 +32,13 @@ var DictionaryList = React.createClass({
              bsStyle="danger"><Glyphicon glyph="remove"/></Button>
   },
   dictionaryPanel: function(name) {
-    var dicts = this.props.dictionaries;
+    var dictLink = this.props.dictionaryLink;
+    var dicts = dictLink.value;
     var dict = dicts[name];
     var button = this.deleteButton(name);
     var header = <div>{name} {button}</div>;
     var entryList = 
-      <EntryManager
-        name={name}
-        dictionaries={dicts}
-        updateDictionaries={this.props.updateDictionaries}/>;
+      <EntryManager dictionaryLink={dictLink} name={name}/>;
     return (
       <Panel header={header} key={name} eventKey={name}>
         {entryList}
@@ -38,8 +46,8 @@ var DictionaryList = React.createClass({
     );
   },
   render: function() {
-    var dictionaries = this.props.dictionaries;
-    var updateDictionaries = this.props.updateDictionaries;
+    var dictLink = this.props.dictionaryLink;
+    var dictionaries = dictLink.value;
     return (
       <PanelGroup accordion>
         {Object.keys(dictionaries).map(this.dictionaryPanel)}

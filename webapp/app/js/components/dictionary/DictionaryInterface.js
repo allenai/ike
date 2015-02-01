@@ -4,16 +4,16 @@ var DictionaryAdder = require('./DictionaryAdder.js');
 var DictionaryList = require('./DictionaryList.js');
 var DictionaryInterface = React.createClass({
   render: function() {
-    var dictionaries = this.props.dictionaries;
-    var updateDictionaries = this.props.updateDictionaries;
-    var adder = 
+    var dictLink = this.props.dictionaryLink;
+    var targetLink = this.props.targetLink;
+    var adder =
       <DictionaryAdder
-        dictionaries={dictionaries}
-        updateDictionaries={updateDictionaries}/>;
+        dictionaryLink={dictLink}
+        targetLink={targetLink}/>;
     var list =
       <DictionaryList
-        dictionaries={dictionaries}
-        updateDictionaries={updateDictionaries}/>;
+        dictionaryLink={dictLink}
+        targetLink={targetLink}/>;
     return (
       <div>
         {adder}

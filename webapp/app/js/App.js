@@ -1,9 +1,10 @@
-var React = require('react');
+var React = require('react/addons');
 var SearchInterface = require('./components/SearchInterface.js');
 var ResultsInterface = require('./components/ResultsInterface.js');
 var DictionaryInterface = require('./components/dictionary/DictionaryInterface.js');
 
 var DictionaryApp = React.createClass({
+  mixins: [React.addons.LinkedStateMixin],
   updateDictionaries: function(updated) {
     this.setState({dictionaries: updated});
   },
@@ -16,27 +17,30 @@ var DictionaryApp = React.createClass({
   getInitialState: function() {
     return {
       results: [],
-      dictionaries: {}
+      dictionaries: {},
+      target: null
     };
   },
   render: function() {
-    var search = 
-      <SearchInterface updateResults={this.updateResults}/>
+    var dictLink = this.linkState('dictionaries');
+    var targetLink = this.linkState('target');
+    var resultsLink = this.linkState('results');
+    var search = <SearchInterface resultsLink={resultsLink}/>;
     var dictionary = 
-      <DictionaryInterface dictionaries={this.state.dictionaries}
-        updateDictionaries={this.updateDictionaries}/>;
+      <DictionaryInterface 
+        targetLink={targetLink}
+        dictionaryLink={dictLink}/>;
     var results = 
       <ResultsInterface
-        dictionaries={this.state.dictionaries}
-        results={this.state.results}
-        updateDictionary={this.updateDictionary}/>;
+        dictionaryLink={dictLink}
+        resultsLink={resultsLink}/>;
     return (
       <div>
         {search}
         <div className="fluid">
           <div className="row">
-            <div className="col-md-4">{dictionary}</div>
-            <div className="col-md-8">{results}</div>
+            <div className="col-md-3">{dictionary}</div>
+            <div className="col-md-9">{results}</div>
           </div>
         </div>
       </div>

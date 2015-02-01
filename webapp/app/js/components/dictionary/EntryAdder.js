@@ -11,8 +11,9 @@ var EntryAdder = React.createClass({
     if (entry == '') {
       return;
     }
-    var dicts = this.props.dictionaries;
-    var update = this.props.updateDictionaries;
+    var dictLink = this.props.dictionaryLink;
+    var dicts = dictLink.value;
+    var update = dictLink.requestChange;
     var name = this.props.name;
     var type = this.props.type;
     var entries = dicts[name][type];

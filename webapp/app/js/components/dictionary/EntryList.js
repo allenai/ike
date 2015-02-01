@@ -7,8 +7,9 @@ var ListGroupItem = bs.ListGroupItem;
 var EntryAdder = require('./EntryAdder.js');
 var EntryList = React.createClass({
   deleteEntry: function(entry) {
-    var update = this.props.updateDictionaries;
-    var dicts = this.props.dictionaries;
+    var dictLink = this.props.dictionaryLink;
+    var update = dictLink.requestChange;
+    var dicts = dictLink.value;
     var name = this.props.name;
     var type = this.props.type;
     var i = dicts[name][type].indexOf(entry);
@@ -34,7 +35,9 @@ var EntryList = React.createClass({
     return <ListGroupItem key={entry}>{entry} {button}</ListGroupItem>;
   },
   render: function() {
-    var dicts = this.props.dictionaries;
+    var targetLink = this.props.targetLink;
+    var dictLink = this.props.dictionaryLink;
+    var dicts = dictLink.value;
     var name = this.props.name;
     var type = this.props.type;
     var entries = dicts[name][type];
@@ -43,8 +46,8 @@ var EntryList = React.createClass({
       <EntryAdder
         name={name}
         type={type}
-        dictionaries={this.props.dictionaries}
-        updateDictionaries={this.props.updateDictionaries}/>;
+        targetLink={targetLink}
+        dictionaryLink={dictLink}/>;
     return (
       <div className="dictList">
         <ListGroup>

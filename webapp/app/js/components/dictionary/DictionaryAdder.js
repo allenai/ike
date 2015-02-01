@@ -8,11 +8,13 @@ var DictionaryAdder = React.createClass({
   handleSubmit: function(e) {
     e.preventDefault();
     var name = this.state.value;
-    var dicts = this.props.dictionaries;
-    var update = this.props.updateDictionaries;
+    var dictLink = this.props.dictionaryLink;
+    var targetLink = this.props.targetLink;
+    var dicts = dictLink.value;
     if (!(name in dicts)) {
       dicts[name] = {name: name, positive: [], negative: []};
-      update(dicts);
+      dictLink.requestChange(dicts);
+      targetLink.requestChange(name);
     }
     this.setState({value: ''});
   },
