@@ -19,8 +19,6 @@ libraryDependencies ++= Seq(
 
 fork in run := true
 
-javaOptions in run ++= Seq("-Xms2G", "-Xmx8G")
-
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
 dependencyOverrides ++= Set(allenAiCommon)

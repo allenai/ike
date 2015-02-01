@@ -26,26 +26,30 @@ case object BlackLabResult {
       data = WordData(word, attrGroup - "word")
     } yield data
   }
-  def captureGroups(hits: Hits, hit: Hit, shift: Int): Map[String, Interval] =
-    if (hits.hasCapturedGroups) {
-      val names = hits.getCapturedGroupNames
-      val spanMap = hits.getCapturedGroupMap(hit).asScala.toMap
-      for {
-        (name, span) <- spanMap
-        offset = Interval.open(span.start - shift, span.end - shift)
-      } yield (name, offset)
-    } else {
-      Map.empty
-    }
-  def fromHit(hits: Hits, hit: Hit, kwicSize: Int = 5): BlackLabResult = {
+  def captureGroups(hits: Hits, hit: Hit, shift: Int): Map[String, Interval] = {
+    val names = hits.getCapturedGroupNames.asScala
+    // For some reason BlackLab will sometimes return null values here, so wrap in Options
+    val optSpans = hits.getCapturedGroups(hit) map wrapNull
+    for {
+      (name, optSpan) <- names.zip(optSpans).toMap
+      span <- optSpan
+      interval = Interval.open(span.start, span.end).shift(-shift)
+    } yield (name, interval)
+  }
+  def fromHit(hits: Hits, hit: Hit, kwicSize: Int = 10): BlackLabResult = {
     val kwic = hits.getKwic(hit, kwicSize)
     val data = wordData(hits, kwic)
     val offset = Interval.open(kwic.getHitStart, kwic.getHitEnd)
-    val groups = captureGroups(hits, hit, hit.start - kwic.getHitStart)
+    val groups = if (hits.hasCapturedGroups) {
+      captureGroups(hits, hit, hit.start - kwic.getHitStart)
+    } else {
+      Map.empty[String, Interval]
+    }
     BlackLabResult(data, offset, groups)
   }
   def fromHits(hits: Hits): Iterator[BlackLabResult] = for {
     hit <- hits.iterator.asScala
     result = fromHit(hits, hit)
   } yield result
+  def wrapNull[A](a: A): Option[A] = if (a == null) None else Some(a)
 }

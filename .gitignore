@@ -18,6 +18,7 @@ project/plugins/project/
 .worksheet
 public/
 
+# eclipse
 .cache
 .classpath
 .project
