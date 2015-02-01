@@ -16,3 +16,8 @@ project/plugins/project/
 .scala_dependencies
 .worksheet
 public/
+
+.cache
+.classpath
+.project
+.settings/
