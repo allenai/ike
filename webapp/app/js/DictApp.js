@@ -44,7 +44,7 @@ var DictApp = React.createClass({
           <TabPane className="mainContent" eventKey={2} tab="Dictionaries">
             {dictInterface}
           </TabPane>
-          <TabPane className="mainContent" eventKey={3} tab="Configuraion">
+          <TabPane className="mainContent" eventKey={3} tab="Configuration">
             {configInterface}
           </TabPane>
         </TabbedArea>
