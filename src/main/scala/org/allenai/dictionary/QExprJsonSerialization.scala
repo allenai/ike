@@ -37,6 +37,6 @@ object QExprJsonSerialization {
   implicit val qseqFormat = jsonFormat1(QSeq.apply).pack("type" -> "QSeq")
   implicit val qdisjFormat = jsonFormat1(QDisj.apply).pack("type" -> "QDisj")
   implicit val unpackers = Seq(qwordFormat, qclusterFormat, qposFormat, qdictFormat,
-      qwildcardFormat, qnamedFormat, qunnamedFormat, qnonCapFormat, qstarFormat,
-      qplusFormat, qseqFormat, qdisjFormat)
+    qwildcardFormat, qnamedFormat, qunnamedFormat, qnonCapFormat, qstarFormat,
+    qplusFormat, qseqFormat, qdisjFormat)
 }
