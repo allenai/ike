@@ -72,8 +72,4 @@ case class SearchApp(config: Config) {
     val words = wordData map (_.word.toLowerCase.trim)
     words mkString " "
   }
-  def parse(req: ParseRequest): Try[QueryNode] = for {
-    expr <- QueryLanguage.parse(req.query)
-    queryNode = QueryNode.fromExpression(expr)
-  } yield queryNode
 }
