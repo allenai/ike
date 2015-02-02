@@ -56,6 +56,7 @@ case class SearchApp(config: Config) {
         GroupedBlackLabResult(key, count, topResults)
     }
   } yield mapped.toSeq
+  def parse(req: ParseRequest): Try[QExpr] = QueryLanguage.parse(req.query)
   def keyResult(req: SearchRequest, result: BlackLabResult): KeyedBlackLabResult = {
     val providedInterval = for {
       name <- req.groupBy

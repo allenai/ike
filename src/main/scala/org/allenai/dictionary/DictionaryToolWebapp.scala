@@ -67,6 +67,13 @@ class DictionaryToolActor extends Actor with BasicService with SprayJsonSupport 
             complete(searchApp.groupedSearch(req))
           }
         }
+      } ~
+      pathPrefix("api" / "parse") {
+        post {
+          entity(as[ParseRequest]) { req =>
+            complete(searchApp.parse(req))
+          }
+        }
       }
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
