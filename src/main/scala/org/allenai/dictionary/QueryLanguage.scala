@@ -6,14 +6,7 @@ import java.util.regex.Pattern
 import scala.util.{ Try, Failure, Success }
 import java.text.ParseException
 
-trait EndPositional {
-  this: Positional =>
-  var _end = -1
-  def setEnd(i: Int): Unit = _end = i
-  def end: Int = _end
-  def start: Int = this.pos.column - 1
-}
-sealed trait QExpr extends Positional with EndPositional
+sealed trait QExpr extends Positional
 case object QExpr {
   // TODO(tonyf): set up so recursive calls are simplified
   def children(qexpr: QExpr): Seq[QExpr] = qexpr match {
@@ -55,43 +48,30 @@ case object QDisj {
 }
 
 object QExprParser extends RegexParsers {
-  def endPositioned(p: => Parser[QExpr]): Parser[QExpr] = {
-    val pp = positioned(p)
-    new Parser[QExpr] {
-      def apply(in: Input): ParseResult[QExpr] = {
-        pp(in) match {
-          case Success(t, in1) =>
-            t.setEnd(in1.offset)
-            Success(t, in1)
-          case ns: NoSuccess => ns
-        }
-      }
-    }
-  }
   val posTagSet = Seq("PRP$", "NNPS", "WRB", "WP$", "WDT", "VBZ", "VBP", "VBN", "VBG", "VBD", "SYM",
     "RBS", "RBR", "PRP", "POS", "PDT", "NNS", "NNP", "JJS", "JJR", "WP", "VB", "UH", "TO", "RP",
     "RB", "NN", "MD", "LS", "JJ", "IN", "FW", "EX", "DT", "CD", "CC")
   val posTagRegex = posTagSet.map(Pattern.quote).mkString("|").r
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
-  def word = endPositioned("""[^|\^$(){}\s*+,]+""".r ^^ QWord)
-  def cluster = endPositioned("""\^[01]+""".r ^^ { s => QCluster(s.tail) })
-  def pos = endPositioned(posTagRegex ^^ QPos)
-  def dict = endPositioned("""\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) })
-  def wildcard = endPositioned("\\.".r ^^^ QWildcard)
-  def atom = endPositioned(wildcard | pos | dict | cluster | word)
+  def word = positioned("""[^|\^$(){}\s*+,]+""".r ^^ QWord)
+  def cluster = positioned("""\^[01]+""".r ^^ { s => QCluster(s.tail) })
+  def pos = positioned(posTagRegex ^^ QPos)
+  def dict = positioned("""\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) })
+  def wildcard = positioned("\\.".r ^^^ QWildcard)
+  def atom = positioned(wildcard | pos | dict | cluster | word)
   def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
-  def named = endPositioned("(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) })
-  def unnamed = endPositioned("(" ~> expr <~ ")" ^^ QUnnamed)
-  def nonCap = endPositioned("(?:" ~> expr <~ ")" ^^ QNonCap)
-  def curlyDisj = endPositioned("{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq)
-  def operand = endPositioned(named | nonCap | unnamed | curlyDisj | atom)
-  def starred = endPositioned(operand <~ "*" ^^ QStar)
-  def plussed = endPositioned(operand <~ "+" ^^ QPlus)
-  def modified = endPositioned(starred | plussed)
-  def piece: Parser[QExpr] = endPositioned((modified | operand))
-  def branch = endPositioned(rep1(piece) ^^ QSeq.fromSeq)
-  def expr = endPositioned(repsep(branch, "|") ^^ QDisj.fromSeq)
+  def named = positioned("(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) })
+  def unnamed = positioned("(" ~> expr <~ ")" ^^ QUnnamed)
+  def nonCap = positioned("(?:" ~> expr <~ ")" ^^ QNonCap)
+  def curlyDisj = positioned("{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq)
+  def operand = positioned(named | nonCap | unnamed | curlyDisj | atom)
+  def starred = positioned(operand <~ "*" ^^ QStar)
+  def plussed = positioned(operand <~ "+" ^^ QPlus)
+  def modified = positioned(starred | plussed)
+  def piece: Parser[QExpr] = positioned((modified | operand))
+  def branch = positioned(rep1(piece) ^^ QSeq.fromSeq)
+  def expr = positioned(repsep(branch, "|") ^^ QDisj.fromSeq)
   def parse(s: String) = parseAll(expr, s)
   // scalastyle:on
 }
