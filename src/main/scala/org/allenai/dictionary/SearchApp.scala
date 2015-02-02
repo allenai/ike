@@ -10,6 +10,8 @@ import scala.util.Try
 import nl.inl.blacklab.search.HitsWindow
 import scala.util.Failure
 
+case class ParseRequest(query: String)
+
 case class SearchRequest(query: String, dictionaries: Map[String, Dictionary], limit: Int = 100,
   evidenceLimit: Int = 10, groupBy: Option[String] = None)
 
@@ -70,7 +72,7 @@ case class SearchApp(config: Config) {
     val words = wordData map (_.word.toLowerCase.trim)
     words mkString " "
   }
-  def parse(req: SearchRequest): Try[QueryNode] = for {
+  def parse(req: ParseRequest): Try[QueryNode] = for {
     expr <- QueryLanguage.parse(req.query)
     queryNode = QueryNode.fromExpression(expr)
   } yield queryNode

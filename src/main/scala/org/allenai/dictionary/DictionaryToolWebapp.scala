@@ -70,7 +70,7 @@ class DictionaryToolActor extends Actor with BasicService with SprayJsonSupport 
       } ~
       pathPrefix("api" / "parse") {
         post {
-          entity(as[SearchRequest]) { req =>
+          entity(as[ParseRequest]) { req =>
             complete(searchApp.parse(req))
           }
         }

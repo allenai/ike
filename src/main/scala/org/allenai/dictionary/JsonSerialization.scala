@@ -10,7 +10,8 @@ object JsonSerialization {
   implicit val keyedBlackLabResultFormat = jsonFormat2(KeyedBlackLabResult.apply)
   implicit val groupedBlackLabResultFormat = jsonFormat3(GroupedBlackLabResult.apply)
   implicit val dictionaryFormat = jsonFormat3(Dictionary.apply)
-  implicit val requestFormat = jsonFormat5(SearchRequest.apply)
+  implicit val searchRequestFormat = jsonFormat5(SearchRequest.apply)
+  implicit val parseRequestFormat = jsonFormat1(ParseRequest.apply)
   implicit object queryNodeFormat extends RootJsonFormat[QueryNode] {
     def write(qn: QueryNode): JsValue = {
       val children: JsValue = qn.children match {
