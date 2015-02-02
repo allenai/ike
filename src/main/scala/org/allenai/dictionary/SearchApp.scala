@@ -9,14 +9,17 @@ import nl.inl.blacklab.search.TextPattern
 import scala.util.Try
 import nl.inl.blacklab.search.HitsWindow
 import scala.util.Failure
+import scala.util.Success
 
 case class ParseRequest(query: String)
 
-case class SearchRequest(query: String, dictionaries: Map[String, Dictionary], limit: Int = 100,
-  evidenceLimit: Int = 10, groupBy: Option[String] = None)
+case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1, groupBy: Option[String] = None)
+
+case class SearchRequest(query: Either[String, QExpr], dictionaries: Map[String, Dictionary], config: SearchConfig)
+
+case class SearchResponse(qexpr: QExpr, rows: Seq[GroupedBlackLabResult])
 
 case class SearchApp(config: Config) {
-
   val indexDir = config.getString("location") match {
     case "file" => new File(config.getString("path"))
     case "datastore" =>
@@ -24,42 +27,42 @@ case class SearchApp(config: Config) {
       ref.directoryPath.toFile
     case _ => throw new IllegalArgumentException(s"'location' must be either 'file' or 'datastore")
   }
-
   val searcher = Searcher.open(indexDir)
-
   def blackLabHits(textPattern: TextPattern, limit: Int): Try[HitsWindow] = Try {
     searcher.find(textPattern).window(0, limit)
   }
-
   def fromHits(hits: HitsWindow): Try[Seq[BlackLabResult]] = Try {
     BlackLabResult.fromHits(hits).toSeq
   }
-
   def semantics(query: QExpr): Try[TextPattern] = Try(BlackLabSemantics.blackLabQuery(query))
-
+  def parse(r: SearchRequest): Try[QExpr] = r.query match {
+    case Left(queryString) => QueryLanguage.parse(queryString)
+    case Right(qexpr) => Success(qexpr)
+  }
   def search(r: SearchRequest): Try[Seq[BlackLabResult]] = for {
-    query <- QueryLanguage.parse(r.query)
-    interpolated <- QueryLanguage.interpolateDictionaries(query, r.dictionaries)
+    qexpr <- parse(r)
+    interpolated <- QueryLanguage.interpolateDictionaries(qexpr, r.dictionaries)
     textPattern <- semantics(interpolated)
-    hits <- blackLabHits(textPattern, r.limit)
+    hits <- blackLabHits(textPattern, r.config.limit)
     results <- fromHits(hits)
   } yield results
-  def groupedSearch(req: SearchRequest): Try[Seq[GroupedBlackLabResult]] = for {
+  def groupedSearch(req: SearchRequest): Try[SearchResponse] = for {
     results <- search(req)
     keyed = results map (keyResult(req, _))
     grouped = keyed groupBy keyString
-    groupedLimit = grouped mapValues (_.take(req.evidenceLimit))
+    groupedLimit = grouped mapValues (_.take(req.config.evidenceLimit))
     mapped = grouped map {
       case (key, results) =>
         val count = results.size
-        val topResults = results.take(req.evidenceLimit)
+        val topResults = results.take(req.config.evidenceLimit)
         GroupedBlackLabResult(key, count, topResults)
     }
-  } yield mapped.toSeq
-  def parse(req: ParseRequest): Try[QExpr] = QueryLanguage.parse(req.query)
+    qexpr <- parse(req)
+    resp = SearchResponse(qexpr, mapped.toSeq)
+  } yield resp
   def keyResult(req: SearchRequest, result: BlackLabResult): KeyedBlackLabResult = {
     val providedInterval = for {
-      name <- req.groupBy
+      name <- req.config.groupBy
       i <- result.captureGroups.get(name)
     } yield i
     val firstInterval = result.captureGroups.values.toSeq.headOption

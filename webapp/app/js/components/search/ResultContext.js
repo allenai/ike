@@ -3,7 +3,6 @@ var bs = require('react-bootstrap');
 var ResultContext = React.createClass({
   render: function() {
     var context = this.props.context;
-    console.log(context);
     var start = context.key[0];
     var end = context.key[1];
     var wordData = context.result.wordData;

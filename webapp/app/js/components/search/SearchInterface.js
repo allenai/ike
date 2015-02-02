@@ -24,8 +24,10 @@ var SearchInterface = React.createClass({
     var config = this.props.config.value;
     return {
       query: this.state.query,
-      limit: config.limit,
-      evidenceLimit: config.evidenceLimit,
+      config: {
+        limit: config.limit,
+        evidenceLimit: config.evidenceLimit
+      },
       dictionaries: this.props.dicts.value
     };
   },
@@ -43,15 +45,16 @@ var SearchInterface = React.createClass({
     results.value.pending = false;
     results.requestChange(results.value);
     if (resp.statusCode == 200) {
-      var rows = JSON.parse(body);
-      this.searchSuccess(rows);
+      var response = JSON.parse(body);
+      this.searchSuccess(response);
     } else {
       this.searchFailure(resp.body);
     }
   },
-  searchSuccess: function(rows) {
+  searchSuccess: function(response) {
     var results = this.props.results;
-    results.value.rows = rows;
+    results.value.rows = response.rows;
+    results.value.qexpr = response.qexpr;
     this.props.results.value.errorMessage = null;
     results.requestChange(results.value);
   },
@@ -114,7 +117,7 @@ var SearchInterface = React.createClass({
         handleSubmit={handleSubmit}
         target={target}
         dicts={dicts}
-        query={query.value}/>;
+        results={results}/>;
     var searchResults =
       <SearchResults
         target={target}

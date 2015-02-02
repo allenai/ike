@@ -53,28 +53,13 @@ class DictionaryToolActor extends Actor with BasicService with SprayJsonSupport 
   import JsonSerialization._
   val config = ConfigFactory.load
   val searchApp = SearchApp(config.getConfig("index"))
-  val serviceRoute =
-    pathPrefix("api" / "search") {
-      post {
-        entity(as[SearchRequest]) { req =>
-          complete(searchApp.search(req))
-        }
+  val serviceRoute = pathPrefix("api" / "groupedSearch") {
+    post {
+      entity(as[SearchRequest]) { req =>
+        complete(searchApp.groupedSearch(req))
       }
-    } ~
-      pathPrefix("api" / "groupedSearch") {
-        post {
-          entity(as[SearchRequest]) { req =>
-            complete(searchApp.groupedSearch(req))
-          }
-        }
-      } ~
-      pathPrefix("api" / "parse") {
-        post {
-          entity(as[ParseRequest]) { req =>
-            complete(searchApp.parse(req))
-          }
-        }
-      }
+    }
+  }
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
