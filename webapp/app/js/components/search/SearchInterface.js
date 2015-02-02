@@ -1,11 +1,16 @@
 var React = require('react/addons');
 var bs = require('react-bootstrap');
+var SearchForm = require('./SearchForm.js');
+var QueryViewer = require('./QueryViewer.js');
+var SearchResults = require('./SearchResults.js');
 var xhr = require('xhr');
 var Navbar = bs.Navbar;
 var Nav = bs.Nav;
 var NavItem = bs.NavItem;
 var Button = bs.Button;
 var Input = bs.Input;
+var Row = bs.Row;
+var Col = bs.Col;
 var InputGroup = bs.InputGroup;
 var Glyphicon = bs.Glyphicon;
 var SearchInterface = React.createClass({
@@ -80,15 +85,36 @@ var SearchInterface = React.createClass({
     this.search();
   },
   render: function() {
-    var a = <a href="#">Search Options</a>;
+    var query = this.linkState('query');
+    var target = this.props.target;
+    var dicts = this.props.dicts;
+    var config = this.props.config;
+    var handleSubmit = this.handleSubmit;
+    var form = 
+      <SearchForm
+        handleSubmit={handleSubmit}
+        target={target}
+        dicts={dicts}
+        query={query}/>;
+    var queryViewer =
+      <QueryViewer
+        handleSubmit={handleSubmit}
+        target={target}
+        dicts={dicts}
+        query={query}/>;
+    var searchResults =
+      <SearchResults
+        target={target}
+        dicts={dicts}
+        query={query}
+        config={config}/>;
     return (
       <div>
-        <form onSubmit={this.handleSubmit}>
-          <Input
-            type="text"
-            placeholder="Enter Query"
-            valueLink={this.linkState('query')}/>
-        </form>
+        {form}
+        <Row>
+          <Col xs={4}>{queryViewer}</Col>
+          <Col xs={8}>{searchResults}</Col>
+        </Row>
       </div>
     );
   }
