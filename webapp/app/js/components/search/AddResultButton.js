@@ -31,9 +31,15 @@ var AddResultButton = React.createClass({
     this.props.dicts.requestChange(this.props.dicts.value);
   },
   togglePos: function() {
+    if (!this.isPos() && this.isNeg()) {
+      this.toggle("negative");
+    }
     this.toggle("positive");
   },
   toggleNeg: function() {
+    if (!this.isNeg() && this.isPos()) {
+      this.toggle("positive");
+    }
     this.toggle("negative");
   },
   hasType: function(type) {
