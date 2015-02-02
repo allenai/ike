@@ -1,12 +1,11 @@
 package org.allenai.dictionary
 
-import scala.util.parsing.input.Positional
 import scala.util.parsing.combinator.RegexParsers
 import java.util.regex.Pattern
 import scala.util.{ Try, Failure, Success }
 import java.text.ParseException
 
-sealed trait QExpr extends Positional
+sealed trait QExpr
 case object QExpr {
   // TODO(tonyf): set up so recursive calls are simplified
   def children(qexpr: QExpr): Seq[QExpr] = qexpr match {
@@ -54,24 +53,24 @@ object QExprParser extends RegexParsers {
   val posTagRegex = posTagSet.map(Pattern.quote).mkString("|").r
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
-  def word = positioned("""[^|\^$(){}\s*+,]+""".r ^^ QWord)
-  def cluster = positioned("""\^[01]+""".r ^^ { s => QCluster(s.tail) })
-  def pos = positioned(posTagRegex ^^ QPos)
-  def dict = positioned("""\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) })
-  def wildcard = positioned("\\.".r ^^^ QWildcard())
-  def atom = positioned(wildcard | pos | dict | cluster | word)
+  def word = """[^|\^$(){}\s*+,]+""".r ^^ QWord
+  def cluster = """\^[01]+""".r ^^ { s => QCluster(s.tail) }
+  def pos = posTagRegex ^^ QPos
+  def dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
+  def wildcard = "\\.".r ^^^ QWildcard()
+  def atom = wildcard | pos | dict | cluster | word
   def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
-  def named = positioned("(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) })
-  def unnamed = positioned("(" ~> expr <~ ")" ^^ QUnnamed)
-  def nonCap = positioned("(?:" ~> expr <~ ")" ^^ QNonCap)
-  def curlyDisj = positioned("{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq)
-  def operand = positioned(named | nonCap | unnamed | curlyDisj | atom)
-  def starred = positioned(operand <~ "*" ^^ QStar)
-  def plussed = positioned(operand <~ "+" ^^ QPlus)
-  def modified = positioned(starred | plussed)
-  def piece: Parser[QExpr] = positioned((modified | operand))
-  def branch = positioned(rep1(piece) ^^ QSeq.fromSeq)
-  def expr = positioned(repsep(branch, "|") ^^ QDisj.fromSeq)
+  def named = "(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) }
+  def unnamed = "(" ~> expr <~ ")" ^^ QUnnamed
+  def nonCap = "(?:" ~> expr <~ ")" ^^ QNonCap
+  def curlyDisj = "{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq
+  def operand = named | nonCap | unnamed | curlyDisj | atom
+  def starred = operand <~ "*" ^^ QStar
+  def plussed = operand <~ "+" ^^ QPlus
+  def modified = starred | plussed
+  def piece: Parser[QExpr] = (modified | operand)
+  def branch = rep1(piece) ^^ QSeq.fromSeq
+  def expr = repsep(branch, "|") ^^ QDisj.fromSeq
   def parse(s: String) = parseAll(expr, s)
   // scalastyle:on
 }
