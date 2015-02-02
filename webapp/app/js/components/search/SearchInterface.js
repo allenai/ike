@@ -114,7 +114,7 @@ var SearchInterface = React.createClass({
         handleSubmit={handleSubmit}
         target={target}
         dicts={dicts}
-        query={query}/>;
+        query={query.value}/>;
     var searchResults =
       <SearchResults
         target={target}
