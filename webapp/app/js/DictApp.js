@@ -3,7 +3,6 @@ var bs = require('react-bootstrap');
 var TabbedArea = bs.TabbedArea;
 var TabPane = bs.TabPane;
 var SearchInterface = require('./components/search/SearchInterface.js');
-var ResultsInterface = require('./components/results/ResultsInterface.js');
 var DictInterface = require('./components/dict/DictInterface.js');
 var ConfigInterface = require('./components/config/ConfigInterface.js');
 var DictApp = React.createClass({
