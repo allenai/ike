@@ -84,6 +84,7 @@ var SearchResults = React.createClass({
             {addCol}
             <th>Capture</th>
             <th>Count</th>
+            <th>Context</th>
           </tr>
         </thead>
         <tbody>

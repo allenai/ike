@@ -67,7 +67,7 @@ var AddResultButton = React.createClass({
     var style = {};
     return (
       <ButtonToolbar>
-        <ButtonGroup bsSize="small">
+        <ButtonGroup bsSize="small" style={{display: 'flex'}}>
           <Button onClick={this.togglePos} bsStyle={this.posStyle()}>
             {target.value}
           </Button>

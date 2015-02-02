@@ -1,6 +1,7 @@
 var React = require('react');
 var bs = require('react-bootstrap');
 var AddResultButton = require('./AddResultButton.js');
+var ResultContextSet = require('./ResultContextSet.js');
 var ResultRow = React.createClass({
   render: function() {
     var row = this.props.row;
@@ -13,11 +14,13 @@ var ResultRow = React.createClass({
       addCol =
         <td><AddResultButton row={row} target={target} dicts={dicts}/></td>;
     }
+    var context = <ResultContextSet row={row}/>;
     return (
       <tr>
         {addCol}
-        <td>{row.key}</td>
+        <td style={{'white-space': 'nowrap'}}>{row.key}</td>
         <td>{row.size}</td>
+        <td>{context}</td>
       </tr>
     );
   }
