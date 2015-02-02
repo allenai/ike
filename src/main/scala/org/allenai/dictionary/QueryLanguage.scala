@@ -26,7 +26,7 @@ case class QWord(value: String) extends QExpr with QLeaf
 case class QCluster(value: String) extends QExpr with QLeaf
 case class QPos(value: String) extends QExpr with QLeaf
 case class QDict(value: String) extends QExpr with QLeaf
-object QWildcard extends QExpr with QLeaf
+case class QWildcard() extends QExpr with QLeaf
 case class QNamed(qexpr: QExpr, name: String) extends QExpr
 case class QUnnamed(qexpr: QExpr) extends QExpr
 case class QNonCap(qexpr: QExpr) extends QExpr
@@ -58,7 +58,7 @@ object QExprParser extends RegexParsers {
   def cluster = positioned("""\^[01]+""".r ^^ { s => QCluster(s.tail) })
   def pos = positioned(posTagRegex ^^ QPos)
   def dict = positioned("""\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) })
-  def wildcard = positioned("\\.".r ^^^ QWildcard)
+  def wildcard = positioned("\\.".r ^^^ QWildcard())
   def atom = positioned(wildcard | pos | dict | cluster | word)
   def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
   def named = positioned("(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) })
