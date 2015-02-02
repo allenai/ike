@@ -4,7 +4,6 @@ var xhr = require('xhr');
 var Navbar = bs.Navbar;
 var Nav = bs.Nav;
 var NavItem = bs.NavItem;
-var Well = bs.Well;
 var Button = bs.Button;
 var Input = bs.Input;
 var InputGroup = bs.InputGroup;
@@ -83,14 +82,14 @@ var SearchInterface = React.createClass({
   render: function() {
     var a = <a href="#">Search Options</a>;
     return (
-      <Well bsSize="small" fluid>
+      <div>
         <form onSubmit={this.handleSubmit}>
           <Input
             type="text"
             placeholder="Enter Query"
             valueLink={this.linkState('query')}/>
         </form>
-      </Well>
+      </div>
     );
   }
 });

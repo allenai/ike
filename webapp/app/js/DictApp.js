@@ -31,26 +31,20 @@ var DictApp = React.createClass({
     var searchInterface = 
       <SearchInterface config={config} results={results} dicts={dicts}/>;
     var dictInterface = <DictInterface target={target} dicts={dicts}/>;
-    var resultsInterface = <ResultsInterface dicts={dicts} results={results}/>;
     var configInterface = <ConfigInterface config={config}/>;
     return (
       <div>
-        {searchInterface}
-        <div className="fluid" style={{margin: 20}}>
-          <div className="row">
-            <div className="col-md-3">
-              <TabbedArea animation={false}>
-                <TabPane eventKey={1} tab="Dictionaries">
-                  {dictInterface}
-                </TabPane>
-                <TabPane eventKey={2} tab="Configuration">
-                  {configInterface}
-                </TabPane>
-              </TabbedArea>
-            </div>
-            <div className="col-md-9">{resultsInterface}</div>
-          </div>
-        </div>
+        <TabbedArea animation={false}>
+          <TabPane className="mainContent" eventKey={1} tab="Search">
+            {searchInterface}
+          </TabPane>
+          <TabPane className="mainContent" eventKey={2} tab="Dictionaries">
+            {dictInterface}
+          </TabPane>
+          <TabPane className="mainContent" eventKey={3} tab="Configuraion">
+            {configInterface}
+          </TabPane>
+        </TabbedArea>
       </div>
     );
   }

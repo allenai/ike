@@ -42,7 +42,7 @@ var EntryList = React.createClass({
     var adder =
       <EntryAdder name={name} type={type} target={target} dicts={dicts}/>;
     return (
-      <div className="dictList">
+      <div className="mainContent">
         <ListGroup>
           <ListGroupItem>{adder}</ListGroupItem>
           {items}

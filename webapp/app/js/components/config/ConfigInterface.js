@@ -1,6 +1,7 @@
 var React = require('react');
 var bs = require('react-bootstrap');
 var Input = bs.Input;
+var Well = bs.Well;
 var ConfigInterface = React.createClass({
   toggleCheckbox: function(configName) {
     var config = this.props.config;
