@@ -89,6 +89,7 @@ var SearchInterface = React.createClass({
     var target = this.props.target;
     var dicts = this.props.dicts;
     var config = this.props.config;
+    var results = this.props.results;
     var handleSubmit = this.handleSubmit;
     var form = 
       <SearchForm
@@ -107,6 +108,7 @@ var SearchInterface = React.createClass({
         target={target}
         dicts={dicts}
         query={query}
+        results={results}
         config={config}/>;
     return (
       <div>

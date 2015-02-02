@@ -13,7 +13,8 @@ var DictApp = React.createClass({
       config: {
         limit: 1000,
         evidenceLimit: 1,
-        hideAdded: true
+        hideAdded: true,
+        rowsPerPage: 25
       },
       results: {
         rows: [],
@@ -29,7 +30,7 @@ var DictApp = React.createClass({
     var results = this.linkState('results');
     var config = this.linkState('config');
     var searchInterface = 
-      <SearchInterface config={config} results={results} dicts={dicts}/>;
+      <SearchInterface config={config} results={results} dicts={dicts} target={target}/>;
     var dictInterface = <DictInterface target={target} dicts={dicts}/>;
     var configInterface = <ConfigInterface config={config}/>;
     return (
