@@ -4,31 +4,34 @@ var xhr = require('xhr');
 var Navbar = bs.Navbar;
 var Nav = bs.Nav;
 var NavItem = bs.NavItem;
+var Well = bs.Well;
+var Button = bs.Button;
 var Input = bs.Input;
+var InputGroup = bs.InputGroup;
 var Glyphicon = bs.Glyphicon;
 var SearchInterface = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
   getInitialState: function() {
     return {
       query: '',
-      limit: 1000,
-      evidenceLimit: 1,
       request: null,
       errorMessage: null
     };
   },
   makeQuery: function() {
+    var config = this.props.config.value;
     return {
       query: this.state.query,
-      limit: this.state.limit,
-      evidenceLimit: this.state.evidenceLimit
+      limit: config.limit,
+      evidenceLimit: config.evidenceLimit,
+      dictionaries: this.props.dicts.value
     };
   },
   makeRequestData: function() {
     var query = this.makeQuery();
     return {
       body: JSON.stringify(query),
-      uri: '/api/search',
+      uri: '/api/groupedSearch',
       method: 'POST',
       headers: {'Content-Type': 'application/json'}
     };
@@ -78,15 +81,16 @@ var SearchInterface = React.createClass({
     this.search();
   },
   render: function() {
+    var a = <a href="#">Search Options</a>;
     return (
-      <Navbar fluid>
-        <form className="searchForm" onSubmit={this.handleSubmit}>
+      <Well bsSize="small" fluid>
+        <form onSubmit={this.handleSubmit}>
           <Input
             type="text"
             placeholder="Enter Query"
             valueLink={this.linkState('query')}/>
         </form>
-      </Navbar>
+      </Well>
     );
   }
 });

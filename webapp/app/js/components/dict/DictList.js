@@ -12,9 +12,9 @@ var DictList = React.createClass({
     var deleteEntry = function() {
       if (name in dicts.value) {
         delete dicts.value[name];
-        dicts.requestChange(dicts);
+        dicts.requestChange(dicts.value);
+        var dictNames = Object.keys(dicts.value);
         if (target.value == name) {
-          var dictNames = Object.keys(dicts.value);
           if (dictNames.length > 0) {
             target.requestChange(dictNames[0]);
           } else {
