@@ -12,7 +12,7 @@ var TargetSelector = React.createClass({
     var label = "Target Dictionary";
     if (names.length > 0) {
       return (
-        <Input label={label} type="select">
+        <Input label={label} type="select" valueLink={target}>
           {names.map(this.makeOption)}
         </Input>
       );

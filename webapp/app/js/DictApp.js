@@ -20,8 +20,10 @@ var DictApp = React.createClass({
         rows: [],
         errorMessage: null
       },
-      dicts: {},
-      target: null
+      dicts: {
+        'stuff': {name: 'stuff', positive: [], negative: []}
+      },
+      target: 'stuff'
     };
   },
   render: function() {

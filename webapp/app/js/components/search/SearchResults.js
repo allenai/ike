@@ -39,9 +39,18 @@ var SearchResults = React.createClass({
       return inPos || inNeg;
     }
   },
+  bySize: function(row1, row2) {
+    var diff = row2.size - row1.size;
+    if (diff == 0) {
+      return row1.key > row2.key ? 1 : -1;
+    } else {
+      return diff;
+    }
+  },
   displayedRows: function() {
     var results = this.props.results.value;
     var rows = results.rows;
+    rows.sort(this.bySize);
     return rows.filter(this.displayRow);
   },
   pageRows: function() {
@@ -55,6 +64,7 @@ var SearchResults = React.createClass({
     return this.pageRows().map(function(row) {
       return (
         <ResultRow
+          key={row.key}
           row={row}
           dicts={dicts}
           target={target}/>
@@ -65,10 +75,12 @@ var SearchResults = React.createClass({
     var results = this.props.results;
     var config = this.props.config;
     var target = this.props.target;
+    var addCol = (this.props.target.value == null) ? null : <th>Add</th>;
     return (
       <Table striped bordered condensed hover>
         <thead>
           <tr>
+            {addCol}
             <th>Capture</th>
             <th>Count</th>
           </tr>
