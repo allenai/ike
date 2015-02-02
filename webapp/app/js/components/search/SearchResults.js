@@ -2,6 +2,7 @@ var React = require('react');
 var bs = require('react-bootstrap');
 var Well = bs.Well;
 var Table = bs.Table;
+var Panel = bs.Panel;
 var ResultRow = require('./ResultRow.js');
 var SearchResults = React.createClass({
   getInitialState: function() {
@@ -71,7 +72,7 @@ var SearchResults = React.createClass({
         );
     });
   },
-  render: function() {
+  renderTable: function() {
     var results = this.props.results;
     var config = this.props.config;
     var target = this.props.target;
@@ -90,6 +91,43 @@ var SearchResults = React.createClass({
         </tbody>
       </Table>
     );
+  },
+  renderBlank: function() {
+    return <div/>;
+  },
+  renderErrorMessage: function() {
+    return (
+      <Panel header="Error" bsStyle="danger">
+        {this.props.results.value.errorMessage}
+      </Panel>
+    );
+  },
+  renderNoRows: function() {
+    var numRows = this.props.results.value.rows.length;
+    var numDisplayed = this.displayedRows().length;
+    var numHidden = numRows - numDisplayed;
+    return (
+      <Panel header="Empty Result Set" bsStyle="warning">
+        No rows to display ({numHidden} hidden).
+      </Panel>
+    );
+  },
+  renderPending: function() {
+    return <div>Loading...</div>;
+  },
+  render: function() {
+    var results = this.props.results.value;
+    if (results.request == null) {
+      return this.renderBlank();
+    } else if (results.pending) {
+      return this.renderPending();
+    } else if (results.errorMessage != null) {
+      return this.renderErrorMessage();
+    } else if (this.displayedRows().length == 0) {
+      return this.renderNoRows();
+    } else {
+      return this.renderTable();
+    }
   }
 });
 module.exports = SearchResults;

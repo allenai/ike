@@ -18,6 +18,8 @@ var DictApp = React.createClass({
       },
       results: {
         rows: [],
+        pending: false,
+        request: null,
         errorMessage: null
       },
       dicts: {

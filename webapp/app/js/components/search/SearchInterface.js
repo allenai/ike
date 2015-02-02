@@ -17,9 +17,7 @@ var SearchInterface = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
   getInitialState: function() {
     return {
-      query: 'JJ parsing',
-      request: null,
-      errorMessage: null
+      query: 'JJ parsing'
     };
   },
   makeQuery: function() {
@@ -41,6 +39,9 @@ var SearchInterface = React.createClass({
     };
   },
   searchCallback: function(err, resp, body) {
+    var results = this.props.results;
+    results.value.pending = false;
+    results.requestChange(results.value);
     if (resp.statusCode == 200) {
       var rows = JSON.parse(body);
       this.searchSuccess(rows);
@@ -51,16 +52,24 @@ var SearchInterface = React.createClass({
   searchSuccess: function(rows) {
     var results = this.props.results;
     results.value.rows = rows;
+    this.props.results.value.errorMessage = null;
     results.requestChange(results.value);
   },
   searchFailure: function(message) {
-    this.setState({errorMessage: message});
+    var results = this.props.results;
+    results.value.errorMessage = message;
+    results.requestChange(results.value);
   },
   hasPendingRequest: function() {
-    return this.state.request != null;
+    var results = this.props.results.value;
+    return results.pending;
   },
   cancelRequest: function() {
-    this.state.request.abort();
+    var results = this.props.results;
+    results.value.request.abort();
+    results.value.request = null;
+    results.value.pending = false;
+    results.requestChange(results.value);
   },
   clearRows: function() {
     var results = this.props.results;
@@ -77,7 +86,10 @@ var SearchInterface = React.createClass({
     this.clearRows();
     var requestData = this.makeRequestData();
     var request = xhr(requestData, this.searchCallback);
-    this.setState({request: request});
+    var results = this.props.results;
+    results.value.request = request;
+    results.value.pending = true;
+    results.requestChange(results.value);
   },
   handleSubmit: function(e) {
     e.preventDefault();
