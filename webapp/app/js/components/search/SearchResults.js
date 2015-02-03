@@ -20,6 +20,12 @@ var SearchResults = React.createClass({
       this.setState({currentPage: i});
     }
   },
+  hasNextPage: function() {
+    return this.state.currentPage < this.numPages() - 1;
+  },
+  hasPrevPage: function() {
+    return this.state.currentPage > 0;
+  },
   nextPage: function() {
     this.pageTo(this.state.currentPage + 1);
   },
@@ -90,16 +96,17 @@ var SearchResults = React.createClass({
     var config = this.props.config;
     var target = this.props.target;
     var addCol = (this.props.target.value == null) ? null : <th>Add</th>;
-    var pager = (
-        <Pager>
-          <PageItem previous href="#" onClick={this.prevPage}>
-            &larr; Previous Page
-          </PageItem>
-          <PageItem next href="#" onClick={this.nextPage}>
-            Next Page &rarr;
-          </PageItem>
-        </Pager>
-    );
+    var nextPage = this.hasNextPage() ? (
+      <PageItem next href="#" onClick={this.nextPage}>
+        Next Page &rarr;
+      </PageItem>
+    ) : null;
+    var prevPage = this.hasPrevPage() ? (
+      <PageItem previous href="#" onClick={this.prevPage}>
+        &larr; Previous Page
+      </PageItem>
+    ) : null;
+    var pager = <Pager>{nextPage} {prevPage}</Pager>;
     return (
       <div>
         <Table striped bordered condensed hover>
