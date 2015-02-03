@@ -96,7 +96,6 @@ var SearchInterface = React.createClass({
   },
   handleSubmit: function(e) {
     e.preventDefault();
-    this.clearQuery();
     this.search();
   },
   render: function() {
