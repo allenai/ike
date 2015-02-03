@@ -11,12 +11,10 @@ import nl.inl.blacklab.search.HitsWindow
 import scala.util.Failure
 import scala.util.Success
 
-case class ParseRequest(query: String)
-
+case class WordInfoRequest(word: String, config: SearchConfig)
+case class WordInfoResponse(histogram: Map[String, Map[String, Int]])
 case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1, groupBy: Option[String] = None)
-
 case class SearchRequest(query: Either[String, QExpr], dictionaries: Map[String, Dictionary], config: SearchConfig)
-
 case class SearchResponse(qexpr: QExpr, rows: Seq[GroupedBlackLabResult])
 
 case class SearchApp(config: Config) {
@@ -76,4 +74,11 @@ case class SearchApp(config: Config) {
     val words = wordData map (_.word.toLowerCase.trim)
     words mkString " "
   }
+  def wordAttributes(word: String): Try[Seq[(String, String)]] = for {
+    textPattern <- semantics(QWord(word))
+    hits <- blackLabHits(textPattern, 1000)
+    results <- fromHits(hits)
+    data = results.flatMap(_.matchData)
+    attrs = data.flatMap(_.attributes.toSeq)
+  } yield attrs
 }
