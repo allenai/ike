@@ -3,6 +3,8 @@ var bs = require('react-bootstrap');
 var Well = bs.Well;
 var Table = bs.Table;
 var Panel = bs.Panel;
+var Pager = bs.Pager;
+var PageItem = bs.PageItem;
 var ResultRow = require('./ResultRow.js');
 var SearchResults = React.createClass({
   getInitialState: function() {
@@ -13,11 +15,22 @@ var SearchResults = React.createClass({
   startRow: function() {
     return this.state.currentPage * this.rowsPerPage();
   },
+  pageTo: function(i) {
+    if (0 <= i && i < this.numPages()) {
+      this.setState({currentPage: i});
+    }
+  },
+  nextPage: function() {
+    this.pageTo(this.state.currentPage + 1);
+  },
+  prevPage: function() {
+    this.pageTo(this.state.currentPage - 1);
+  },
   rowsPerPage: function() {
     return this.props.config.value.rowsPerPage;
   },
   numPages: function() {
-    var rowsPerPage = 1.0 * this.rowsPerPage;
+    var rowsPerPage = 1.0 * this.rowsPerPage();
     var rows = this.displayedRows();
     var numRows = rows.length;
     return Math.ceil(numRows / rowsPerPage);
@@ -77,20 +90,33 @@ var SearchResults = React.createClass({
     var config = this.props.config;
     var target = this.props.target;
     var addCol = (this.props.target.value == null) ? null : <th>Add</th>;
+    var pager = (
+        <Pager>
+          <PageItem previous href="#" onClick={this.prevPage}>
+            &larr; Previous Page
+          </PageItem>
+          <PageItem next href="#" onClick={this.nextPage}>
+            Next Page &rarr;
+          </PageItem>
+        </Pager>
+    );
     return (
-      <Table striped bordered condensed hover>
-        <thead>
-          <tr>
-            {addCol}
-            <th>Capture</th>
-            <th>Count</th>
-            <th>Context</th>
-          </tr>
-        </thead>
-        <tbody>
-          {this.pageRowComponents()}
-        </tbody>
-      </Table>
+      <div>
+        <Table striped bordered condensed hover>
+          <thead>
+            <tr>
+              {addCol}
+              <th>Capture</th>
+              <th>Count</th>
+              <th>Context</th>
+            </tr>
+          </thead>
+          <tbody>
+            {this.pageRowComponents()}
+          </tbody>
+        </Table>
+        {this.numPages() > 1 ? pager : null}
+      </div>
     );
   },
   renderBlank: function() {
