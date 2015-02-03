@@ -119,6 +119,7 @@ var SearchInterface = React.createClass({
         results={results}/>;
     var searchResults =
       <SearchResults
+        key={results.value.rows}
         target={target}
         dicts={dicts}
         query={query}
