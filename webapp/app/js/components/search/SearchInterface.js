@@ -93,10 +93,8 @@ var SearchInterface = React.createClass({
     this.clearRows();
     var queryValue;
     if (this.state.qexpr == null) {
-      console.log('searching using string');
       queryValue = this.state.query;
     } else {
-      console.log('searching using expresion');
       queryValue = this.state.qexpr;
     }
     var requestData = this.makeRequestData(queryValue);
@@ -138,7 +136,7 @@ var SearchInterface = React.createClass({
         target={target}
         dicts={dicts}
         handleChange={handleChange}
-        qexpr={qexpr}/>;
+        rootState={qexpr}/>;
     var searchResults =
       <SearchResults
         key={results.value.rows}

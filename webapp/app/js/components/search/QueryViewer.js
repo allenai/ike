@@ -7,16 +7,16 @@ var Panel = bs.Panel;
 var Button = bs.Button;
 var QueryViewer = React.createClass({
   render: function() {
-    var qexpr = this.props.qexpr;
+    var rootState = this.props.rootState;
     var handleChange = this.props.handleChange;
-    if (qexpr.value == null) {
+    if (rootState == null || rootState.value == null) {
       return <div/>;
     } else {
       return (
         <Panel header="Query Expression Editor">
           <div className="tree" style={{display: 'table', margin: '0 auto'}}>
             <ul>
-              <li><QExpr qexpr={qexpr.value} linkedState={qexpr} handleChange={handleChange}/></li>
+              <li><QExpr qexpr={rootState.value} rootState={rootState} handleChange={handleChange}/></li>
             </ul>
           </div>
         </Panel>

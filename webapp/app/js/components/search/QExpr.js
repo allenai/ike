@@ -4,62 +4,104 @@ var Glyphicon = bs.Glyphicon;
 var Button = bs.Button;
 
 var QExprMixin = {
+  propTypes: {
+    rootState: React.PropTypes.shape({
+      value: React.PropTypes.object.isRequired,
+      requestChange: React.PropTypes.func.isRequired
+    }).isRequired,
+    qexpr: React.PropTypes.object.isRequired,
+    handleChange: React.PropTypes.func.isRequired,
+    path: React.PropTypes.arrayOf(React.PropTypes.oneOfType([
+      React.PropTypes.string,
+      React.PropTypes.number
+    ])).isRequired
+  },
   replaceExprAtPath: function(replacement, callback, path, pointer) {
-    var linkedState = this.props.linkedState;
+    var qexprLink = this.props.qexprLink;
     if (path == null) {
       path = this.props.path;
     }
     if (pointer == null) {
-      pointer = linkedState.value;
+      pointer = qexprLink.value;
     }
     if (path.length == 0) {
       console.error('Could not update expr at empty path');
     } else if (path.length == 1) {
       pointer[path[0]] = replacement;
-      linkedState.requestChange(linkedState.value, callback);
+      qexprLink.requestChange(qexprLink.value, callback);
     } else {
       pointer = pointer[path[0]];
       this.replaceExprAtPath(replacement, callback, path.slice(1), pointer);
     }
   },
   updateSelf: function(replacement) {
-    var linkedState = this.props.linkedState;
+    var qexprLink = this.props.qexprLink;
     var callback = this.props.handleChange;
     this.replaceExprAtPath(replacement, callback);
+  },
+  children: function() {
+    var attr = this.pathAttr();
+    if (attr == null) {
+      return null;
+    } else if (attr == 'qexpr') {
+      return [this.props.qexpr[attr]];
+    } else if (attr == 'qexprs') {
+      return this.props.qexpr[attr];
+    } else {
+      return [];
+    }
+  },
+  pathAttr: function() {
+    var qexpr = this.props.qexpr;
+    if ('qexpr' in qexpr) {
+      return 'qexpr';
+    } else if ('qexprs' in qexpr) {
+      return 'qexprs';
+    } else {
+      return null;
+    }
+  },
+  makeChildComponent: function(childExpr, index) {
+    var attr = this.pathAttr();
+    var childPath = this.props.path.slice();
+    var handleChange = this.props.handleChange;
+    var rootState = this.props.rootState;
+    childPath.push(attr);
+    childPath.push(index);
+    return (
+      <li key={index}>
+        <QExpr
+          qexpr={childExpr}
+          path={childPath}
+          handleChange={handleChange}
+          rootState={rootState}/>
+      </li>
+    );
+  },
+  childComponents: function() {
+    var children = this.children();
+    return children.map(this.makeChildComponent);
   }
 }
-
-var QSeq = React.createClass({
+var InnerNodeMixin = {
   mixins: [QExprMixin],
   render: function() {
-    var qexpr = this.props.qexpr;
-    var path = this.props.path;
-    var linkedState = this.props.linkedState;
-    var handleChange = this.props.handleChange;
-    var children = qexpr.qexprs.map(function(q, i) {
-      var childPath = path.slice();
-      childPath.push('qexprs');
-      childPath.push(i);
-      return <li key={i}><QExpr qexpr={q} path={childPath} linkedState={linkedState} handleChange={handleChange}/></li>;
-    });
-    return <div>Sequence<ul>{children}</ul></div>;
+    var name;
+    if (typeof(this.name) == 'function') {
+      name = this.name();
+    } else {
+      name = this.name;
+    }
+    return <div>{name}<ul>{this.childComponents()}</ul></div>;
   }
+};
+var QSeq = React.createClass({
+  mixins: [InnerNodeMixin],
+  name: 'Sequence'
 });
 var QDisj = React.createClass({
-  mixins: [QExprMixin],
-  render: function() {
-    var qexpr = this.props.qexpr;
-    var path = this.props.path;
-    var linkedState = this.props.linkedState;
-    var handleChange = this.props.handleChange;
-    var children = qexpr.qexprs.map(function(q, i) {
-      var childPath = path.slice();
-      childPath.push('qexprs');
-      childPath.push(i);
-      return <li key={i}><QExpr qexpr={q} path={childPath} linkedState={linkedState} handleChange={handleChange}/></li>;
-    });
-    return <div>Or<ul>{children}</ul></div>;
-  }
+  mixins: [InnerNodeMixin],
+  name: 'Or'
 });
 var QPos = React.createClass({
   mixins: [QExprMixin],
@@ -70,16 +112,7 @@ var QPos = React.createClass({
 var QWord = React.createClass({
   mixins: [QExprMixin],
   render: function() {
-    var linkedState = this.props.linkedState;
-    var path = this.props.path;
-    var qexpr = this.props.qexpr;
-    var handleChange = this.props.handleChange;
-    var reverse = function() {
-      qexpr.value = qexpr.value.split("").reverse().join("");
-      this.updateSelf(qexpr);
-    }.bind(this);
-    var button = <Button onClick={reverse}>Click!</Button>;
-    return <div>Word<ul><li>{this.props.qexpr.value} {button}</li></ul></div>;
+    return <div>Word<ul><li>{this.props.qexpr.value}</li></ul></div>;
   }
 });
 var QDict = React.createClass({
@@ -101,96 +134,34 @@ var QWildcard = React.createClass({
   }
 });
 var QNamed = React.createClass({
-  mixins: [QExprMixin],
-  render: function() {
-    var linkedState = this.props.linkedState;
-    var childPath = this.props.path.slice();
-    var handleChange = this.props.handleChange;
-    childPath.push('qexpr');
-    var child = <QExpr qexpr={this.props.qexpr.qexpr} path={childPath} linkedState={linkedState} handleChange={handleChange}/>;
-    return (
-      <div>
-        Capture({this.props.qexpr.name})
-        <ul>
-          <li>{child}</li>
-        </ul>
-      </div>
-    );
+  mixins: [InnerNodeMixin],
+  name: function() {
+    return 'Capture(' + this.props.qexpr.name + ')';
   }
 });
 var QUnnamed = React.createClass({
-  mixins: [QExprMixin],
-  render: function() {
-    var linkedState = this.props.linkedState;
-    var childPath = this.props.path.slice();
-    var handleChange = this.props.handleChange;
-    childPath.push('qexpr');
-    var child = <QExpr qexpr={this.props.qexpr.qexpr} path={childPath} linkedState={linkedState} handleChange={handleChange}/>;
-    return (
-      <div>
-        Capture
-        <ul>
-          <li>{child}</li>
-        </ul>
-      </div>
-    );
-  }
+  mixins: [InnerNodeMixin],
+  name: 'Capture'
 });
 var QNonCap = React.createClass({
-  mixins: [QExprMixin],
-  render: function() {
-    var linkedState = this.props.linkedState;
-    var childPath = this.props.path.slice();
-    childPath.push('qexpr');
-    var handleChange = this.props.handleChange;
-    var child = <QExpr qexpr={this.props.qexpr.qexpr} path={childPath} linkedState={linkedState} handleChange={handleChange}/>;
-    return (
-      <div>
-        Non-Capture
-        <ul>
-          <li>{child}</li>
-        </ul>
-      </div>
-    );
-  }
+  mixins: [InnerNodeMixin],
+  name: 'NonCapture'
 });
 var QStar = React.createClass({
-  mixins: [QExprMixin],
-  render: function() {
-    var linkedState = this.props.linkedState;
-    var childPath = this.props.path.slice();
-    childPath.push('qexpr');
-    var handleChange = this.props.handleChange;
-    var child = <QExpr qexpr={this.props.qexpr.qexpr} path={childPath} linkedState={linkedState} handleChange={handleChange}/>;
-    return (
-      <div>
-        <Glyphicon glyph="asterisk"/>
-        <ul>
-          <li>{child}</li>
-        </ul>
-      </div>
-    );
-  }
+  mixins: [InnerNodeMixin],
+  name: <Glyphicon glyph="asterisk"/>
 });
 var QPlus = React.createClass({
-  mixins: [QExprMixin],
-  render: function() {
-    var linkedState = this.props.linkedState;
-    var childPath = this.props.path.slice();
-    childPath.push('qexpr');
-    var handleChange = this.props.handleChange;
-    var child = <QExpr qexpr={this.props.qexpr.qexpr} path={childPath} linkedState={linkedState} handleChange={handleChange}/>;
-    return (
-      <div>
-        <Glyphicon glyph="plus"/>
-        <ul>
-          <li>{child}</li>
-        </ul>
-      </div>
-    );
-  }
+  mixins: [InnerNodeMixin],
+  name: <Glyphicon glyph="plus"/>
 });
 var QExpr = React.createClass({
+  mixins: [QExprMixin],
+  getDefaultProps: function() {
+    return {
+      path: []
+    }
+  },
   qexprComponents: {
     QWord: QWord,
     QPos: QPos,
@@ -206,19 +177,20 @@ var QExpr = React.createClass({
     QDisj: QDisj
   },
   render: function() {
-    var linkedState = this.props.linkedState;
     var qexpr = this.props.qexpr;
     var type = qexpr.type;
-    var handleChange = this.props.handleChange;
     if (type in this.qexprComponents) {
       var component = this.qexprComponents[type];
-      var path;
-      if (this.props.path == null) {
-        path = [];
-      } else {
-        path = this.props.path;
-      }
-      return React.createElement(component, {qexpr: qexpr, path: path, linkedState: linkedState, handleChange: handleChange});
+      var rootState = this.props.rootState;
+      var handleChange = this.props.handleChange;
+      var path = this.props.path;
+      var implProps = {
+        qexpr: qexpr,
+        path: path,
+        rootState: rootState,
+        handleChange: handleChange
+      };
+      return React.createElement(component, implProps);
     } else {
       console.error('Could not find expression type: ' + type);
       return <div/>;

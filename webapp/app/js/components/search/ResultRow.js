@@ -18,7 +18,7 @@ var ResultRow = React.createClass({
     return (
       <tr>
         {addCol}
-        <td style={{'white-space': 'nowrap'}}>{row.key}</td>
+        <td className="rowKey">{row.key}</td>
         <td>{row.size}</td>
         <td>{context}</td>
       </tr>
