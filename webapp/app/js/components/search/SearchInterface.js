@@ -17,7 +17,8 @@ var SearchInterface = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
   getInitialState: function() {
     return {
-      query: 'JJ parsing'
+      query: 'JJ parsing',
+      qexpr: null
     };
   },
   makeQuery: function() {
@@ -54,9 +55,9 @@ var SearchInterface = React.createClass({
   searchSuccess: function(response) {
     var results = this.props.results;
     results.value.rows = response.rows;
-    results.value.qexpr = response.qexpr;
     this.props.results.value.errorMessage = null;
     results.requestChange(results.value);
+    this.setState({qexpr: response.qexpr});
   },
   searchFailure: function(message) {
     var results = this.props.results;
@@ -105,6 +106,7 @@ var SearchInterface = React.createClass({
     var config = this.props.config;
     var results = this.props.results;
     var handleSubmit = this.handleSubmit;
+    var qexpr = this.linkState('qexpr');
     var form = 
       <SearchForm
         handleSubmit={handleSubmit}
@@ -116,7 +118,7 @@ var SearchInterface = React.createClass({
         handleSubmit={handleSubmit}
         target={target}
         dicts={dicts}
-        results={results}/>;
+        qexpr={qexpr}/>;
     var searchResults =
       <SearchResults
         key={results.value.rows}
