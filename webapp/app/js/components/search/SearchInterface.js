@@ -21,10 +21,10 @@ var SearchInterface = React.createClass({
       qexpr: null
     };
   },
-  makeQuery: function() {
+  makeQuery: function(queryValue) {
     var config = this.props.config.value;
     return {
-      query: this.state.query,
+      query: queryValue,
       config: {
         limit: config.limit,
         evidenceLimit: config.evidenceLimit
@@ -32,8 +32,8 @@ var SearchInterface = React.createClass({
       dictionaries: this.props.dicts.value
     };
   },
-  makeRequestData: function() {
-    var query = this.makeQuery();
+  makeRequestData: function(queryValue) {
+    var query = this.makeQuery(queryValue);
     return {
       body: JSON.stringify(query),
       uri: '/api/groupedSearch',
@@ -83,12 +83,23 @@ var SearchInterface = React.createClass({
   clearQuery: function() {
     this.setState({query: ''});
   },
+  clearQueryViewer: function(callback) {
+    this.setState({qexpr: null}, callback);
+  },
   search: function() {
     if (this.hasPendingRequest()) {
       this.cancelRequest();
     }
     this.clearRows();
-    var requestData = this.makeRequestData();
+    var queryValue;
+    if (this.state.qexpr == null) {
+      console.log('searching using string');
+      queryValue = this.state.query;
+    } else {
+      console.log('searching using expresion');
+      queryValue = this.state.qexpr;
+    }
+    var requestData = this.makeRequestData(queryValue);
     var request = xhr(requestData, this.searchCallback);
     var results = this.props.results;
     results.value.request = request;
@@ -97,7 +108,15 @@ var SearchInterface = React.createClass({
   },
   handleSubmit: function(e) {
     e.preventDefault();
-    this.search();
+    this.clearQueryViewer(this.search);
+  },
+  linkStateCallback: function(name) {
+    return {
+      value: this.state[name],
+      requestChange: function(update, callback) {
+        this.setState({name: update}, callback)
+      }.bind(this)
+    };
   },
   render: function() {
     var query = this.linkState('query');
@@ -106,7 +125,8 @@ var SearchInterface = React.createClass({
     var config = this.props.config;
     var results = this.props.results;
     var handleSubmit = this.handleSubmit;
-    var qexpr = this.linkState('qexpr');
+    var handleChange = this.search;
+    var qexpr = this.linkStateCallback('qexpr');
     var form = 
       <SearchForm
         handleSubmit={handleSubmit}
@@ -115,9 +135,9 @@ var SearchInterface = React.createClass({
         query={query}/>;
     var queryViewer =
       <QueryViewer
-        handleSubmit={handleSubmit}
         target={target}
         dicts={dicts}
+        handleChange={handleChange}
         qexpr={qexpr}/>;
     var searchResults =
       <SearchResults
