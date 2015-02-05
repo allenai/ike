@@ -135,6 +135,7 @@ var SearchInterface = React.createClass({
       <QueryViewer
         target={target}
         dicts={dicts}
+        config={config}
         handleChange={handleChange}
         rootState={qexpr}/>;
     var searchResults =

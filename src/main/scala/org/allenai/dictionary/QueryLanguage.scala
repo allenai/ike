@@ -25,6 +25,9 @@ case class QWord(value: String) extends QExpr with QLeaf
 case class QCluster(value: String) extends QExpr with QLeaf
 case class QPos(value: String) extends QExpr with QLeaf
 case class QDict(value: String) extends QExpr with QLeaf
+case class QClusterFromWord(value: String, wordValue: String, clusterId: String)
+  extends QExpr
+  with QLeaf
 case class QWildcard() extends QExpr with QLeaf
 case class QNamed(qexpr: QExpr, name: String) extends QExpr
 case class QUnnamed(qexpr: QExpr) extends QExpr

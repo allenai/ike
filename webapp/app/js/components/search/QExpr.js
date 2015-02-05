@@ -1,5 +1,6 @@
 var React = require('react');
 var bs = require('react-bootstrap');
+var xhr = require('xhr');
 var Glyphicon = bs.Glyphicon;
 var DropdownButton = bs.DropdownButton;
 var tree = require('./Tree.js');
@@ -21,25 +22,25 @@ var QExprMixin = {
     ])).isRequired
   },
   replaceExprAtPath: function(replacement, callback, path, pointer) {
-    var qexprLink = this.props.qexprLink;
+    var rootState = this.props.rootState;
     if (path == null) {
       path = this.props.path;
     }
     if (pointer == null) {
-      pointer = qexprLink.value;
+      pointer = rootState.value;
     }
     if (path.length == 0) {
       console.error('Could not update expr at empty path');
     } else if (path.length == 1) {
       pointer[path[0]] = replacement;
-      qexprLink.requestChange(qexprLink.value, callback);
+      rootState.requestChange(rootState.value, callback);
     } else {
       pointer = pointer[path[0]];
       this.replaceExprAtPath(replacement, callback, path.slice(1), pointer);
     }
   },
   updateSelf: function(replacement) {
-    var qexprLink = this.props.qexprLink;
+    var rootState = this.props.rootState;
     var callback = this.props.handleChange;
     this.replaceExprAtPath(replacement, callback);
   },
@@ -70,6 +71,7 @@ var QExprMixin = {
     var childPath = this.props.path.slice();
     var handleChange = this.props.handleChange;
     var rootState = this.props.rootState;
+    var config = this.props.config;
     childPath.push(attr);
     childPath.push(index);
     return (
@@ -77,6 +79,7 @@ var QExprMixin = {
         <QExpr
           qexpr={childExpr}
           path={childPath}
+          config={config}
           handleChange={handleChange}
           rootState={rootState}/>
       </Node>
@@ -115,12 +118,44 @@ var QPos = React.createClass({
 });
 var QWord = React.createClass({
   mixins: [QExprMixin],
+  getWordInfo: function() {
+    var word = this.props.qexpr.value;
+    var config = this.props.config.value;
+    var query = {
+      word: word,
+      config: config
+    };
+    var requestData = {
+      body: JSON.stringify(query),
+      uri: '/api/wordInfo',
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'}
+    };
+    var request = xhr(requestData, this.wordInfoCallback);
+  },
+  wordInfoCallback: function(err, resp, body) {
+    if (resp.statusCode == 200) {
+      var wordInfo = JSON.parse(body);
+      this.replaceWithClusterFromWord(wordInfo);
+    } else {
+      alert('Could not get word info');
+    }
+  },
+  replaceWithClusterFromWord: function(wordInfo) {
+    var replacement = {
+      type: 'QClusterFromWord',
+      value: wordInfo.clusterId,
+      wordValue: wordInfo.word,
+      clusterId: wordInfo.clusterId
+    };
+    this.updateSelf(replacement);
+  },
   render: function() {
     var value = this.props.qexpr.value;
     var button = (
       <div>
       <DropdownButton bsStyle="link" title={value}>
-        <MenuItem eventKey={1}>Do something</MenuItem>
+        <MenuItem eventKey={1} onClick={this.getWordInfo}>Do something</MenuItem>
         <MenuItem eventKey={1}><input type="text"/></MenuItem>
       </DropdownButton>
       </div>
@@ -168,6 +203,45 @@ var QPlus = React.createClass({
   mixins: [InnerNodeMixin],
   name: <Glyphicon glyph="plus"/>
 });
+var QClusterFromWord = React.createClass({
+  mixins: [QExprMixin],
+  handleChange: function(e) {
+    var qexpr = this.props.qexpr;
+    var clusterId = qexpr.clusterId;
+    var n = clusterId.length;
+    var value = this.refs.slider.getDOMNode().value;
+    var prefix = clusterId.slice(0, value);
+    qexpr.value = prefix;
+    console.log(prefix);
+    this.updateSelf(qexpr);
+  },
+  render: function() {
+    var qexpr = this.props.qexpr;
+    var value = qexpr.value;
+    var wordValue = qexpr.wordValue;
+    var clusterId = qexpr.clusterId;
+    var slider = 
+      <input
+        ref="slider"
+        type="range"
+        className="vslider"
+        min={1}
+        max={clusterId.length}
+        step={1}
+        value={value.length}
+        onChange={this.handleChange}/>;
+    return (
+      <div>
+        {wordValue}
+        <div>
+          More Specific
+          {slider}
+          More General
+        </div>
+      </div>
+    );
+  }
+});
 var QExpr = React.createClass({
   mixins: [QExprMixin],
   getDefaultProps: function() {
@@ -187,7 +261,8 @@ var QExpr = React.createClass({
     QNonCap: QNonCap,
     QStar: QStar,
     QPlus: QPlus,
-    QDisj: QDisj
+    QDisj: QDisj,
+    QClusterFromWord: QClusterFromWord
   },
   render: function() {
     var qexpr = this.props.qexpr;
@@ -196,12 +271,14 @@ var QExpr = React.createClass({
       var component = this.qexprComponents[type];
       var rootState = this.props.rootState;
       var handleChange = this.props.handleChange;
+      var config = this.props.config;
       var path = this.props.path;
       var implProps = {
         qexpr: qexpr,
         path: path,
         rootState: rootState,
-        handleChange: handleChange
+        handleChange: handleChange,
+        config: config
       };
       return React.createElement(component, implProps);
     } else {

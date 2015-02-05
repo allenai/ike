@@ -60,10 +60,10 @@ class DictionaryToolActor extends Actor with BasicService with SprayJsonSupport 
       }
     }
   } ~
-  pathPrefix("api" / "wordAttributes") {
+  pathPrefix("api" / "wordInfo") {
     post {
-      entity(as[String]) { word =>
-        complete(searchApp.wordAttributes(word))
+      entity(as[WordInfoRequest]) { req =>
+        complete(searchApp.wordInfo(req))
       }
     }
   }

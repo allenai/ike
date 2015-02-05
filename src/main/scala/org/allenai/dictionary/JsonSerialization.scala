@@ -14,4 +14,6 @@ object JsonSerialization {
   implicit val searchConfigFormat = jsonFormat3(SearchConfig.apply)
   implicit val searchRequestFormat = jsonFormat3(SearchRequest.apply)
   implicit val searchResponse = jsonFormat2(SearchResponse.apply)
+  implicit val wordInfoRequest = jsonFormat2(WordInfoRequest.apply)
+  implicit val wordInfoResponse = jsonFormat3(WordInfoResponse.apply)
 }

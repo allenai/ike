@@ -18,6 +18,7 @@ object QExprJsonSerialization {
       case q: QPlus => q.toJson
       case q: QSeq => q.toJson
       case q: QDisj => q.toJson
+      case q: QClusterFromWord => q.toJson
     }
     override def read(jsValue: JsValue): QExpr = jsValue.asJsObject.unpackAs[QExpr]
   }
@@ -36,7 +37,8 @@ object QExprJsonSerialization {
   implicit val qplusFormat = jsonFormat1(QPlus.apply).pack("type" -> "QPlus")
   implicit val qseqFormat = jsonFormat1(QSeq.apply).pack("type" -> "QSeq")
   implicit val qdisjFormat = jsonFormat1(QDisj.apply).pack("type" -> "QDisj")
+  implicit val qcfwFormat = jsonFormat3(QClusterFromWord.apply).pack("type" -> "QClusterFromWord")
   implicit val unpackers = Seq(qwordFormat, qclusterFormat, qposFormat, qdictFormat,
     qwildcardFormat, qnamedFormat, qunnamedFormat, qnonCapFormat, qstarFormat,
-    qplusFormat, qseqFormat, qdisjFormat)
+    qplusFormat, qseqFormat, qdisjFormat, qcfwFormat)
 }

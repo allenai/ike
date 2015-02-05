@@ -12,7 +12,7 @@ import scala.util.Failure
 import scala.util.Success
 
 case class WordInfoRequest(word: String, config: SearchConfig)
-case class WordInfoResponse(histogram: Map[String, Map[String, Int]])
+case class WordInfoResponse(word: String, clusterId: Option[String], posTags: Map[String, Int])
 case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1, groupBy: Option[String] = None)
 case class SearchRequest(query: Either[String, QExpr], dictionaries: Map[String, Dictionary], config: SearchConfig)
 case class SearchResponse(qexpr: QExpr, rows: Seq[GroupedBlackLabResult])
@@ -74,11 +74,33 @@ case class SearchApp(config: Config) {
     val words = wordData map (_.word.toLowerCase.trim)
     words mkString " "
   }
-  def wordAttributes(word: String): Try[Seq[(String, String)]] = for {
-    textPattern <- semantics(QWord(word))
-    hits <- blackLabHits(textPattern, 1000)
+  def wordAttributes(req: WordInfoRequest): Try[Seq[(String, String)]] = for {
+    textPattern <- semantics(QWord(req.word))
+    hits <- blackLabHits(textPattern, req.config.limit)
     results <- fromHits(hits)
     data = results.flatMap(_.matchData)
     attrs = data.flatMap(_.attributes.toSeq)
   } yield attrs
+  def attrHist(attrs: Seq[(String, String)]): Map[(String, String), Int] = attrs.groupBy(identity).mapValues(_.size)
+  def attrModes(attrs: Seq[(String, String)]): Map[String, String] = {
+    val histogram = attrHist(attrs)
+    val attrKeys = attrs.map(_._1).distinct
+    val results = for {
+      key <- attrKeys
+      subHistogram = histogram.filterKeys(_._1 == key)
+      if subHistogram.size > 0
+      attrMode = subHistogram.keys.maxBy(subHistogram)
+    } yield attrMode
+    results.toMap
+  }
+  def wordInfo(req: WordInfoRequest): Try[WordInfoResponse] = for {
+    attrs <- wordAttributes(req)
+    histogram = attrHist(attrs)
+    modes = attrModes(attrs)
+    clusterId = modes.get("cluster")
+    posTags = histogram.filterKeys(_._1 == "pos").map {
+      case (a, b) => (a._2, b)
+    }
+    res = WordInfoResponse(req.word, clusterId, posTags)
+  } yield res
 }

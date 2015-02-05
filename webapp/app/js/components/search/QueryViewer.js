@@ -12,6 +12,7 @@ var QueryViewer = React.createClass({
   render: function() {
     var rootState = this.props.rootState;
     var handleChange = this.props.handleChange;
+    var config = this.props.config;
     if (rootState == null || rootState.value == null) {
       return <div/>;
     } else {
@@ -21,6 +22,7 @@ var QueryViewer = React.createClass({
             <Tree>
               <Node>
                 <QExpr
+                  config={config}
                   qexpr={rootState.value}
                   rootState={rootState}
                   handleChange={handleChange}/>
