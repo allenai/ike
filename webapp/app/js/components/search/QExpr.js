@@ -1,7 +1,11 @@
 var React = require('react');
 var bs = require('react-bootstrap');
 var Glyphicon = bs.Glyphicon;
-var Button = bs.Button;
+var DropdownButton = bs.DropdownButton;
+var tree = require('./Tree.js');
+var MenuItem = bs.MenuItem;
+var Node = tree.Node;
+var Tree = tree.Tree;
 
 var QExprMixin = {
   propTypes: {
@@ -69,13 +73,13 @@ var QExprMixin = {
     childPath.push(attr);
     childPath.push(index);
     return (
-      <li key={index}>
+      <Node key={index}>
         <QExpr
           qexpr={childExpr}
           path={childPath}
           handleChange={handleChange}
           rootState={rootState}/>
-      </li>
+      </Node>
     );
   },
   childComponents: function() {
@@ -92,7 +96,7 @@ var InnerNodeMixin = {
     } else {
       name = this.name;
     }
-    return <div>{name}<ul>{this.childComponents()}</ul></div>;
+    return <div>{name}<Tree>{this.childComponents()}</Tree></div>;
   }
 };
 var QSeq = React.createClass({
@@ -106,25 +110,34 @@ var QDisj = React.createClass({
 var QPos = React.createClass({
   mixins: [QExprMixin],
   render: function() {
-    return <div>POS<ul><li>{this.props.qexpr.value}</li></ul></div>;
+    return <div>POS<Tree><Node>{this.props.qexpr.value}</Node></Tree></div>;
   }
 });
 var QWord = React.createClass({
   mixins: [QExprMixin],
   render: function() {
-    return <div>Word<ul><li>{this.props.qexpr.value}</li></ul></div>;
+    var value = this.props.qexpr.value;
+    var button = (
+      <div>
+      <DropdownButton bsStyle="link" title={value}>
+        <MenuItem eventKey={1}>Do something</MenuItem>
+        <MenuItem eventKey={1}><input type="text"/></MenuItem>
+      </DropdownButton>
+      </div>
+    );
+    return button;
   }
 });
 var QDict = React.createClass({
   mixins: [QExprMixin],
   render: function() {
-    return <div>Dict<ul><li>{this.props.qexpr.value}</li></ul></div>;
+    return <div>Dict<Tree><Node>{this.props.qexpr.value}</Node></Tree></div>;
   }
 });
 var QCluster = React.createClass({
   mixins: [QExprMixin],
   render: function() {
-    return <div>Cluster<ul><li>{this.props.qexpr.value}</li></ul></div>;
+    return <div>Cluster<Tree><Node>{this.props.qexpr.value}</Node></Tree></div>;
   }
 });
 var QWildcard = React.createClass({

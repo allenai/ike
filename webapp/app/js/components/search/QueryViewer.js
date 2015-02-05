@@ -1,6 +1,9 @@
 var React = require('react');
 var bs = require('react-bootstrap');
 var xhr = require('xhr');
+var tree = require('./Tree.js');
+var Tree = tree.Tree;
+var Node = tree.Node;
 var QExpr = require('./QExpr.js');
 var Well = bs.Well;
 var Panel = bs.Panel;
@@ -14,10 +17,15 @@ var QueryViewer = React.createClass({
     } else {
       return (
         <Panel header="Query Expression Editor">
-          <div className="tree" style={{display: 'table', margin: '0 auto'}}>
-            <ul>
-              <li><QExpr qexpr={rootState.value} rootState={rootState} handleChange={handleChange}/></li>
-            </ul>
+          <div style={{display: 'table', margin: '0 auto'}}>
+            <Tree>
+              <Node>
+                <QExpr
+                  qexpr={rootState.value}
+                  rootState={rootState}
+                  handleChange={handleChange}/>
+              </Node>
+            </Tree>
           </div>
         </Panel>
       );
