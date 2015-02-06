@@ -2,11 +2,15 @@ var React = require('react');
 var bs = require('react-bootstrap');
 var xhr = require('xhr');
 var Glyphicon = bs.Glyphicon;
+var Button = bs.Button;
 var DropdownButton = bs.DropdownButton;
 var tree = require('./Tree.js');
 var MenuItem = bs.MenuItem;
 var Node = tree.Node;
 var Tree = tree.Tree;
+var Label = bs.Label;
+var Panel = bs.Panel;
+var Input = bs.Input;
 
 var QExprMixin = {
   propTypes: {
@@ -115,7 +119,7 @@ var QPos = React.createClass({
 });
 var QWord = React.createClass({
   mixins: [QExprMixin],
-  getWordInfo: function() {
+  getWordInfo: function(callback) {
     var word = this.props.qexpr.value;
     var config = this.props.config.value;
     var query = {
@@ -128,15 +132,15 @@ var QWord = React.createClass({
       method: 'POST',
       headers: {'Content-Type': 'application/json'}
     };
-    var request = xhr(requestData, this.wordInfoCallback);
-  },
-  wordInfoCallback: function(err, resp, body) {
-    if (resp.statusCode == 200) {
-      var wordInfo = JSON.parse(body);
-      this.replaceWithClusterFromWord(wordInfo);
-    } else {
-      alert('Could not get word info');
-    }
+    var xhrCallback = function(err, resp, body) {
+      if (resp.statusCode == 200) {
+        var wordInfo = JSON.parse(body);
+        callback(wordInfo);
+      } else {
+        alert('Could not get word info');
+      }
+    };
+    var request = xhr(requestData, xhrCallback);
   },
   replaceWithClusterFromWord: function(wordInfo) {
     var replacement = {
@@ -147,12 +151,29 @@ var QWord = React.createClass({
     };
     this.updateSelf(replacement);
   },
+  replaceWithPosFromWord: function(wordInfo) {
+    var replacement = {
+      type: 'QPosFromWord',
+      wordValue: wordInfo.word,
+      posTags: wordInfo.posTags
+    };
+    this.updateSelf(replacement);
+  },
+  toClusterFromWord: function() {
+    var replace = this.replaceWithClusterFromWord;
+    this.getWordInfo(replace);
+  },
+  toPosFromWord: function() {
+    var replace = this.replaceWithPosFromWord;
+    this.getWordInfo(replace);
+  },
   render: function() {
     var value = this.props.qexpr.value;
     var button = (
       <div>
       <DropdownButton bsStyle="link" title={value}>
-        <MenuItem eventKey={1} onClick={this.getWordInfo}>Generalize to Similar Words...</MenuItem>
+        <MenuItem eventKey={1} onClick={this.toClusterFromWord}>Generalize to similar words...</MenuItem>
+        <MenuItem eventKey={1} onClick={this.toPosFromWord}>Generalize by POS tag...</MenuItem>
       </DropdownButton>
       </div>
     );
@@ -199,6 +220,40 @@ var QPlus = React.createClass({
   mixins: [InnerNodeMixin],
   name: <Glyphicon glyph="plus"/>
 });
+var QPosFromWord = React.createClass({
+  mixins: [QExprMixin],
+  handleChange: function(e) {
+    var value = e.target.value;
+    console.log(value);
+    var qexpr = this.props.qexpr;
+    qexpr.value = value;
+    this.updateSelf(qexpr);
+  },
+  makeOption: function(tag, i) {
+    return <option key={i} value={tag}>{tag}</option>;
+  },
+  render: function() {
+    var qexpr = this.props.qexpr;
+    var word = qexpr.wordValue;
+    var tags = Object.keys(qexpr.posTags);
+    tags.sort(function(t1, t2) {
+      return qexpr.posTags[t2] - qexpr.posTags[t1];
+    });
+    var header = <div style={{fontSize: 'small'}}>{'POS Tags for "' + word + '"'}</div>;
+    var placeholder;
+    if (!('value' in qexpr)) {
+      placeholder = <option>Possible POS Tags</option>;
+    }
+    return (
+      <Panel header={header}>
+        <Input type="select" onChange={this.handleChange} value={this.props.qexpr.value}>
+          {placeholder}
+          {tags.map(this.makeOption)}
+        </Input>
+      </Panel>
+    );
+  }
+});
 var QClusterFromWord = React.createClass({
   mixins: [QExprMixin],
   handleChange: function(e) {
@@ -207,11 +262,29 @@ var QClusterFromWord = React.createClass({
     qexpr.value = parseInt(value);
     this.updateSelf(qexpr);
   },
+  convertToWord: function() {
+    var word = this.props.qexpr.wordValue;
+    var replacement = {
+      value: word,
+      type: "QWord"
+    };
+    console.log(replacement);
+    this.updateSelf(replacement);
+  },
   render: function() {
     var qexpr = this.props.qexpr;
     var value = qexpr.value;
     var wordValue = qexpr.wordValue;
     var clusterId = qexpr.clusterId;
+    var button = (
+      <Button                                                                   
+        onClick={this.convertToWord}                                                    
+        bsSize="xsmall"                                                         
+        className="pull-right"                                                  
+        bsStyle="danger">                                                       
+        <Glyphicon glyph="remove"/>                                             
+      </Button>
+    );
     var slider = 
       <input
         ref="slider"
@@ -222,15 +295,16 @@ var QClusterFromWord = React.createClass({
         step={1}
         value={value}
         onChange={this.handleChange}/>;
+    var header = 'Words similar to "' + wordValue + '"'
+    var headerValue = <div style={{fontSize: 'small'}}>{header}</div>;
     return (
-      <div>
-        {wordValue}
+      <Panel header={headerValue}>
         <div>
           More Similar
           {slider}
           Less Similar
         </div>
-      </div>
+      </Panel>
     );
   }
 });
@@ -254,7 +328,8 @@ var QExpr = React.createClass({
     QStar: QStar,
     QPlus: QPlus,
     QDisj: QDisj,
-    QClusterFromWord: QClusterFromWord
+    QClusterFromWord: QClusterFromWord,
+    QPosFromWord: QPosFromWord
   },
   render: function() {
     var qexpr = this.props.qexpr;
