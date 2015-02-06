@@ -114,7 +114,9 @@ var QDisj = React.createClass({
 var QPos = React.createClass({
   mixins: [QExprMixin],
   render: function() {
-    return <div>POS<Tree><Node>{this.props.qexpr.value}</Node></Tree></div>;
+    var value = this.props.qexpr.value;
+    var menu = <DropdownButton bsStyle="link" title={value}></DropdownButton>;
+    return menu;
   }
 });
 var QWord = React.createClass({
@@ -183,7 +185,10 @@ var QWord = React.createClass({
 var QDict = React.createClass({
   mixins: [QExprMixin],
   render: function() {
-    return <div>Dict<Tree><Node>{this.props.qexpr.value}</Node></Tree></div>;
+    var value = this.props.qexpr.value;
+    var dollarized = '$' + value;
+    var menu = <DropdownButton bsStyle="link" title={dollarized}></DropdownButton>;
+    return menu;
   }
 });
 var QCluster = React.createClass({
@@ -277,15 +282,15 @@ var QClusterFromWord = React.createClass({
     var wordValue = qexpr.wordValue;
     var clusterId = qexpr.clusterId;
     var button = (
-      <Button                                                                   
-        onClick={this.convertToWord}                                                    
-        bsSize="xsmall"                                                         
-        className="pull-right"                                                  
-        bsStyle="danger">                                                       
-        <Glyphicon glyph="remove"/>                                             
+      <Button
+        onClick={this.convertToWord}
+        bsSize="xsmall"
+        className="pull-right"
+        bsStyle="danger">
+        <Glyphicon glyph="remove"/>
       </Button>
     );
-    var slider = 
+    var slider =
       <input
         ref="slider"
         type="range"

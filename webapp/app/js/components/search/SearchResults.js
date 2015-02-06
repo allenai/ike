@@ -113,7 +113,7 @@ var SearchResults = React.createClass({
           <thead>
             <tr>
               {addCol}
-              <th>Capture</th>
+              <th></th>
               <th>Count</th>
               <th>Context</th>
             </tr>

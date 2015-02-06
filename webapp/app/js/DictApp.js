@@ -11,8 +11,8 @@ var DictApp = React.createClass({
     return {
       config: {
         limit: 1000,
-        evidenceLimit: 1,
-        hideAdded: true,
+        evidenceLimit: 10,
+        hideAdded: false,
         rowsPerPage: 25
       },
       results: {
@@ -23,9 +23,8 @@ var DictApp = React.createClass({
         errorMessage: null
       },
       dicts: {
-        'stuff': {name: 'stuff', positive: [], negative: []}
       },
-      target: 'stuff'
+      target: null
     };
   },
   render: function() {

@@ -17,7 +17,7 @@ var SearchInterface = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
   getInitialState: function() {
     return {
-      query: 'JJ parsing',
+      query: null,
       qexpr: null
     };
   },
