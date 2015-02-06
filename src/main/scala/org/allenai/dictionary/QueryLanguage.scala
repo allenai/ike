@@ -6,26 +6,12 @@ import scala.util.{ Try, Failure, Success }
 import java.text.ParseException
 
 sealed trait QExpr
-case object QExpr {
-  // TODO(tonyf): set up so recursive calls are simplified
-  def children(qexpr: QExpr): Seq[QExpr] = qexpr match {
-    case l: QLeaf => Nil
-    case n: QNamed => n.qexpr :: Nil
-    case u: QUnnamed => u.qexpr :: Nil
-    case n: QNonCap => n.qexpr :: Nil
-    case s: QStar => s.qexpr :: Nil
-    case p: QPlus => p.qexpr :: Nil
-    case s: QSeq => s.qexprs
-    case d: QDisj => d.qexprs
-  }
-}
-
 sealed trait QLeaf extends QExpr
 case class QWord(value: String) extends QExpr with QLeaf
 case class QCluster(value: String) extends QExpr with QLeaf
 case class QPos(value: String) extends QExpr with QLeaf
 case class QDict(value: String) extends QExpr with QLeaf
-case class QClusterFromWord(value: String, wordValue: String, clusterId: String)
+case class QClusterFromWord(value: Int, wordValue: String, clusterId: String)
   extends QExpr
   with QLeaf
 case class QWildcard() extends QExpr with QLeaf

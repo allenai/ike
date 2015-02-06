@@ -32,7 +32,12 @@ object BlackLabSemantics {
       case QPlus(e: QExpr) => new TextPatternRepetition(blqHelper(e), 1, -1)
       case QSeq(es: Seq[QExpr]) => new TextPatternSequence(es.map(blqHelper): _*)
       case QDisj(es: Seq[QExpr]) => new TextPatternOr(es.map(blqHelper): _*)
-      case QClusterFromWord(value, _, _) => blqHelper(QCluster(value))
+      case QClusterFromWord(value, word, clusterId) =>
+        if (value < clusterId.size) {
+          blqHelper(QCluster(clusterId.slice(0, value)))
+        } else {
+          blqHelper(QWord(word))
+        }
     }
     blqHelper(qexpr)
   }

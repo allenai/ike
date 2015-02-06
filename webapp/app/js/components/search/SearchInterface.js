@@ -111,8 +111,10 @@ var SearchInterface = React.createClass({
   linkStateCallback: function(name) {
     return {
       value: this.state[name],
-      requestChange: function(update, callback) {
-        this.setState({name: update}, callback)
+      requestChange: function(updateValue, callback) {
+        var update = {};
+        update[name] = updateValue;
+        this.setState(update, callback)
       }.bind(this)
     };
   },

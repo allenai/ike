@@ -21,22 +21,19 @@ var QExprMixin = {
       React.PropTypes.number
     ])).isRequired
   },
-  replaceExprAtPath: function(replacement, callback, path, pointer) {
+  replaceExprAtPath: function(replacement, callback) {
     var rootState = this.props.rootState;
-    if (path == null) {
-      path = this.props.path;
-    }
-    if (pointer == null) {
-      pointer = rootState.value;
-    }
+    var path = this.props.path.slice();
+    var pointer = rootState.value;
     if (path.length == 0) {
-      console.error('Could not update expr at empty path');
-    } else if (path.length == 1) {
+      rootState.requestChange(replacement, callback);
+    } else {
+      while (path.length > 1) {
+        pointer = pointer[path[0]];
+        path = path.slice(1);
+      }
       pointer[path[0]] = replacement;
       rootState.requestChange(rootState.value, callback);
-    } else {
-      pointer = pointer[path[0]];
-      this.replaceExprAtPath(replacement, callback, path.slice(1), pointer);
     }
   },
   updateSelf: function(replacement) {
@@ -46,9 +43,7 @@ var QExprMixin = {
   },
   children: function() {
     var attr = this.pathAttr();
-    if (attr == null) {
-      return null;
-    } else if (attr == 'qexpr') {
+    if (attr == 'qexpr') {
       return [this.props.qexpr[attr]];
     } else if (attr == 'qexprs') {
       return this.props.qexpr[attr];
@@ -73,7 +68,9 @@ var QExprMixin = {
     var rootState = this.props.rootState;
     var config = this.props.config;
     childPath.push(attr);
-    childPath.push(index);
+    if (attr == 'qexprs') {
+      childPath.push(index);
+    }
     return (
       <Node key={index}>
         <QExpr
@@ -144,7 +141,7 @@ var QWord = React.createClass({
   replaceWithClusterFromWord: function(wordInfo) {
     var replacement = {
       type: 'QClusterFromWord',
-      value: wordInfo.clusterId,
+      value: wordInfo.clusterId.length + 1,
       wordValue: wordInfo.word,
       clusterId: wordInfo.clusterId
     };
@@ -155,8 +152,7 @@ var QWord = React.createClass({
     var button = (
       <div>
       <DropdownButton bsStyle="link" title={value}>
-        <MenuItem eventKey={1} onClick={this.getWordInfo}>Do something</MenuItem>
-        <MenuItem eventKey={1}><input type="text"/></MenuItem>
+        <MenuItem eventKey={1} onClick={this.getWordInfo}>Generalize to Similar Words...</MenuItem>
       </DropdownButton>
       </div>
     );
@@ -207,12 +203,8 @@ var QClusterFromWord = React.createClass({
   mixins: [QExprMixin],
   handleChange: function(e) {
     var qexpr = this.props.qexpr;
-    var clusterId = qexpr.clusterId;
-    var n = clusterId.length;
     var value = this.refs.slider.getDOMNode().value;
-    var prefix = clusterId.slice(0, value);
-    qexpr.value = prefix;
-    console.log(prefix);
+    qexpr.value = parseInt(value);
     this.updateSelf(qexpr);
   },
   render: function() {
@@ -226,9 +218,9 @@ var QClusterFromWord = React.createClass({
         type="range"
         className="vslider"
         min={1}
-        max={clusterId.length}
+        max={clusterId.length + 1}
         step={1}
-        value={value.length}
+        value={value}
         onChange={this.handleChange}/>;
     return (
       <div>
