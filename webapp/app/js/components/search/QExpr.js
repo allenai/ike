@@ -226,9 +226,9 @@ var QClusterFromWord = React.createClass({
       <div>
         {wordValue}
         <div>
-          More Specific
+          More Similar
           {slider}
-          More General
+          Less Similar
         </div>
       </div>
     );

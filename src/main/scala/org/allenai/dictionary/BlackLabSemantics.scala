@@ -38,6 +38,10 @@ object BlackLabSemantics {
         } else {
           blqHelper(QWord(word))
         }
+      case QPosFromWord(value, word, posTags) => value match {
+        case Some(string) => blqHelper(QPos(string))
+        case None => blqHelper(QWord(word))
+      }
     }
     blqHelper(qexpr)
   }
