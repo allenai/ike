@@ -14,7 +14,8 @@ import scala.util.Success
 case class WordInfoRequest(word: String, config: SearchConfig)
 case class WordInfoResponse(word: String, clusterId: Option[String], posTags: Map[String, Int])
 case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1, groupBy: Option[String] = None)
-case class SearchRequest(query: Either[String, QExpr], dictionaries: Map[String, Dictionary], config: SearchConfig)
+case class SearchRequest(query: Either[String, QExpr], dictionaries: Map[String, Dictionary],
+  config: SearchConfig)
 case class SearchResponse(qexpr: QExpr, rows: Seq[GroupedBlackLabResult])
 
 case class SearchApp(config: Config) {
@@ -81,7 +82,8 @@ case class SearchApp(config: Config) {
     data = results.flatMap(_.matchData)
     attrs = data.flatMap(_.attributes.toSeq)
   } yield attrs
-  def attrHist(attrs: Seq[(String, String)]): Map[(String, String), Int] = attrs.groupBy(identity).mapValues(_.size)
+  def attrHist(attrs: Seq[(String, String)]): Map[(String, String), Int] =
+    attrs.groupBy(identity).mapValues(_.size)
   def attrModes(attrs: Seq[(String, String)]): Map[String, String] = {
     val histogram = attrHist(attrs)
     val attrKeys = attrs.map(_._1).distinct

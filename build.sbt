@@ -1,5 +1,7 @@
 import Dependencies._
 
+scalaVersion := "2.11.5"
+
 val dictionaryBuilder = project.in(file(".")).enablePlugins(WebappPlugin)
 
 name := "dictionary-builder"
@@ -7,7 +9,7 @@ name := "dictionary-builder"
 description := "buildin' them electric dictionaries"
 
 libraryDependencies ++= Seq(
-    allenAiCommon exclude("com.typesafe", "config"),
+    allenAiCommon,
     allenAiTestkit,
     allenAiDatastore,
     lucene("core"),
