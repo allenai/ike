@@ -41,6 +41,11 @@ case class CreateIndex(config: Config) extends Logging {
 
   def processBatch(batch: Seq[IdText]): Seq[IndexableText] = batch.toArray.par.map(process).seq
 
+  def addTo(indexer: Indexer)(text: IndexableText): Unit = {
+    CreateIndex.addTo(indexer)(text)
+    numAdded = numAdded + 1
+  }
+
   def create(): Unit = {
     val start = System.currentTimeMillis
     val indexer = new Indexer(indexDir, true, classOf[AnnotationIndexer])
@@ -50,21 +55,19 @@ case class CreateIndex(config: Config) extends Logging {
       batchResults = processBatch(batch)
       result <- batchResults
     } yield result
-    indexableTexts foreach addTo(indexer)
+    indexableTexts foreach CreateIndex.addTo(indexer)
     val end = System.currentTimeMillis
     indexer.close
-  }
-
-  def addTo(indexer: Indexer)(text: IndexableText): Unit = {
-    val xml = XmlSerialization.xml(text)
-    val id = text.idText.id
-    indexer.index(id, new StringReader(xml.toString))
-    numAdded = numAdded + 1
   }
 
 }
 
 object CreateIndex {
+  def addTo(indexer: Indexer)(text: IndexableText): Unit = {
+    val xml = XmlSerialization.xml(text)
+    val id = text.idText.id
+    indexer.index(id, new StringReader(xml.toString))
+  }
   def main(args: Array[String]): Unit = {
     val config = ConfigFactory.load.getConfig("CreateIndex")
     CreateIndex(config).create

@@ -19,13 +19,7 @@ case class SearchRequest(query: Either[String, QExpr], dictionaries: Map[String,
 case class SearchResponse(qexpr: QExpr, rows: Seq[GroupedBlackLabResult])
 
 case class SearchApp(config: Config) {
-  val indexDir = config.getString("location") match {
-    case "file" => new File(config.getString("path"))
-    case "datastore" =>
-      val ref = DatastoreRef.fromConfig(config.getConfig("item"))
-      ref.directoryPath.toFile
-    case _ => throw new IllegalArgumentException(s"'location' must be either 'file' or 'datastore")
-  }
+  val indexDir = DataFile.fromConfig(config)
   val searcher = Searcher.open(indexDir)
   def blackLabHits(textPattern: TextPattern, limit: Int): Try[HitsWindow] = Try {
     searcher.find(textPattern).window(0, limit)
