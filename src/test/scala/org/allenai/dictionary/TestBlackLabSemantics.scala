@@ -3,6 +3,7 @@ package org.allenai.dictionary
 import org.allenai.common.testkit.ScratchDirectory
 import org.allenai.common.testkit.UnitSpec
 import nl.inl.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
+import org.allenai.dictionary.index.TestData
 
 class TestBlackLabSemantics extends UnitSpec with ScratchDirectory {
   TestData.createTestIndex(scratchDir)
