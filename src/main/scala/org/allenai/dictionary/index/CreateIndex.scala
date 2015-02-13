@@ -13,14 +13,14 @@ import scala.concurrent.duration.Duration
 import org.allenai.common.Timing
 
 case class CreateIndex(config: Config) extends Logging {
-  
+
   val indexDir = new File(config.getString("indexDir"))
   val defaultBatchSize = 1000
   val batchSize = if (config.hasPath("batchSize")) config.getInt("batchSize") else defaultBatchSize
   val clusterFile = DataFile.fromConfig(config.getConfig("clusters"))
   val clusters = Clusters.fromFile(clusterFile)
   var numAdded = 0
-  
+
   def indexableToken(lemmatized: Lemmatized[PostaggedToken]): IndexableToken = {
     val word = lemmatized.token.string
     val wordLc = word.toLowerCase
@@ -29,7 +29,7 @@ case class CreateIndex(config: Config) extends Logging {
     val cluster = clusters.getOrElse(wordLc, "")
     IndexableToken(word, pos, lemma, cluster)
   }
-  
+
   def process(idText: IdText): IndexableText = {
     val text = idText.text
     val sents = for {
@@ -38,9 +38,9 @@ case class CreateIndex(config: Config) extends Logging {
     } yield indexableSent
     IndexableText(idText, sents)
   }
-  
+
   def processBatch(batch: Seq[IdText]): Seq[IndexableText] = batch.toArray.par.map(process).seq
-  
+
   def create(): Unit = {
     val start = System.currentTimeMillis
     val indexer = new Indexer(indexDir, true, classOf[AnnotationIndexer])
@@ -54,14 +54,14 @@ case class CreateIndex(config: Config) extends Logging {
     val end = System.currentTimeMillis
     indexer.close
   }
-  
+
   def addTo(indexer: Indexer)(text: IndexableText): Unit = {
     val xml = XmlSerialization.xml(text)
     val id = text.idText.id
     indexer.index(id, new StringReader(xml.toString))
     numAdded = numAdded + 1
   }
-  
+
 }
 
 object CreateIndex {
