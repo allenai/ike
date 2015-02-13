@@ -23,9 +23,9 @@ import JsonSerialization._
 import akka.actor.ActorContext
 import com.typesafe.config.ConfigFactory
 
-object DictionaryToolWebapp extends App {
+object DictionaryToolWebapp {
   val name = "dictionary-tool"
-  override def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit = {
     implicit val system = ActorSystem("dictionary-tool")
     val service = system.actorOf(Props[DictionaryToolActor], "webapp-actor")
 
@@ -60,13 +60,13 @@ class DictionaryToolActor extends Actor with BasicService with SprayJsonSupport 
       }
     }
   } ~
-  pathPrefix("api" / "wordInfo") {
-    post {
-      entity(as[WordInfoRequest]) { req =>
-        complete(searchApp.wordInfo(req))
+    pathPrefix("api" / "wordInfo") {
+      post {
+        entity(as[WordInfoRequest]) { req =>
+          complete(searchApp.wordInfo(req))
+        }
       }
     }
-  }
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {

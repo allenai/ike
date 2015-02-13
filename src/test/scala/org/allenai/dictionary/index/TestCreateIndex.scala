@@ -1,4 +1,4 @@
-package org.allenai.dictionary
+package org.allenai.dictionary.index
 
 import org.allenai.common.testkit.ScratchDirectory
 import org.allenai.common.testkit.UnitSpec
@@ -10,7 +10,7 @@ class TestCreateIndex extends UnitSpec with ScratchDirectory {
   val searcher = TestData.testSearcher(scratchDir)
   "createTestIndex" should "create the index" in {
     val reader = searcher.getIndexReader
-    assert(reader.numDocs == TestData.documents.size)
+    assert(reader.numDocs == TestData.indexableTexts.size)
   }
   it should "add the doc content" in {
     val i = CorpusQueryLanguageParser.parse(""" "I" [pos="VBP"] """)
