@@ -12,6 +12,7 @@ libraryDependencies ++= Seq(
     allenAiCommon,
     allenAiTestkit,
     allenAiDatastore,
+    allenAiPipeline,
     nlpstackModule("tokenize"),
     nlpstackModule("postag"),
     nlpstackModule("lemmatize"),
@@ -33,5 +34,6 @@ dependencyOverrides ++= Set(
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.2",
   "commons-codec" % "commons-codec" % "1.6",
-  "org.apache.commons" % "commons-compress" % "1.8"
+  "org.apache.commons" % "commons-compress" % "1.8",
+  "org.scala-lang" % "scala-reflect" % "2.11.5"
 )
