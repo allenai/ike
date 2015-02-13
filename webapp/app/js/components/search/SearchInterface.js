@@ -152,8 +152,8 @@ var SearchInterface = React.createClass({
       <div>
         {form}
         <Row>
-          <Col xs={4}>{queryViewer}</Col>
-          <Col xs={8}>{searchResults}</Col>
+          <Col xs={5}>{queryViewer}</Col>
+          <Col xs={7}>{searchResults}</Col>
         </Row>
       </div>
     );
