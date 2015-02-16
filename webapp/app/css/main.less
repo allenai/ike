@@ -1,3 +1,19 @@
+.vslider {
+    writing-mode: bt-lr; /* IE */
+    -webkit-appearance: slider-vertical; /* WebKit */
+    width: 8px;
+    height: 75px;
+    padding: 0 5px;
+}
+.rowKey {
+    white-space: nowrap
+}
+.mainContent {
+    padding: 20px;
+}
+.searchForm {
+    margin-top: 10px;
+}
 .wordData {
     margin-right: 5px;
 }
@@ -7,6 +23,25 @@
     overflow-y: scroll;
 }
 
+.keyedBlackLabResults {
+    max-height: 100px;
+    overflow-y: scroll;
+}
+
+.leftContext {
+    text-align: right;
+}
+.rightContext {
+    text-align: left;
+}
+.hit {
+    text-align: center;
+}
+.highlighted {
+    color: blue;
+    font-weight: bold;
+}
+@import 'tree.less';
 @import '../../node_modules/bootstrap/less/alerts.less';
 @import '../../node_modules/bootstrap/less/badges.less';
 @import '../../node_modules/bootstrap/less/bootstrap.less';

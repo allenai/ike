@@ -5,7 +5,7 @@ import org.allenai.common.testkit.ScratchDirectory
 
 class TestQExprParser extends UnitSpec with ScratchDirectory {
 
-  val wc = QWildcard
+  val wc = QWildcard()
   // A bunch of QExpr shorthand functions
   // scalastyle:off
   def w(s: String) = QWord(s)

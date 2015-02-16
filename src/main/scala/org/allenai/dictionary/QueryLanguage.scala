@@ -1,15 +1,23 @@
 package org.allenai.dictionary
 
-import scala.util.parsing.input.Positional
 import scala.util.parsing.combinator.RegexParsers
 import java.util.regex.Pattern
+import scala.util.{ Try, Failure, Success }
+import java.text.ParseException
 
-sealed trait QExpr extends Positional
-case class QWord(value: String) extends QExpr
-case class QCluster(value: String) extends QExpr
-case class QPos(value: String) extends QExpr
-case class QDict(value: String) extends QExpr
-object QWildcard extends QExpr
+sealed trait QExpr
+sealed trait QLeaf extends QExpr
+case class QWord(value: String) extends QExpr with QLeaf
+case class QCluster(value: String) extends QExpr with QLeaf
+case class QPos(value: String) extends QExpr with QLeaf
+case class QDict(value: String) extends QExpr with QLeaf
+case class QClusterFromWord(value: Int, wordValue: String, clusterId: String)
+  extends QExpr
+  with QLeaf
+case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])
+  extends QExpr
+  with QLeaf
+case class QWildcard() extends QExpr with QLeaf
 case class QNamed(qexpr: QExpr, name: String) extends QExpr
 case class QUnnamed(qexpr: QExpr) extends QExpr
 case class QNonCap(qexpr: QExpr) extends QExpr
@@ -37,24 +45,54 @@ object QExprParser extends RegexParsers {
   val posTagRegex = posTagSet.map(Pattern.quote).mkString("|").r
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
-  def word = positioned("""[^|\^$(){}\s*+,]+""".r ^^ QWord)
-  def cluster = positioned("""\^[01]+""".r ^^ { s => QCluster(s.tail) })
-  def pos = positioned(posTagRegex ^^ QPos)
-  def dict = positioned("""\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) })
-  def wildcard = positioned("\\.".r ^^^ QWildcard)
-  def atom = positioned(wildcard | pos | dict | cluster | word)
+  def word = """[^|\^$(){}\s*+,]+""".r ^^ QWord
+  def cluster = """\^[01]+""".r ^^ { s => QCluster(s.tail) }
+  def pos = posTagRegex ^^ QPos
+  def dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
+  def wildcard = "\\.".r ^^^ QWildcard()
+  def atom = wildcard | pos | dict | cluster | word
   def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
-  def named = positioned("(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) })
-  def unnamed = positioned("(" ~> expr <~ ")" ^^ QUnnamed)
-  def nonCap = positioned("(?:" ~> expr <~ ")" ^^ QNonCap)
-  def curlyDisj = positioned("{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq)
-  def operand = positioned(named | nonCap | unnamed | curlyDisj | atom)
-  def starred = positioned(operand <~ "*" ^^ QStar)
-  def plussed = positioned(operand <~ "+" ^^ QPlus)
-  def modified = positioned(starred | plussed)
-  def piece: Parser[QExpr] = positioned((modified | operand))
-  def branch = positioned(rep1(piece) ^^ QSeq.fromSeq)
-  def expr = positioned(repsep(branch, "|") ^^ QDisj.fromSeq)
+  def named = "(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) }
+  def unnamed = "(" ~> expr <~ ")" ^^ QUnnamed
+  def nonCap = "(?:" ~> expr <~ ")" ^^ QNonCap
+  def curlyDisj = "{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq
+  def operand = named | nonCap | unnamed | curlyDisj | atom
+  def starred = operand <~ "*" ^^ QStar
+  def plussed = operand <~ "+" ^^ QPlus
+  def modified = starred | plussed
+  def piece: Parser[QExpr] = (modified | operand)
+  def branch = rep1(piece) ^^ QSeq.fromSeq
+  def expr = repsep(branch, "|") ^^ QDisj.fromSeq
   def parse(s: String) = parseAll(expr, s)
   // scalastyle:on
+}
+
+// Use this so parser combinator objects are not in scope
+object QueryLanguage {
+  val parser = QExprParser
+  def parse(s: String): Try[QExpr] = parser.parse(s) match {
+    case parser.Success(result, _) => Success(result)
+    case parser.NoSuccess(message, next) =>
+      val exception = new ParseException(message, next.pos.column)
+      Failure(exception)
+  }
+  def interpolateDictionaries(expr: QExpr, dicts: Map[String, Dictionary]): Try[QExpr] = {
+    def interp(value: String): QDisj = dicts.get(value) match {
+      case Some(dict) => Dictionary.positiveDisj(dict)
+      case None =>
+        throw new IllegalArgumentException(s"Could not find dictionary '$value'")
+    }
+    def recurse(expr: QExpr): QExpr = expr match {
+      case QDict(value) => interp(value)
+      case l: QLeaf => l
+      case QSeq(children) => QSeq(children.map(recurse))
+      case QDisj(children) => QDisj(children.map(recurse))
+      case QNamed(expr, name) => QNamed(recurse(expr), name)
+      case QNonCap(expr) => QNonCap(recurse(expr))
+      case QPlus(expr) => QPlus(recurse(expr))
+      case QStar(expr) => QStar(recurse(expr))
+      case QUnnamed(expr) => QUnnamed(recurse(expr))
+    }
+    Try(recurse(expr))
+  }
 }

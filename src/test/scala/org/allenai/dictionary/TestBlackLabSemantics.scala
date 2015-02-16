@@ -3,6 +3,7 @@ package org.allenai.dictionary
 import org.allenai.common.testkit.ScratchDirectory
 import org.allenai.common.testkit.UnitSpec
 import nl.inl.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
+import org.allenai.dictionary.index.TestData
 
 class TestBlackLabSemantics extends UnitSpec with ScratchDirectory {
   TestData.createTestIndex(scratchDir)
@@ -67,6 +68,24 @@ class TestBlackLabSemantics extends UnitSpec with ScratchDirectory {
       Set("x like", "y mango", "x hate", "y bananas"))
     assert(searchGroups("I (?<x>.*) (?<y>NN|NNS)") ==
       Set("x like", "y mango", "x hate those", "y bananas"))
+  }
+
+  it should "handle multiple grouped wildcards" in {
+    val q = "(?<x>{I, They, It} VBP) ."
+    val expected = Set("x I like", "x I hate", "x They taste", "x It tastes")
+    assert(searchGroups(q) == expected)
+  }
+
+  it should "handle all-wildcard queries" in {
+    val q = "(?<x>.) . . ."
+    val expected = Set("x I", "x hate", "x They", "x taste", "x It")
+    assert(searchGroups(q) == expected)
+  }
+
+  it should "handle disjunctions at the beginning" in {
+    val q = "{I, They} (?<x>VBP)"
+    val expected = Set("x like", "x hate", "x taste")
+    assert(searchGroups(q) == expected)
   }
 
 }

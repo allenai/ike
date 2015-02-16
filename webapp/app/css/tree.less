@@ -1,0 +1,72 @@
+/* from http://stackoverflow.com/questions/14954789/complex-heirarchical-tree-layout */
+/*Now the CSS*/
+* {margin: 0; padding: 0;}
+
+ul.tree {
+    padding-top: 20px; position: relative;
+    
+    transition: all 0.5s;
+    -webkit-transition: all 0.5s;
+    -moz-transition: all 0.5s;
+}
+
+li.tree {
+    float: left; text-align: center;
+    list-style-type: none;
+    position: relative;
+    padding: 20px 5px 0 5px;
+    
+    transition: all 0.5s;
+    -webkit-transition: all 0.5s;
+    -moz-transition: all 0.5s;
+}
+
+/*We will use ::before and ::after to draw the connectors*/
+
+li.tree::before, li.tree::after{
+    content: '';
+    position: absolute; top: 0; right: 50%;
+    border-top: 1px solid #ccc;
+    width: 50%; height: 20px;
+}
+li.tree::after{
+    right: auto; left: 50%;
+    border-left: 1px solid #ccc;
+}
+
+/*We need to remove left-right connectors from elements without 
+any siblings*/
+li.tree:only-child::after, li.tree:only-child::before{
+    display: none;
+}
+
+/*Remove space from the top of single children*/
+li.tree:only-child{ padding-top: 0;}
+
+/*Remove left connector from first child and 
+right connector from last child*/
+li.tree:first-child::before, li.tree:last-child::after{
+    border: 0 none;
+}
+/*Adding back the vertical connector to the last nodes*/
+li.tree:last-child::before{
+    border-right: 1px solid #ccc;
+    border-radius: 0 5px 0 0;
+    -webkit-border-radius: 0 5px 0 0;
+    -moz-border-radius: 0 5px 0 0;
+}
+li.tree:first-child::after{
+    border-radius: 5px 0 0 0;
+    -webkit-border-radius: 5px 0 0 0;
+    -moz-border-radius: 5px 0 0 0;
+}
+
+/*Time to add downward connectors from parents*/
+ul.tree ul.tree::before{
+    content: '';
+    position: absolute; top: 0; left: 50%;
+    border-left: 1px solid #ccc;
+    width: 0; height: 20px;
+}
+/*Thats all. I hope you enjoyed it.
+Thanks :)*/
