@@ -28,6 +28,8 @@ fork in run := true
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
+conflictManager := ConflictManager.default
+
 dependencyOverrides ++= Set(allenAiCommon)
 
 dependencyOverrides ++= Set(
