@@ -6,9 +6,9 @@ var TargetSelector = React.createClass({
     return <option value={name} key={name}>{name}</option>;
   },
   render: function() {
-    var dicts = this.props.dicts;
+    var tables = this.props.tables;
     var target = this.props.target;
-    var names = Object.keys(dicts.value);
+    var names = Object.keys(tables.value);
     var label = "Target Dictionary";
     if (names.length > 0) {
       return (

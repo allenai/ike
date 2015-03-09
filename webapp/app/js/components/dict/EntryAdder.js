@@ -1,5 +1,6 @@
 var React = require('react');
 var bs = require('react-bootstrap');
+var tableUtils = require('../../tableUtils.js');
 var Input = bs.Input;
 var EntryAdder = React.createClass({
   getInitialState: function() {
@@ -7,17 +8,20 @@ var EntryAdder = React.createClass({
   },
   handleSubmit: function(e) {
     e.preventDefault();
-    var entry = this.state.value.trim();
-    if (entry == '') {
+    var entryString = this.state.value.trim();
+    if (entryString == '') {
       return;
     }
-    var dicts = this.props.dicts;
+    var tables = this.props.tables;
     var name = this.props.name;
     var type = this.props.type;
-    var entries = dicts.value[name][type];
-    if (entries.indexOf(entry) < 0) {
+    var entries = tables.value[name][type];
+    var entryStrings = entries.map(tableUtils.rowString);
+    var index = entryStrings.indexOf(entryString);
+    if (index < 0) {
+      var entry = tableUtils.stringToRow(entryString);
       entries.unshift(entry);
-      dicts.requestChange(dicts.value);
+      tables.requestChange(tables.value);
     }
     this.setState({value: ''});
   },

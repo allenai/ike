@@ -22,19 +22,19 @@ var DictApp = React.createClass({
         request: null,
         errorMessage: null
       },
-      dicts: {
+      tables: {
       },
       target: null
     };
   },
   render: function() {
-    var dicts = this.linkState('dicts');
+    var tables = this.linkState('tables');
     var target = this.linkState('target');
     var results = this.linkState('results');
     var config = this.linkState('config');
     var searchInterface = 
-      <SearchInterface config={config} results={results} dicts={dicts} target={target}/>;
-    var dictInterface = <DictInterface target={target} dicts={dicts}/>;
+      <SearchInterface config={config} results={results} tables={tables} target={target}/>;
+    var dictInterface = <DictInterface target={target} tables={tables}/>;
     var configInterface = <ConfigInterface config={config}/>;
     return (
       <div>

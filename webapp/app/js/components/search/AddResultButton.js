@@ -1,5 +1,6 @@
 var React = require('react');
 var bs = require('react-bootstrap');
+var tableUtils = require('../../tableUtils.js');
 var ButtonToolbar = bs.ButtonToolbar;
 var ButtonGroup = bs.ButtonGroup;
 var Button = bs.Button;
@@ -7,11 +8,11 @@ var AddResultButton = React.createClass({
   target: function() {
     return this.props.target.value;
   },
-  dict: function() {
+  table: function() {
     var target = this.target();
-    var dicts = this.props.dicts.value;
-    if (dicts != null && target in dicts) {
-      return dicts[target];
+    var tables = this.props.tables.value;
+    if (tables != null && target in tables) {
+      return tables[target];
     } else {
       return null;
     }
@@ -19,16 +20,23 @@ var AddResultButton = React.createClass({
   entry: function() {
     return this.props.row.key;
   },
+  entryIndex: function(type) {
+    var entry = this.entry();
+    var table = this.table();
+    var rowStrings = table[type].map(tableUtils.rowString);
+    var i = rowStrings.indexOf(entry);
+    return i;
+  },
   toggle: function(type) {
     var entry = this.entry();
-    var dict = this.dict();
-    var i = dict[type].indexOf(entry);
+    var table = this.table();
+    var i = this.entryIndex(type);
     if (i >= 0) {
-      dict[type].splice(i, 1);
+      table[type].splice(i, 1);
     } else {
-      dict[type].unshift(entry);
+      table[type].unshift(tableUtils.stringToRow(entry));
     }
-    this.props.dicts.requestChange(this.props.dicts.value);
+    this.props.tables.requestChange(this.props.tables.value);
   },
   togglePos: function() {
     if (!this.isPos() && this.isNeg()) {
@@ -43,7 +51,7 @@ var AddResultButton = React.createClass({
     this.toggle("negative");
   },
   hasType: function(type) {
-    return this.dict()[type].indexOf(this.entry()) >= 0;
+    return this.entryIndex(type) >= 0;
   },
   isPos: function() {
     return this.hasType("positive");
@@ -60,7 +68,7 @@ var AddResultButton = React.createClass({
   render: function() {
     var row = this.props.row;
     var target = this.props.target;
-    var dicts = this.props.dicts;
+    var tables = this.props.tables;
     if (target.value == null) {
       return null;
     }

@@ -8,11 +8,11 @@ var DictAdder = React.createClass({
   handleSubmit: function(e) {
     e.preventDefault();
     var name = this.state.value;
-    var dicts = this.props.dicts;
+    var tables = this.props.tables;
     var target = this.props.target;
-    if (!(name in dicts.value)) {
-      dicts.value[name] = {name: name, positive: [], negative: []};
-      dicts.requestChange(dicts.value);
+    if (!(name in tables.value)) {
+      tables.value[name] = {name: name, cols: ["col1"], positive: [], negative: []};
+      tables.requestChange(tables.value);
       target.requestChange(name);
     }
     this.setState({value: ''});

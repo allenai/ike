@@ -5,13 +5,13 @@ var TabPane = bs.TabPane;
 var EntryList = require('./EntryList.js');
 var EntryManager = React.createClass({
   entryPane: function(type) {
-    var dicts = this.props.dicts;
+    var tables = this.props.tables;
     var name = this.props.name;
-    var dict = dicts.value[name];
-    var entries = dict[type];
+    var table = tables.value[name];
+    var entries = table[type];
     var capType = type.charAt(0).toUpperCase() + type.slice(1);
     var tabLabel = capType + ' (' + entries.length + ')';
-    var entries = <EntryList dicts={dicts} name={name} type={type}/>;
+    var entries = <EntryList tables={tables} name={name} type={type}/>;
     return (
       <TabPane eventKey={type} tab={tabLabel}>
         {entries}

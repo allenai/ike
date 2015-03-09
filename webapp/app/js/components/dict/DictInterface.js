@@ -4,10 +4,10 @@ var DictAdder = require('./DictAdder.js');
 var DictList = require('./DictList.js');
 var DictInterface = React.createClass({
   render: function() {
-    var dicts = this.props.dicts;
+    var tables = this.props.tables;
     var target = this.props.target;
-    var adder = <DictAdder dicts={dicts} target={target}/>;
-    var list = <DictList dicts={dicts} target={target}/>;
+    var adder = <DictAdder tables={tables} target={target}/>;
+    var list = <DictList tables={tables} target={target}/>;
     return (
       <div>
         {adder}

@@ -5,14 +5,14 @@ var ResultContextSet = require('./ResultContextSet.js');
 var ResultRow = React.createClass({
   render: function() {
     var row = this.props.row;
-    var dicts = this.props.dicts;
+    var tables = this.props.tables;
     var target = this.props.target;
     var addCol;
     if (target.value == null) { 
       addCol = null
     } else {
       addCol =
-        <td><AddResultButton row={row} target={target} dicts={dicts}/></td>;
+        <td><AddResultButton row={row} target={target} tables={tables}/></td>;
     }
     var context = <ResultContextSet row={row}/>;
     return (

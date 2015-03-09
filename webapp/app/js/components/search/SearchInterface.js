@@ -29,7 +29,7 @@ var SearchInterface = React.createClass({
         limit: config.limit,
         evidenceLimit: config.evidenceLimit
       },
-      dictionaries: this.props.dicts.value
+      tables: this.props.tables.value
     };
   },
   makeRequestData: function(queryValue) {
@@ -121,7 +121,7 @@ var SearchInterface = React.createClass({
   render: function() {
     var query = this.linkState('query');
     var target = this.props.target;
-    var dicts = this.props.dicts;
+    var tables = this.props.tables;
     var config = this.props.config;
     var results = this.props.results;
     var handleSubmit = this.handleSubmit;
@@ -131,12 +131,12 @@ var SearchInterface = React.createClass({
       <SearchForm
         handleSubmit={handleSubmit}
         target={target}
-        dicts={dicts}
+        tables={tables}
         query={query}/>;
     var queryViewer =
       <QueryViewer
         target={target}
-        dicts={dicts}
+        tables={tables}
         config={config}
         handleChange={handleChange}
         rootState={qexpr}/>;
@@ -144,7 +144,7 @@ var SearchInterface = React.createClass({
       <SearchResults
         key={results.value.rows}
         target={target}
-        dicts={dicts}
+        tables={tables}
         query={query}
         results={results}
         config={config}/>;

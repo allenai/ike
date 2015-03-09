@@ -7,16 +7,16 @@ var Glyphicon = bs.Glyphicon;
 var EntryManager = require('./EntryManager.js');
 var DictList = React.createClass({
   deleteButton: function(name) {
-    var dicts = this.props.dicts;
+    var tables = this.props.tables;
     var target = this.props.target;
     var deleteEntry = function() {
-      if (name in dicts.value) {
-        delete dicts.value[name];
-        dicts.requestChange(dicts.value);
-        var dictNames = Object.keys(dicts.value);
+      if (name in tables.value) {
+        delete tables.value[name];
+        tables.requestChange(tables.value);
+        var tableNames = Object.keys(tables.value);
         if (target.value == name) {
-          if (dictNames.length > 0) {
-            target.requestChange(dictNames[0]);
+          if (tableNames.length > 0) {
+            target.requestChange(tableNames[0]);
           } else {
             target.requestChange(null);
           }
@@ -30,11 +30,11 @@ var DictList = React.createClass({
              bsStyle="danger"><Glyphicon glyph="remove"/></Button>
   },
   dictPanel: function(name) {
-    var dicts = this.props.dicts;
-    var dict = dicts.value[name];
+    var tables = this.props.tables;
+    var table = tables.value[name];
     var button = this.deleteButton(name);
     var header = <div>{name} {button}</div>;
-    var entryList = <EntryManager dicts={dicts} name={name}/>;
+    var entryList = <EntryManager tables={tables} name={name}/>;
     return (
       <Panel header={header} key={name} eventKey={name}>
         {entryList}
@@ -42,10 +42,10 @@ var DictList = React.createClass({
     );
   },
   render: function() {
-    var dicts = this.props.dicts;
+    var tables = this.props.tables;
     return (
       <PanelGroup accordion>
-        {Object.keys(dicts.value).map(this.dictPanel)}
+        {Object.keys(tables.value).map(this.dictPanel)}
       </PanelGroup>
     );
   }
