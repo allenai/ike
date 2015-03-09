@@ -14,7 +14,7 @@ import scala.util.Success
 case class WordInfoRequest(word: String, config: SearchConfig)
 case class WordInfoResponse(word: String, clusterId: Option[String], posTags: Map[String, Int])
 case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1, groupBy: Option[String] = None)
-case class SearchRequest(query: Either[String, QExpr], dictionaries: Map[String, Dictionary],
+case class SearchRequest(query: Either[String, QExpr], tables: Map[String, Table],
   config: SearchConfig)
 case class SearchResponse(qexpr: QExpr, rows: Seq[GroupedBlackLabResult])
 
@@ -34,7 +34,7 @@ case class SearchApp(config: Config) {
   }
   def search(r: SearchRequest): Try[Seq[BlackLabResult]] = for {
     qexpr <- parse(r)
-    interpolated <- QueryLanguage.interpolateDictionaries(qexpr, r.dictionaries)
+    interpolated <- QueryLanguage.interpolateTables(qexpr, r.tables)
     textPattern <- semantics(interpolated)
     hits <- blackLabHits(textPattern, r.config.limit)
     results <- fromHits(hits)

@@ -76,9 +76,19 @@ object QueryLanguage {
       val exception = new ParseException(message, next.pos.column)
       Failure(exception)
   }
-  def interpolateDictionaries(expr: QExpr, dicts: Map[String, Dictionary]): Try[QExpr] = {
-    def interp(value: String): QDisj = dicts.get(value) match {
-      case Some(dict) => Dictionary.positiveDisj(dict)
+  def interpolateTables(expr: QExpr, tables: Map[String, Table]): Try[QExpr] = {
+    def interp(value: String): QDisj = tables.get(value) match {
+      case Some(table) if table.cols.size == 1 =>
+        val rowExprs = for {
+          row <- table.positive
+          value <- row.values
+          qseq = QSeq(value.qwords)
+        } yield qseq
+        QDisj(rowExprs)
+      case Some(table) =>
+        val name = table.name
+        val ncol = table.cols.size
+        throw new IllegalArgumentException(s"1-col table required: Table '$name' has $ncol columns")
       case None =>
         throw new IllegalArgumentException(s"Could not find dictionary '$value'")
     }
