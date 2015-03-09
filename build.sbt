@@ -30,6 +30,8 @@ fork in run := true
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
+conflictManager := ConflictManager.default
+
 dependencyOverrides ++= Set(
   allenAiCommon,
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3",
