@@ -24,15 +24,16 @@ libraryDependencies ++= Seq(
     lucene("queryparser")
 )
 
+mainClass in Revolver.reStart := Some("org.allenai.dictionary.DictionaryToolWebapp")
+
 fork in run := true
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
 conflictManager := ConflictManager.default
 
-dependencyOverrides ++= Set(allenAiCommon)
-
 dependencyOverrides ++= Set(
+  allenAiCommon,
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.2",
   "commons-codec" % "commons-codec" % "1.6",
