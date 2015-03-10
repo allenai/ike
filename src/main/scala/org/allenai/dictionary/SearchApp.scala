@@ -43,7 +43,6 @@ case class SearchApp(config: Config) {
     results <- search(req)
     keyed = results map (keyResult(req, _))
     grouped = keyed groupBy keyString
-    groupedLimit = grouped mapValues (_.take(req.config.evidenceLimit))
     mapped = grouped map {
       case (key, results) =>
         val count = results.size
