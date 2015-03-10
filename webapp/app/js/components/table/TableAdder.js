@@ -23,6 +23,11 @@ var TableAdder = React.createClass({
     };
     console.log(table);
   },
+  submitDisabled: function() {
+    var name = this.state.name;
+    var cols = this.state.cols;
+    return name.trim() == '' || cols.length == 0;
+  },
   render: function() {
     var form = (
       <form onSubmit={this.handleSubmit}>
@@ -30,7 +35,7 @@ var TableAdder = React.createClass({
           onChange={this.handleNameChange}/>
         <label className="control-label"><span>Table Columns</span></label>
         <EditableList name="Table Columns" onChange={this.handleColChange}/>
-        <Input type="submit" value="Create Table"/>
+        <Input type="submit" value="Create Table" disabled={this.submitDisabled()}/>
       </form>
     );
     return <Panel header="Create New Table">{form}</Panel>;
