@@ -7,8 +7,11 @@ var TableAdder = React.createClass({
   getInitialState: function() {
     return {name: '', cols: []};
   },
+  validCol: function(col) {
+    return col && col.trim() && this.state.cols.indexOf(col) < 0;
+  },
   addCol: function(value) {
-    if (this.state.cols.indexOf(value) < 0) {
+    if (this.validCol(value)) {
       this.state.cols.push(value);
       this.setState({cols: this.state.cols});
     }
