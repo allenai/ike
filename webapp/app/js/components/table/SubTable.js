@@ -10,11 +10,13 @@ var SubTable = React.createClass({
   thead: function() {
     var cols = this.props.table.cols;
     var cells = cols.map(this.headerCell);
-    return <thead>{cells}</thead>;
+    return <thead><th></th>{cells}</thead>;
   },
   row: function(row, i) {
+    var rowType = this.props.rowType;
+    var table = this.props.table;
     var key = "row" + i;
-    return <TableRow key={key} row={row}/>;
+    return <TableRow key={key} row={row} rowType={rowType} table={table}/>;
   },
   tbody: function() {
     var rowType = this.props.rowType;
@@ -48,10 +50,10 @@ var SubTable = React.createClass({
   render: function() {
     var style = {borderTop: 0};
     return (
-      <BsTable bordered style={style}>
+      <table style={style} className="dataTable">
         {this.thead()}
         {this.tbody()}
-      </BsTable>
+      </table>
     );
   }
 });

@@ -43,7 +43,7 @@ var RowAdder = React.createClass({
   render: function() {
     var cols = this.props.cols;
     var inputs = cols.map(this.columnInput);
-    var row = <tr>{inputs}</tr>;
+    var row = <tr><td>New Row:</td>{inputs}</tr>;
     return row;
   }
 });
