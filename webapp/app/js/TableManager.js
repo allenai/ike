@@ -17,6 +17,15 @@ TableManager = {
     var words = qwords.map(function(qw) { return qw.value; });
     return words.join(" ");
   },
+  stringValue: function(string) {
+    var words = string.split(" ");
+    var qwords = words.map(function(w) { return {value: w}; });
+    return {qwords: qwords};
+  },
+  stringsRow: function(strings) {
+    var values = strings.map(this.stringValue);
+    return {values: values};
+  },
   getTables: function() {
     return tables;
   },
