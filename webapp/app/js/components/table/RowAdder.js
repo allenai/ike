@@ -11,7 +11,10 @@ var RowAdder = React.createClass({
   handleSubmit: function(e) {
     e.preventDefault();
     this.props.onSubmit(this.state.values);
-    this.setState({values: this.emptyValues()});
+    var firstField = this.refs.col0.getDOMNode();
+    this.setState({values: this.emptyValues()}, function() {
+      firstField.focus();
+    });
   },
   handleChange: function(i) {
     return function(e) {
@@ -29,7 +32,9 @@ var RowAdder = React.createClass({
     var value = this.state.values[i];
     var onChange = this.handleChange(i);
     var ph = "Add " + col;
+    var ref = "col" + i;
     var input = <input
+      ref={ref}
       className="form-control"
       onKeyPress={onChange}
       type="text" placeholder={ph} value={value} onChange={onChange}/>;
