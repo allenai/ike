@@ -6,55 +6,39 @@ var ListGroup = bs.ListGroup;
 var ListGroupItem = bs.ListGroupItem;
 var EditableList = React.createClass({
   getInitialState: function() {
-    return {
-      input: "",
-      items: []
-    };
+    return {input: ""};
   },
   handleChange: function(e) {
     if (e.which == 13) {
-      this.handleSubmit();
+      this.add();
     } else {
       this.setState({input: e.target.value});
     }
   },
-  handleSubmit: function() {
+  add: function() {
     var input = this.state.input;
-    var items = this.state.items;
-    var index = items.indexOf(input);
-    if (index < 0) {
-      items.push(input);
-      this.setState({input: "", items: items}, this.focusAndUpdate);
-    }
+    this.props.onAdd(input);
+    this.setState({input: ''});
   },
-  focusAndUpdate: function() {
-    this.updateListener();
+  remove: function(i) {
+    return function () { this.props.onRemove(i); }.bind(this);
+  },
+  focus: function() {
     this.refs.inputBox.getDOMNode().childNodes[0].focus();
   },
-  updateListener: function() {
-    this.props.onChange(this.state.items);
-  },
-  makeRow: function(value) {
-    var button = <DeleteButton callback={this.deleteRow(value)}/>;
-    return <ListGroupItem key={value}>{value} {button}</ListGroupItem>;
-  },
-  deleteRow: function(value) {
-    return function() {
-      var index = this.state.items.indexOf(value);
-      if (index >= 0) {
-        this.state.items.splice(index, 1);
-        this.setState({items: this.state.items}, this.updateListener);
-      }
-    }.bind(this);
+  makeRow: function(value, i) {
+    var button = <DeleteButton callback={this.remove(i)}/>;
+    var key = value + '.' + i;
+    return <ListGroupItem key={key}>{value} {button}</ListGroupItem>;
   },
   render: function() {
     var name = this.props.name;
-    var items = this.state.items;
+    var items = this.props.value;
     var input = this.state.input;
     var placeholder = "Add to " + name;
     var inputBox = <Input type="text" ref="inputBox" placeholder={placeholder}
       onKeyPress={this.handleChange} onChange={this.handleChange} value={input}/>;
-    var groupItems = this.state.items.map(this.makeRow);
+    var groupItems = items.map(this.makeRow);
     var listGroup = <ListGroup>{groupItems}</ListGroup>;
     var listGroupCond = items.length > 0 ? listGroup : null;
     return (
