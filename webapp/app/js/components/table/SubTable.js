@@ -27,14 +27,21 @@ var SubTable = React.createClass({
       </tbody>
     );
   },
+  invalidValue: function(valueString) {
+    return !valueString || (valueString.trim() == '');
+  },
+  invalidRow: function(valueStrings) {
+    return valueStrings.map(this.invalidValue).indexOf(true) >= 0;
+  },
   rowAdder: function() {
     var cols = this.props.cols;
     var tableName = this.props.tableName;
     var rowType = this.props.rowType;
     var add = function(valueStrings) {
+      if (this.invalidRow(valueStrings)) { return; }
       var row = TableManager.stringsRow(valueStrings);
       TableManager.addRow(tableName, rowType, row);
-    };
+    }.bind(this);
     return <RowAdder cols={cols} onSubmit={add}/>;
   },
   render: function() {
