@@ -8,7 +8,7 @@ var SubTable = React.createClass({
     return <th key={i}>{col}</th>;
   },
   thead: function() {
-    var cols = this.props.cols;
+    var cols = this.props.table.cols;
     var cells = cols.map(this.headerCell);
     return <thead>{cells}</thead>;
   },
@@ -17,7 +17,8 @@ var SubTable = React.createClass({
     return <TableRow key={key} row={row}/>;
   },
   tbody: function() {
-    var rows = this.props.rows;
+    var rowType = this.props.rowType;
+    var rows = this.props.table[rowType];
     var rowComponents = rows.map(this.row);
     var rowAdder = this.rowAdder();
     return (
@@ -34,8 +35,8 @@ var SubTable = React.createClass({
     return valueStrings.map(this.invalidValue).indexOf(true) >= 0;
   },
   rowAdder: function() {
-    var cols = this.props.cols;
-    var tableName = this.props.tableName;
+    var cols = this.props.table.cols;
+    var tableName = this.props.table.name;
     var rowType = this.props.rowType;
     var add = function(valueStrings) {
       if (this.invalidRow(valueStrings)) { return; }
