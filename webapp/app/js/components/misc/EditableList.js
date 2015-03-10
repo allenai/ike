@@ -29,7 +29,7 @@ var EditableList = React.createClass({
   },
   focusAndUpdate: function() {
     this.updateListener();
-    this.refs.inputBox.getDOMNode().focus();
+    this.refs.inputBox.getDOMNode().childNodes[0].focus();
   },
   updateListener: function() {
     this.props.onChange(this.state.items);
@@ -49,16 +49,19 @@ var EditableList = React.createClass({
   },
   render: function() {
     var name = this.props.name;
+    var items = this.state.items;
+    var input = this.state.input;
     var placeholder = "Add to " + name;
-    var inputBox = <input type="text" ref="inputBox" placeholder={placeholder}
-      onKeyPress={this.handleChange} onChange={this.handleChange}
-      className="form-control"/>;
+    var inputBox = <Input type="text" ref="inputBox" placeholder={placeholder}
+      onKeyPress={this.handleChange} onChange={this.handleChange} value={input}/>;
     var groupItems = this.state.items.map(this.makeRow);
+    var listGroup = <ListGroup>{groupItems}</ListGroup>;
+    var listGroupCond = items.length > 0 ? listGroup : null;
     return (
-      <ListGroup>
-        {groupItems}
-        <ListGroupItem>{inputBox}</ListGroupItem>
-      </ListGroup>
+      <div>
+        {listGroupCond}
+        {inputBox}
+      </div>
     );
   }
 });
