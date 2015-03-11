@@ -7,21 +7,29 @@ var Panel = bs.Panel;
 var TableAdder = require('./TableAdder.js');
 var Table = require('./Table.js');
 var TableManager = require('../../TableManager.js');
+var DeleteButton = require('../misc/DeleteButton.js');
 var TablesInterface = React.createClass({
   tables: function() {
     var tables = TableManager.getTables();
     var components = Object.keys(tables).map(function(name, i) {
+      var button = <DeleteButton callback={this.deleteTable(name)}/>;
+      var header = <span>{name} {button}</span>;
       var table = tables[name];
       return (
-        <Panel header={name} key={name} eventKey={i}>
+        <Panel header={header} key={name} eventKey={i}>
           <Table key={name} table={table}/>
         </Panel>
       );
-    });
+    }.bind(this));
     return <Accordion>{components}</Accordion>;
   },
   addTable: function(table) {
     TableManager.createTable(table);
+  },
+  deleteTable: function(tableName) {
+    return function() {
+      TableManager.deleteTable(tableName);
+    };
   },
   adder: function() {
     return (
