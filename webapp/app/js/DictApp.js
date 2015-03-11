@@ -35,12 +35,11 @@ var DictApp = React.createClass({
     };
   },
   renderContent: function() {
-    var tables = this.linkState('tables');
     var target = this.linkState('target');
     var results = this.linkState('results');
     var config = this.linkState('config');
     var searchInterface = 
-      <SearchInterface config={config} results={results} tables={tables} target={target}/>;
+      <SearchInterface config={config} results={results} target={target}/>;
     var tablesInterface = <TablesInterface/>;
     var configInterface = <ConfigInterface config={config}/>;
     return (

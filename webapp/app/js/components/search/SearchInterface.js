@@ -3,6 +3,7 @@ var bs = require('react-bootstrap');
 var SearchForm = require('./SearchForm.js');
 var QueryViewer = require('./QueryViewer.js');
 var SearchResults = require('./SearchResults.js');
+var TableManager = require('../../TableManager.js');
 var xhr = require('xhr');
 var Navbar = bs.Navbar;
 var Nav = bs.Nav;
@@ -29,7 +30,7 @@ var SearchInterface = React.createClass({
         limit: config.limit,
         evidenceLimit: config.evidenceLimit
       },
-      tables: this.props.tables.value
+      tables: TableManager.getTables()
     };
   },
   makeRequestData: function(queryValue) {
@@ -121,7 +122,6 @@ var SearchInterface = React.createClass({
   render: function() {
     var query = this.linkState('query');
     var target = this.props.target;
-    var tables = this.props.tables;
     var config = this.props.config;
     var results = this.props.results;
     var handleSubmit = this.handleSubmit;
@@ -131,12 +131,10 @@ var SearchInterface = React.createClass({
       <SearchForm
         handleSubmit={handleSubmit}
         target={target}
-        tables={tables}
         query={query}/>;
     var queryViewer =
       <QueryViewer
         target={target}
-        tables={tables}
         config={config}
         handleChange={handleChange}
         rootState={qexpr}/>;
@@ -144,7 +142,6 @@ var SearchInterface = React.createClass({
       <SearchResults
         key={results.value.rows}
         target={target}
-        tables={tables}
         query={query}
         results={results}
         config={config}/>;

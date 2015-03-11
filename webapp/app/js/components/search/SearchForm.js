@@ -8,9 +8,8 @@ var SearchForm = React.createClass({
   render: function() {
     var handleSubmit = this.props.handleSubmit;
     var target = this.props.target;
-    var tables = this.props.tables;
     var query = this.props.query;
-    var selector = <TargetSelector target={target} tables={tables}/>;
+    var selector = <TargetSelector target={target}/>;
     return (
       <div>
         <form onSubmit={handleSubmit}>

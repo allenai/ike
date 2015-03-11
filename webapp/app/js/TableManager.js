@@ -111,5 +111,12 @@ TableManager = {
   hasNegativeRow: function(tableName, row) {
     return this.hasRow(tableName, "negative", row);
   },
+  toggleRow: function(tableName, rowType, row) {
+    if (this.hasRow(tableName, rowType, row)) {
+      this.deleteRow(tableName, rowType, row);
+    } else {
+      this.addRow(tableName, rowType, row);
+    }
+  }
 };
 module.exports = TableManager;

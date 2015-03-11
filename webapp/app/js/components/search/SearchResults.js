@@ -1,6 +1,6 @@
 var React = require('react');
 var bs = require('react-bootstrap');
-var tableUtils = require('../../tableUtils.js');
+var TableManager = require('../../TableManager.js');
 var Well = bs.Well;
 var Table = bs.Table;
 var Panel = bs.Panel;
@@ -52,14 +52,9 @@ var SearchResults = React.createClass({
     if (target == null) {
       return false;
     } else {
-      var tables = this.props.tables.value;
-      var table = tables[target];
-      var entry = row.key;
-      var posStrings = table.positive.map(tableUtils.rowString);
-      var negStrings = table.negative.map(tableUtils.rowString);
-      var inPos = posStrings.indexOf(entry) >= 0;
-      var inNeg = negStrings.indexOf(entry) >= 0;
-      return inPos || inNeg;
+      var hasPos = TableManager.hasPositiveRow(target, row);
+      var hasNeg = TableManager.hasNegativeRow(target, row);
+      return hasPos || hasNeg;
     }
   },
   bySize: function(row1, row2) {
@@ -82,14 +77,12 @@ var SearchResults = React.createClass({
     return rows.slice(start, start + this.rowsPerPage());
   },
   pageRowComponents: function() {
-    var tables = this.props.tables;
     var target = this.props.target;
     return this.pageRows().map(function(row) {
       return (
         <ResultRow
           key={row.key}
           row={row}
-          tables={tables}
           target={target}/>
         );
     });
