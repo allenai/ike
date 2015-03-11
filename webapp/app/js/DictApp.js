@@ -3,10 +3,16 @@ var bs = require('react-bootstrap');
 var TabbedArea = bs.TabbedArea;
 var TabPane = bs.TabPane;
 var SearchInterface = require('./components/search/SearchInterface.js');
-var DictInterface = require('./components/dict/DictInterface.js');
+var TablesInterface = require('./components/table/TablesInterface.js');
+var TableManager = require('./TableManager.js');
 var ConfigInterface = require('./components/config/ConfigInterface.js');
 var DictApp = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
+  componentDidMount: function() {
+    TableManager.addChangeListener(function(tables) {
+      this.setState({tables: tables});
+    }.bind(this));
+  },
   getInitialState: function() {
     return {
       config: {
@@ -34,7 +40,7 @@ var DictApp = React.createClass({
     var config = this.linkState('config');
     var searchInterface = 
       <SearchInterface config={config} results={results} tables={tables} target={target}/>;
-    var dictInterface = <DictInterface target={target} tables={tables}/>;
+    var tablesInterface = <TablesInterface/>;
     var configInterface = <ConfigInterface config={config}/>;
     return (
       <div>
@@ -42,8 +48,8 @@ var DictApp = React.createClass({
           <TabPane className="mainContent" eventKey={1} tab="Search">
             {searchInterface}
           </TabPane>
-          <TabPane className="mainContent" eventKey={2} tab="Dictionaries">
-            {dictInterface}
+          <TabPane className="mainContent" eventKey={2} tab="Tables">
+            {tablesInterface}
           </TabPane>
           <TabPane className="mainContent" eventKey={3} tab="Configuration">
             {configInterface}
