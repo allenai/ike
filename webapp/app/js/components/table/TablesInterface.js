@@ -6,6 +6,7 @@ var Accordion = bs.Accordion;
 var Panel = bs.Panel;
 var TableAdder = require('./TableAdder.js');
 var Table = require('./Table.js');
+var TableManager = require('../../TableManager.js');
 var TablesInterface = React.createClass({
   tables: function() {
     var tables = TableManager.getTables();
