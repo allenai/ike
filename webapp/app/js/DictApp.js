@@ -1,5 +1,6 @@
 var React = require('react/addons');
 var bs = require('react-bootstrap');
+var PageHeader = bs.PageHeader;
 var TabbedArea = bs.TabbedArea;
 var TabPane = bs.TabPane;
 var SearchInterface = require('./components/search/SearchInterface.js');
@@ -33,7 +34,7 @@ var DictApp = React.createClass({
       target: null
     };
   },
-  render: function() {
+  renderContent: function() {
     var tables = this.linkState('tables');
     var target = this.linkState('target');
     var results = this.linkState('results');
@@ -57,6 +58,19 @@ var DictApp = React.createClass({
         </TabbedArea>
       </div>
     );
+  },
+  renderHeader: function() {
+    return (
+      <div>
+        <img src="assets/logo.png" width="64"/>
+        <em>"The Pacific Northwest's Most Beloved Extraction Tool"</em>
+      </div>
+    );
+  },
+  render: function() {
+    var content = this.renderContent();
+    var header = this.renderHeader();
+    return <div>{header}{content}</div>;
   }
 });
 React.render(<DictApp/>, document.body);

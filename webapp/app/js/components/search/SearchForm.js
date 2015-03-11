@@ -15,9 +15,8 @@ var SearchForm = React.createClass({
       <div>
         <form onSubmit={handleSubmit}>
           <Row>
-            <Col xs={1}><img src="assets/logo.png" width="65" height="65"/></Col>
             <Col xs={2}>{selector}</Col>
-            <Col xs={9}>
+            <Col xs={10}>
               <Input
                 type="text"
                 placeholder="Enter Query"
