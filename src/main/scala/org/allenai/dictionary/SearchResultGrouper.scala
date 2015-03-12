@@ -28,15 +28,12 @@ object SearchResultGrouper {
   }
   /** Constructs the string key used to join multiple result objects.
     */
-  def keyString(kr: KeyedBlackLabResult): String = {
-    val values = for {
-      interval <- kr.keys
-      wordData = kr.result.wordData.slice(interval.start, interval.end)
-      words = wordData.map(_.word.toLowerCase.trim)
-      value = words mkString " "
-    } yield value
-    "(" + values.mkString(", ") + ")"
-  }
+  def keyString(kr: KeyedBlackLabResult): Seq[String] = for {
+    interval <- kr.keys
+    wordData = kr.result.wordData.slice(interval.start, interval.end)
+    words = wordData.map(_.word.toLowerCase.trim)
+    value = words mkString " "
+  } yield value
   def keyResult(req: SearchRequest, result: BlackLabResult): KeyedBlackLabResult = {
     val groups = result.captureGroups
     val groupNames = groups.keys
