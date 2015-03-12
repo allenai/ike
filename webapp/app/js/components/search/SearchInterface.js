@@ -30,7 +30,8 @@ var SearchInterface = React.createClass({
         limit: config.limit,
         evidenceLimit: config.evidenceLimit
       },
-      tables: TableManager.getTables()
+      tables: TableManager.getTables(),
+      target: this.props.target.value
     };
   },
   makeRequestData: function(queryValue) {
@@ -55,7 +56,7 @@ var SearchInterface = React.createClass({
   },
   searchSuccess: function(response) {
     var results = this.props.results;
-    results.value.rows = response.rows;
+    results.value.groups = response.groups;
     this.props.results.value.errorMessage = null;
     results.requestChange(results.value);
     this.setState({qexpr: response.qexpr});
@@ -76,9 +77,9 @@ var SearchInterface = React.createClass({
     results.value.pending = false;
     results.requestChange(results.value);
   },
-  clearRows: function() {
+  clearGroups: function() {
     var results = this.props.results;
-    results.value.rows = [];
+    results.value.groups = [];
     results.requestChange(results.value);
   },
   clearQuery: function() {
@@ -91,7 +92,7 @@ var SearchInterface = React.createClass({
     if (this.hasPendingRequest()) {
       this.cancelRequest();
     }
-    this.clearRows();
+    this.clearGroups();
     var queryValue;
     if (this.state.qexpr == null) {
       queryValue = this.state.query;
@@ -140,7 +141,7 @@ var SearchInterface = React.createClass({
         rootState={qexpr}/>;
     var searchResults =
       <SearchResults
-        key={results.value.rows}
+        key={results.value.groups}
         target={target}
         query={query}
         results={results}

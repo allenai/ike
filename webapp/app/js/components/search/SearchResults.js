@@ -6,15 +6,15 @@ var Table = bs.Table;
 var Panel = bs.Panel;
 var Pager = bs.Pager;
 var PageItem = bs.PageItem;
-var ResultRow = require('./ResultRow.js');
+var ResultGroup = require('./ResultGroup.js');
 var SearchResults = React.createClass({
   getInitialState: function() {
     return {
       currentPage: 0
     };
   },
-  startRow: function() {
-    return this.state.currentPage * this.rowsPerPage();
+  startGroup: function() {
+    return this.state.currentPage * this.groupsPerPage();
   },
   pageTo: function(i) {
     if (0 <= i && i < this.numPages()) {
@@ -33,21 +33,22 @@ var SearchResults = React.createClass({
   prevPage: function() {
     this.pageTo(this.state.currentPage - 1);
   },
-  rowsPerPage: function() {
-    return this.props.config.value.rowsPerPage;
+  groupsPerPage: function() {
+    return this.props.config.value.groupsPerPage;
   },
   numPages: function() {
-    var rowsPerPage = 1.0 * this.rowsPerPage();
-    var rows = this.displayedRows();
-    var numRows = rows.length;
-    return Math.ceil(numRows / rowsPerPage);
+    var groupsPerPage = 1.0 * this.groupsPerPage();
+    var groups = this.displayedGroups();
+    var numGroups = groups.length;
+    return Math.ceil(numGroups / groupsPerPage);
   },
-  displayRow: function(row) {
+  displayGroup: function(group) {
     var config = this.props.config.value;
-    var result = !(config.hideAdded && this.targetHasRow(row));
+    var result = !(config.hideAdded && this.targetHasRow(group));
     return result;
   },
-  targetHasRow: function(row) {
+  targetHasRow: function(group) {
+    var row = TableManager.stringsRow(group.keys);
     var target = this.props.target.value;
     if (target == null) {
       return false;
@@ -57,41 +58,74 @@ var SearchResults = React.createClass({
       return hasPos || hasNeg;
     }
   },
-  bySize: function(row1, row2) {
-    var diff = row2.size - row1.size;
+  bySize: function(group1, group2) {
+    var diff = group2.size - group1.size;
     if (diff == 0) {
-      return row1.key > row2.key ? 1 : -1;
+      return group1.keys > group2.keys ? 1 : -1;
     } else {
       return diff;
     }
   },
-  displayedRows: function() {
+  displayedGroups: function() {
     var results = this.props.results.value;
-    var rows = results.rows;
-    rows.sort(this.bySize);
-    return rows.filter(this.displayRow);
+    var groups = results.groups;
+    groups.sort(this.bySize);
+    return groups.filter(this.displayGroup);
   },
-  pageRows: function() {
-    var rows = this.displayedRows();
-    var start = this.startRow();
-    return rows.slice(start, start + this.rowsPerPage());
+  pageGroups: function() {
+    var groups = this.displayedGroups();
+    var start = this.startGroup();
+    return groups.slice(start, start + this.groupsPerPage());
   },
-  pageRowComponents: function() {
+  cols: function() {
+    var target = this.props.target.value;
+    var tables = TableManager.getTables();
+    if (target in tables) {
+      var table = tables[target];
+      return table.cols;
+    } else {
+      return [];
+    }
+  },
+  pageGroupComponents: function() {
     var target = this.props.target;
-    return this.pageRows().map(function(row) {
+    var cols = this.cols();
+    return this.pageGroups().map(function(group) {
+      var key = group.keys.join(",");
       return (
-        <ResultRow
-          key={row.key}
-          row={row}
+        <ResultGroup
+          key={key}
+          group={group}
+          cols={cols}
           target={target}/>
         );
     });
+  },
+  addHead: function() {
+    if (this.props.target.value == null) {
+      return null;
+    } else {
+      return <th>Add</th>;
+    }
+  },
+  colHeads: function() {
+    var target = this.props.target.value;
+    var tables = TableManager.getTables();
+    if (target in tables) {
+      var table = tables[target];
+      var makeHead = function(col, i) {
+        var key = 'head' + i;
+        return <th key={key}>{col}</th>;
+      };
+      return table.cols.map(makeHead);
+    } else {
+      return null;
+    }
   },
   renderTable: function() {
     var results = this.props.results;
     var config = this.props.config;
     var target = this.props.target;
-    var addCol = (this.props.target.value == null) ? null : <th>Add</th>;
     var nextPage = this.hasNextPage() ? (
       <PageItem next href="#" onClick={this.nextPage}>
         Next Page &rarr;
@@ -108,14 +142,14 @@ var SearchResults = React.createClass({
         <Table striped bordered condensed hover>
           <thead>
             <tr>
-              {addCol}
-              <th></th>
+              {this.addHead()}
+              {this.colHeads()}
               <th>Count</th>
               <th>Context</th>
             </tr>
           </thead>
           <tbody>
-            {this.pageRowComponents()}
+            {this.pageGroupComponents()}
           </tbody>
         </Table>
         {this.numPages() > 1 ? pager : null}
@@ -132,13 +166,13 @@ var SearchResults = React.createClass({
       </Panel>
     );
   },
-  renderNoRows: function() {
-    var numRows = this.props.results.value.rows.length;
-    var numDisplayed = this.displayedRows().length;
-    var numHidden = numRows - numDisplayed;
+  renderNoGroups: function() {
+    var numGroups = this.props.results.value.groups.length;
+    var numDisplayed = this.displayedGroups().length;
+    var numHidden = numGroups - numDisplayed;
     return (
       <Panel header="Empty Result Set" bsStyle="warning">
-        No rows to display ({numHidden} hidden).
+        No results to display ({numHidden} hidden).
       </Panel>
     );
   },
@@ -153,8 +187,8 @@ var SearchResults = React.createClass({
       return this.renderPending();
     } else if (results.errorMessage != null) {
       return this.renderErrorMessage();
-    } else if (this.displayedRows().length == 0) {
-      return this.renderNoRows();
+    } else if (this.displayedGroups().length == 0) {
+      return this.renderNoGroups();
     } else {
       return this.renderTable();
     }

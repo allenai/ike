@@ -20,10 +20,10 @@ var DictApp = React.createClass({
         limit: 1000,
         evidenceLimit: 10,
         hideAdded: false,
-        rowsPerPage: 25
+        groupsPerPage: 25
       },
       results: {
-        rows: [],
+        groups: [],
         qexpr: null,
         pending: false,
         request: null,
