@@ -3,7 +3,7 @@ var bs = require('react-bootstrap');
 var ButtonToolbar = bs.ButtonToolbar;
 var ButtonGroup = bs.ButtonGroup;
 var Button = bs.Button;
-var TableManager = require('../../TableManager.js');
+var TableManager = require('../../managers/TableManager.js');
 var AddResultButton = React.createClass({
   row: function() {
     var group = this.props.group;

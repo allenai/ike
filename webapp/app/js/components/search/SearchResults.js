@@ -1,6 +1,6 @@
 var React = require('react');
 var bs = require('react-bootstrap');
-var TableManager = require('../../TableManager.js');
+var TableManager = require('../../managers/TableManager.js');
 var Well = bs.Well;
 var Table = bs.Table;
 var Panel = bs.Panel;

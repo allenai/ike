@@ -1,6 +1,6 @@
 var React = require('react');
 var bs = require('react-bootstrap');
-var TableManager = require('../../TableManager.js');
+var TableManager = require('../../managers/TableManager.js');
 var DeleteButton = require('../misc/DeleteButton.js');
 var TableRow = React.createClass({
   valueCell: function(value, i) {

@@ -1,6 +1,6 @@
 var React = require('react');
 var bs = require('react-bootstrap');
-var TableManager = require('../../TableManager.js');
+var TableManager = require('../../managers/TableManager.js');
 var Input = bs.Input;
 var TargetSelector = React.createClass({
   makeOption: function(name) {

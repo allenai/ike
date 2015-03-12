@@ -3,6 +3,7 @@ var bs = require('react-bootstrap');
 var BsTable = bs.Table;
 var TableRow = require('./TableRow.js');
 var RowAdder = require('./RowAdder.js');
+var TableManager = require('../../managers/TableManager.js');
 var SubTable = React.createClass({
   headerCell: function(col, i) {
     return <th key={i}>{col}</th>;

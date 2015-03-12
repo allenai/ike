@@ -5,7 +5,7 @@ var TabbedArea = bs.TabbedArea;
 var TabPane = bs.TabPane;
 var SearchInterface = require('./components/search/SearchInterface.js');
 var TablesInterface = require('./components/table/TablesInterface.js');
-var TableManager = require('./TableManager.js');
+var TableManager = require('./managers/TableManager.js');
 var ConfigInterface = require('./components/config/ConfigInterface.js');
 var DictApp = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
