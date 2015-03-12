@@ -141,7 +141,6 @@ var SearchInterface = React.createClass({
         rootState={qexpr}/>;
     var searchResults =
       <SearchResults
-        key={results.value.groups}
         target={target}
         query={query}
         results={results}
