@@ -13,9 +13,9 @@ import scala.util.Success
 
 case class WordInfoRequest(word: String, config: SearchConfig)
 case class WordInfoResponse(word: String, clusterId: Option[String], posTags: Map[String, Int])
-case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1, groupBy: Option[String] = None)
-case class SearchRequest(query: Either[String, QExpr], tables: Map[String, Table],
-  config: SearchConfig)
+case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1)
+case class SearchRequest(query: Either[String, QExpr], target: Option[String],
+  tables: Map[String, Table], config: SearchConfig)
 case class SearchResponse(qexpr: QExpr, rows: Seq[GroupedBlackLabResult])
 
 case class SearchApp(config: Config) {
@@ -41,34 +41,10 @@ case class SearchApp(config: Config) {
   } yield results
   def groupedSearch(req: SearchRequest): Try[SearchResponse] = for {
     results <- search(req)
-    keyed = results map (keyResult(req, _))
-    grouped = keyed groupBy keyString
-    groupedLimit = grouped mapValues (_.take(req.config.evidenceLimit))
-    mapped = grouped map {
-      case (key, results) =>
-        val count = results.size
-        val topResults = results.take(req.config.evidenceLimit)
-        GroupedBlackLabResult(key, count, topResults)
-    }
+    grouped = SearchResultGrouper.groupResults(req, results)
     qexpr <- parse(req)
-    resp = SearchResponse(qexpr, mapped.toSeq)
+    resp = SearchResponse(qexpr, grouped)
   } yield resp
-  def keyResult(req: SearchRequest, result: BlackLabResult): KeyedBlackLabResult = {
-    val providedInterval = for {
-      name <- req.config.groupBy
-      i <- result.captureGroups.get(name)
-    } yield i
-    val firstInterval = result.captureGroups.values.toSeq.headOption
-    val candidateIntervals = Seq(providedInterval, firstInterval, Some(result.matchOffset))
-    val keyInterval = candidateIntervals.flatten.head
-    KeyedBlackLabResult(keyInterval, result)
-  }
-  def keyString(kr: KeyedBlackLabResult): String = {
-    val i = kr.key
-    val wordData = kr.result.wordData.slice(i.start, i.end)
-    val words = wordData map (_.word.toLowerCase.trim)
-    words mkString " "
-  }
   def wordAttributes(req: WordInfoRequest): Try[Seq[(String, String)]] = for {
     textPattern <- semantics(QWord(req.word))
     hits <- blackLabHits(textPattern, req.config.limit)
