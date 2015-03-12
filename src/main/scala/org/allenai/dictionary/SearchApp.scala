@@ -16,7 +16,7 @@ case class WordInfoResponse(word: String, clusterId: Option[String], posTags: Ma
 case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1)
 case class SearchRequest(query: Either[String, QExpr], target: Option[String],
   tables: Map[String, Table], config: SearchConfig)
-case class SearchResponse(qexpr: QExpr, rows: Seq[GroupedBlackLabResult])
+case class SearchResponse(qexpr: QExpr, groups: Seq[GroupedBlackLabResult])
 
 case class SearchApp(config: Config) {
   val indexDir = DataFile.fromConfig(config)
