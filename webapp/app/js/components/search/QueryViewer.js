@@ -7,6 +7,7 @@ var Node = tree.Node;
 var QExpr = require('./QExpr.js');
 var Well = bs.Well;
 var Panel = bs.Panel;
+var Accordion = bs.Accordion;
 var Button = bs.Button;
 var QueryViewer = React.createClass({
   render: function() {
@@ -18,7 +19,7 @@ var QueryViewer = React.createClass({
     } else {
       return (
         <Panel header="Query Expression Editor">
-          <div style={{display: 'table', margin: '0 auto'}}>
+          <div style={{'font-size': 'small', display: 'table', margin: '0 auto'}}>
             <Tree>
               <Node>
                 <QExpr

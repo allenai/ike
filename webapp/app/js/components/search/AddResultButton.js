@@ -42,10 +42,10 @@ var AddResultButton = React.createClass({
       <ButtonToolbar>
         <ButtonGroup bsSize="small" style={{display: 'flex'}}>
           <Button onClick={this.togglePos} bsStyle={this.posStyle()}>
-            {target}
+            +
           </Button>
           <Button onClick={this.toggleNeg} bsStyle={this.negStyle()}>
-            not {target}
+            -
           </Button>
         </ButtonGroup>
       </ButtonToolbar>

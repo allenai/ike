@@ -102,10 +102,11 @@ var SearchResults = React.createClass({
     });
   },
   addHead: function() {
-    if (this.props.target.value == null) {
+    var target = this.props.target.value;
+    if (target == null) {
       return null;
     } else {
-      return <th>Add</th>;
+      return <th>Add to {target}</th>;
     }
   },
   colHeads: function() {

@@ -50,10 +50,12 @@ var SubTable = React.createClass({
   render: function() {
     var style = {borderTop: 0};
     return (
+      <div className="dataTableContainer">
       <table style={style} className="dataTable">
         {this.thead()}
         {this.tbody()}
       </table>
+      </div>
     );
   }
 });

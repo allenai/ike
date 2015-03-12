@@ -62,7 +62,7 @@ var DictApp = React.createClass({
     return (
       <div>
         <img src="assets/logo.png" width="64"/>
-        <em>"The Pacific Northwest's Most Beloved Extraction Tool"</em>
+        <em>"The Pacific Northwest's Cutest Extraction Tool"</em>
       </div>
     );
   },

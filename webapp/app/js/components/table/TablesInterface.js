@@ -42,7 +42,7 @@ var TablesInterface = React.createClass({
     return (
        <Row>
           <Col xs={3}>{this.adder()}</Col>
-          <Col xs={3}>{this.tables()}</Col>
+          <Col xs={7}>{this.tables()}</Col>
        </Row>
     );
   }
