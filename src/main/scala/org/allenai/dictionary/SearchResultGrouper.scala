@@ -57,7 +57,9 @@ object SearchResultGrouper {
     val withColumnNames = results.map(inferCaptureGroupNames(req, _))
     val keyed = withColumnNames.map(keyResult(req, _))
     val grouped = keyed groupBy keyString map {
-      case (keyString, group) => GroupedBlackLabResult(keyString, group.size, group)
+      case (keyString, group) =>
+        val groupSubset = group.take(req.config.evidenceLimit)
+        GroupedBlackLabResult(keyString, group.size, groupSubset)
     }
     grouped.toSeq
   }
