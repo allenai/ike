@@ -39,13 +39,15 @@ var DictList = React.createClass({
         dict.positive.map(function(x) { return x + ",positive\n" }).join("") +
         dict.negative.map(function(x) { return x + ",negative\n" }).join("");
 
-      // only works in Chrome :-(
       var pom = document.createElement('a');
-      pom.setAttribute('href', 'data:application/csv;charset=utf-8,' + encodeURIComponent(csv));
+      pom.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv));
+      pom.setAttribute('target', '_blank');
       pom.setAttribute('download', name + ".dict.csv");
       document.body.appendChild(pom);
-      pom.click();
-      document.body.removeChild(pom);
+      setTimeout(function() {
+        pom.click();
+        document.body.removeChild(pom);
+      }, 50);
     }
     return <Button
       onClick={downloadDict}
