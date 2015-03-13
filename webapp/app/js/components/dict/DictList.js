@@ -3,6 +3,8 @@ var bs = require('react-bootstrap');
 var Panel = bs.Panel;
 var PanelGroup = bs.PanelGroup;
 var Button = bs.Button;
+var ButtonToolbar = bs.ButtonToolbar
+var ButtonGroup = bs.ButtonGroup
 var Glyphicon = bs.Glyphicon;
 var EntryManager = require('./EntryManager.js');
 var DictList = React.createClass({
@@ -26,14 +28,40 @@ var DictList = React.createClass({
     return <Button 
              onClick={deleteEntry}
              bsSize="xsmall"
-             className="pull-right"
              bsStyle="danger"><Glyphicon glyph="remove"/></Button>
+  },
+  downloadButton: function(name) {
+    var dict = this.props.dicts.value[name];
+    var downloadDict = function(e) {
+      e.stopPropagation();
+
+      var csv =
+        dict.positive.map(function(x) { return x + ",positive\n" }).join("") +
+        dict.negative.map(function(x) { return x + ",negative\n" }).join("");
+
+      var pom = document.createElement('a');
+      pom.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv));
+      pom.setAttribute('target', '_blank');
+      pom.setAttribute('download', name + ".dict.csv");
+      document.body.appendChild(pom);
+      setTimeout(function() {
+        pom.click();
+        document.body.removeChild(pom);
+      }, 50);
+    }
+    return <Button
+      onClick={downloadDict}
+      bsSize="xsmall"><Glyphicon glyph="download"/></Button>
   },
   dictPanel: function(name) {
     var dicts = this.props.dicts;
     var dict = dicts.value[name];
     var button = this.deleteButton(name);
-    var header = <div>{name} {button}</div>;
+    var download = this.downloadButton(name);
+    var header = <div>{name} <ButtonToolbar className="pull-right">
+      <ButtonGroup>{download}</ButtonGroup>
+      <ButtonGroup>{button}</ButtonGroup>
+      </ButtonToolbar></div>;
     var entryList = <EntryManager dicts={dicts} name={name}/>;
     return (
       <Panel header={header} key={name} eventKey={name}>
