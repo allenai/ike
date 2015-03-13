@@ -50,17 +50,26 @@ object SearchResultGrouper {
     } yield interval
     KeyedBlackLabResult(intervals, result)
   }
-  /** Groups the given results. The groups are keyed using the match groups corresponding to the
-    * target table's columns.
-    */
-  def groupResults(req: SearchRequest, results: Seq[BlackLabResult]): Seq[GroupedBlackLabResult] = {
-    val withColumnNames = results.map(inferCaptureGroupNames(req, _))
-    val keyed = withColumnNames.map(keyResult(req, _))
+  def createGroups(req: SearchRequest, keyed: Seq[KeyedBlackLabResult]): Seq[GroupedBlackLabResult] = {
     val grouped = keyed groupBy keyString map {
       case (keyString, group) =>
         val groupSubset = group.take(req.config.evidenceLimit)
         GroupedBlackLabResult(keyString, group.size, groupSubset)
     }
     grouped.toSeq
+  }
+  /** Groups the given results. The groups are keyed using the match groups corresponding to the
+    * target table's columns.
+    */
+  def groupResults(req: SearchRequest, results: Seq[BlackLabResult]): Seq[GroupedBlackLabResult] = {
+    val withColumnNames = results.map(inferCaptureGroupNames(req, _))
+    val keyed = withColumnNames.map(keyResult(req, _))
+    createGroups(req, keyed)
+  }
+  /** Groups each result into its own group. Useful when there is no target dictionary defined.
+    */
+  def identityGroupResults(req: SearchRequest, results: Seq[BlackLabResult]): Seq[GroupedBlackLabResult] = {
+    val keyed = results map { r => KeyedBlackLabResult(r.matchOffset :: Nil, r) }
+    createGroups(req, keyed)
   }
 }

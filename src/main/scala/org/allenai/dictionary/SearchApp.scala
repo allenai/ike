@@ -41,7 +41,10 @@ case class SearchApp(config: Config) {
   } yield results
   def groupedSearch(req: SearchRequest): Try[SearchResponse] = for {
     results <- search(req)
-    grouped = SearchResultGrouper.groupResults(req, results)
+    grouped = req.target match {
+      case Some(target) => SearchResultGrouper.groupResults(req, results)
+      case None => SearchResultGrouper.identityGroupResults(req, results)
+    }
     qexpr <- parse(req)
     resp = SearchResponse(qexpr, grouped)
   } yield resp

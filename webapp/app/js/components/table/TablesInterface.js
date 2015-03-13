@@ -16,7 +16,7 @@ var TablesInterface = React.createClass({
       var header = <span>{name} {button}</span>;
       var table = tables[name];
       return (
-        <Panel style={{height: 'auto'}} header={header} key={name} eventKey={i}>
+        <Panel header={header} key={name} eventKey={i}>
           <Table key={name} table={table}/>
         </Panel>
       );
