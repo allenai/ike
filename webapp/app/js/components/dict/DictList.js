@@ -35,16 +35,9 @@ var DictList = React.createClass({
     var downloadDict = function(e) {
       e.stopPropagation();
 
-      var csv = ""
-      for (var entry in dict.positive) {
-        csv += entry
-        csv += ",positive\n"
-      }
-
-      for (var entry in dict.negative) {
-        csv += entry
-        csv += ",negative\n"
-      }
+      var csv =
+        dict.positive.map(function(x) { return x + ",positive\n" }).join("") +
+        dict.negative.map(function(x) { return x + ",negative\n" }).join("");
 
       // only works in Chrome :-(
       var pom = document.createElement('a');
