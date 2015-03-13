@@ -19,7 +19,7 @@ var QueryViewer = React.createClass({
     } else {
       return (
         <Panel header="Query Expression Editor">
-          <div style={{'font-size': 'small', display: 'table', margin: '0 auto'}}>
+          <div className="queryViewer" style={{'font-size': 'small', display: 'table', margin: '0 auto'}}>
             <Tree>
               <Node>
                 <QExpr
