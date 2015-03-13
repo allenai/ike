@@ -25,9 +25,9 @@ case class SearchApp(config: Config) {
     searcher.find(textPattern).window(0, limit)
   }
   def fromHits(hits: HitsWindow): Try[Seq[BlackLabResult]] = Try {
-    BlackLabResult.fromHits(hits).toSeq
+    BlackLabResult.fromHits(hits).toSeq.map(HackyBlackLabSemantics.removeConstToken)
   }
-  def semantics(query: QExpr): Try[TextPattern] = Try(BlackLabSemantics.blackLabQuery(query))
+  def semantics(query: QExpr): Try[TextPattern] = Try(HackyBlackLabSemantics.blackLabQuery(query))
   def parse(r: SearchRequest): Try[QExpr] = r.query match {
     case Left(queryString) => QueryLanguage.parse(queryString)
     case Right(qexpr) => Success(qexpr)
