@@ -50,7 +50,10 @@ object SearchResultGrouper {
     } yield interval
     KeyedBlackLabResult(intervals, result)
   }
-  def createGroups(req: SearchRequest, keyed: Seq[KeyedBlackLabResult]): Seq[GroupedBlackLabResult] = {
+  def createGroups(
+    req: SearchRequest,
+    keyed: Seq[KeyedBlackLabResult]
+  ): Seq[GroupedBlackLabResult] = {
     val grouped = keyed groupBy keyString map {
       case (keyString, group) =>
         val groupSubset = group.take(req.config.evidenceLimit)
@@ -68,7 +71,10 @@ object SearchResultGrouper {
   }
   /** Groups each result into its own group. Useful when there is no target dictionary defined.
     */
-  def identityGroupResults(req: SearchRequest, results: Seq[BlackLabResult]): Seq[GroupedBlackLabResult] = {
+  def identityGroupResults(
+    req: SearchRequest,
+    results: Seq[BlackLabResult]
+  ): Seq[GroupedBlackLabResult] = {
     val keyed = results map { r => KeyedBlackLabResult(r.matchOffset :: Nil, r) }
     createGroups(req, keyed)
   }
