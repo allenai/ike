@@ -27,7 +27,7 @@ var ConfigInterface = React.createClass({
       <div>
         <Input
           type="checkbox"
-          label="Hide rows that are in dictionary"
+          label="Hide rows that are in table"
           checked={config.hideAdded}
           onChange={hideAddedChange}/>
         <Input

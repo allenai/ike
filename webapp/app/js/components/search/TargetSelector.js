@@ -9,7 +9,7 @@ var TargetSelector = React.createClass({
   render: function() {
     var target = this.props.target;
     var names = Object.keys(TableManager.getTables());
-    var label = "Target Dictionary";
+    var label = "Target Table";
     if (names.length > 0) {
       return (
         <Input label={label} type="select" valueLink={target}>
@@ -19,7 +19,7 @@ var TargetSelector = React.createClass({
     } else {
       return (
         <Input label={label} type="select" disabled>
-          <option>No Dictionaries</option>
+          <option>No Tables</option>
         </Input>
       );
     }
