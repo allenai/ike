@@ -16,7 +16,7 @@ var TablesInterface = React.createClass({
       var header = <span>{name} {button}</span>;
       var table = tables[name];
       return (
-        <Panel header={header} key={name} eventKey={i}>
+        <Panel style={{height: 'auto'}} header={header} key={name} eventKey={i}>
           <Table key={name} table={table}/>
         </Panel>
       );
@@ -25,6 +25,7 @@ var TablesInterface = React.createClass({
   },
   addTable: function(table) {
     TableManager.createTable(table);
+    this.props.target.requestChange(table.name);
   },
   deleteTable: function(tableName) {
     return function() {

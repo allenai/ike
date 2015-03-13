@@ -40,7 +40,7 @@ var DictApp = React.createClass({
     var config = this.linkState('config');
     var searchInterface = 
       <SearchInterface config={config} results={results} target={target}/>;
-    var tablesInterface = <TablesInterface/>;
+    var tablesInterface = <TablesInterface target={target}/>;
     var configInterface = <ConfigInterface config={config}/>;
     return (
       <div>
@@ -62,7 +62,7 @@ var DictApp = React.createClass({
     return (
       <div>
         <img src="assets/logo.png" width="64"/>
-        <em>"The Pacific Northwest's Cutest Extraction Tool"</em>
+        <em>&ldquo;The Pacific Northwest's Cutest Extraction Tool&rdquo;</em>
       </div>
     );
   },
