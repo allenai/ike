@@ -12,6 +12,9 @@ TableManager = {
     var valueStrings = values.map(this.valueString);
     return valueStrings.join("|");
   },
+  rowStrings: function(rows) {
+    return rows.map(this.rowString);
+  },
   valueString: function(value) {
     var qwords = value.qwords;
     var words = qwords.map(function(qw) { return qw.value; });
@@ -117,6 +120,30 @@ TableManager = {
     } else {
       this.addRow(tableName, rowType, row);
     }
-  }
+  },
+  labeledRowStrings: function(table, rowType) {
+    var appendLabelToRow = function(row) {
+      var values = row.values;
+      var strings = values.map(this.valueString);
+      strings.push(rowType);
+      return strings;
+    }.bind(this);
+    return table[rowType].map(appendLabelToRow);
+  },
+  table2csv: function(table) {
+    // Get string arrays representing the rows, with a label column added
+    // to the end.
+    var posRows = this.labeledRowStrings(table, 'positive');
+    var negRows = this.labeledRowStrings(table, 'negative');
+    var allRows = posRows.concat(negRows);
+    // Add a header row with column names.
+    var headerRow = table.cols.slice(0);
+    headerRow.push('label');
+    allRows.unshift(headerRow);
+    // Return as a string.
+    return allRows.map(function(row) {
+      return row.join(",");
+    }).join("\n");
+  },
 };
 module.exports = TableManager;

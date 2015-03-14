@@ -23,6 +23,8 @@ import JsonSerialization._
 import akka.actor.ActorContext
 import com.typesafe.config.ConfigFactory
 
+import scala.util.control.NonFatal
+
 object DictionaryToolWebapp {
   val name = "dictionary-tool"
   def main(args: Array[String]): Unit = {
@@ -70,7 +72,7 @@ class DictionaryToolActor extends Actor with BasicService with SprayJsonSupport 
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
-      case e: Exception =>
+      case NonFatal(e) =>
         requestUri { uri =>
           log.error(toString, e)
           complete(StatusCodes.InternalServerError -> e.getMessage)
