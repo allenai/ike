@@ -6,6 +6,7 @@ import nl.inl.blacklab.search.TextPatternTerm
 import nl.inl.blacklab.search.sequences.TextPatternSequence
 import org.allenai.common.immutable.Interval
 
+// TODO: https://github.com/allenai/okcorpus/issues/31
 object HackyBlackLabSemantics {
   /** For some reason, blacklab hates matching disjunctions at the first token position. This
     * hack updates the query to include a constant match against any token at the prefix of the

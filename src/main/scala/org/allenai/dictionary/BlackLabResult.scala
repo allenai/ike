@@ -46,6 +46,7 @@ case object BlackLabResult {
     val kwic = hits.getKwic(hit, kwicSize)
     val data = wordData(hits, kwic)
     val offset = Interval.open(kwic.getHitStart, kwic.getHitEnd)
+    // TODO: https://github.com/allenai/okcorpus/issues/30
     if (hits.hasCapturedGroups) {
       val shift = hit.start - kwic.getHitStart
       val optGroups = captureGroups(hits, hit, shift)
