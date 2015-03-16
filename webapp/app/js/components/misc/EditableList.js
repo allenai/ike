@@ -8,8 +8,11 @@ var EditableList = React.createClass({
   getInitialState: function() {
     return {input: ""};
   },
+  pressedEnterKey: function(e) {
+    return e.which == 13;
+  },
   handleChange: function(e) {
-    if (e.which == 13) {
+    if (this.pressedEnterKey(e)) {
       this.add();
     } else {
       this.setState({input: e.target.value});
