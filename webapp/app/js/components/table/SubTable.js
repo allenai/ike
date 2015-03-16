@@ -35,7 +35,7 @@ var SubTable = React.createClass({
     return !valueString || (valueString.trim() == '');
   },
   invalidRow: function(valueStrings) {
-    return valueStrings.map(this.invalidValue).indexOf(true) >= 0;
+    return valueStrings.some(this.invalidValue);
   },
   rowAdder: function() {
     var cols = this.props.table.cols;

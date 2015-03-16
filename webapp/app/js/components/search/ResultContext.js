@@ -6,13 +6,9 @@ var ResultContext = React.createClass({
     var words = context.result.wordData.map(function(w) { return w.word });
     var spans = context.keys;
     var highlightedIndex = function(i) {
-      for (var k = 0; k < spans.length; k++) {
-        var span = spans[k];
-        if (span[0] <= i && i < span[1]) {
-          return true;
-        }
-      }
-      return false;
+      return spans.some(function(span) {
+        return span[0] <= i && i < span[1];
+      });
     };
     var highlighted = words.map(function(word, i) {
       if (highlightedIndex(i)) {
