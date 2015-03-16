@@ -5,6 +5,7 @@ import org.allenai.common.immutable.Interval
 import nl.inl.blacklab.search.Hit
 import nl.inl.blacklab.search.Hits
 import nl.inl.blacklab.search.Kwic
+import nl.inl.blacklab.search.Span
 
 case class BlackLabResult(wordData: Seq[WordData], matchOffset: Interval,
     captureGroups: Map[String, Interval]) {
@@ -26,30 +27,51 @@ case object BlackLabResult {
       data = WordData(word, attrGroup - "word")
     } yield data
   }
-  def captureGroups(hits: Hits, hit: Hit, shift: Int): Map[String, Interval] = {
+  def toInterval(span: Span): Interval = Interval.open(span.start, span.end)
+  def captureGroups(hits: Hits, hit: Hit, shift: Int): Map[String, Option[Interval]] = {
     val names = hits.getCapturedGroupNames.asScala
     // For some reason BlackLab will sometimes return null values here, so wrap in Options
     val optSpans = hits.getCapturedGroups(hit) map wrapNull
-    for {
-      (name, optSpan) <- names.zip(optSpans).toMap
-      span <- optSpan
-      interval = Interval.open(span.start, span.end).shift(-shift)
-    } yield (name, interval)
+    val result = for {
+      (name, optSpan) <- names.zip(optSpans)
+      optInterval = optSpan map toInterval
+      shifted = optInterval map (_.shift(-shift))
+    } yield (name, shifted)
+    result.toMap
   }
-  def fromHit(hits: Hits, hit: Hit, kwicSize: Int = 10): BlackLabResult = {
+  /** Converts a hit to a BlackLabResult. Returns None if the dreaded BlackLab NPE is returned
+    * when computing the capture groups.
+    */
+  def fromHit(hits: Hits, hit: Hit, kwicSize: Int = 10): Option[BlackLabResult] = {
     val kwic = hits.getKwic(hit, kwicSize)
     val data = wordData(hits, kwic)
     val offset = Interval.open(kwic.getHitStart, kwic.getHitEnd)
-    val groups = if (hits.hasCapturedGroups) {
-      captureGroups(hits, hit, hit.start - kwic.getHitStart)
+    // TODO: https://github.com/allenai/okcorpus/issues/30
+    if (hits.hasCapturedGroups) {
+      val shift = hit.start - kwic.getHitStart
+      val optGroups = captureGroups(hits, hit, shift)
+      // If all of the capture groups are defined, then return the result. Otherwise, the
+      // mysterious NPE was thrown and we can't compute the result's capture groups.
+      if (optGroups.values.forall(_.isDefined)) {
+        val groups = optGroups.mapValues(_.get)
+        Some(BlackLabResult(data, offset, groups))
+      } else {
+        None
+      }
     } else {
-      Map.empty[String, Interval]
+      // No capture groups? No problem.
+      Some(BlackLabResult(data, offset, Map.empty[String, Interval]))
     }
-    BlackLabResult(data, offset, groups)
   }
-  def fromHits(hits: Hits): Iterator[BlackLabResult] = for {
+  /** Converts the hits into BlackLabResult objects. If ignoreNpe is true, then it will skip over
+    * any hits that throw the weird NPE. If ignoreNpe is false, will throw an IllegalStateException.
+    */
+  def fromHits(hits: Hits, ignoreNpe: Boolean = true): Iterator[BlackLabResult] = for {
     hit <- hits.iterator.asScala
-    result = fromHit(hits, hit)
+    result <- fromHit(hits, hit) match {
+      case x if (x.isDefined || ignoreNpe) => x
+      case _ => throw new IllegalStateException(s"Could not compute capture groups for $hit")
+    }
   } yield result
   def wrapNull[A](a: A): Option[A] = if (a == null) None else Some(a)
 }

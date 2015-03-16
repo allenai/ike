@@ -8,16 +8,14 @@ var SearchForm = React.createClass({
   render: function() {
     var handleSubmit = this.props.handleSubmit;
     var target = this.props.target;
-    var dicts = this.props.dicts;
     var query = this.props.query;
-    var selector = <TargetSelector target={target} dicts={dicts}/>;
+    var selector = <TargetSelector target={target}/>;
     return (
       <div>
         <form onSubmit={handleSubmit}>
           <Row>
-            <Col xs={1}><img src="assets/logo.png" width="65" height="65"/></Col>
             <Col xs={2}>{selector}</Col>
-            <Col xs={9}>
+            <Col xs={10}>
               <Input
                 type="text"
                 placeholder="Enter Query"

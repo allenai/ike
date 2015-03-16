@@ -13,10 +13,10 @@ import scala.util.Success
 
 case class WordInfoRequest(word: String, config: SearchConfig)
 case class WordInfoResponse(word: String, clusterId: Option[String], posTags: Map[String, Int])
-case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1, groupBy: Option[String] = None)
-case class SearchRequest(query: Either[String, QExpr], dictionaries: Map[String, Dictionary],
-  config: SearchConfig)
-case class SearchResponse(qexpr: QExpr, rows: Seq[GroupedBlackLabResult])
+case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1)
+case class SearchRequest(query: Either[String, QExpr], target: Option[String],
+  tables: Map[String, Table], config: SearchConfig)
+case class SearchResponse(qexpr: QExpr, groups: Seq[GroupedBlackLabResult])
 
 case class SearchApp(config: Config) {
   val indexDir = DataFile.fromConfig(config)
@@ -25,49 +25,29 @@ case class SearchApp(config: Config) {
     searcher.find(textPattern).window(0, limit)
   }
   def fromHits(hits: HitsWindow): Try[Seq[BlackLabResult]] = Try {
-    BlackLabResult.fromHits(hits).toSeq
+    BlackLabResult.fromHits(hits).toSeq.map(HackyBlackLabSemantics.removeConstToken)
   }
-  def semantics(query: QExpr): Try[TextPattern] = Try(BlackLabSemantics.blackLabQuery(query))
+  def semantics(query: QExpr): Try[TextPattern] = Try(HackyBlackLabSemantics.blackLabQuery(query))
   def parse(r: SearchRequest): Try[QExpr] = r.query match {
     case Left(queryString) => QueryLanguage.parse(queryString)
     case Right(qexpr) => Success(qexpr)
   }
   def search(r: SearchRequest): Try[Seq[BlackLabResult]] = for {
     qexpr <- parse(r)
-    interpolated <- QueryLanguage.interpolateDictionaries(qexpr, r.dictionaries)
+    interpolated <- QueryLanguage.interpolateTables(qexpr, r.tables)
     textPattern <- semantics(interpolated)
     hits <- blackLabHits(textPattern, r.config.limit)
     results <- fromHits(hits)
   } yield results
   def groupedSearch(req: SearchRequest): Try[SearchResponse] = for {
     results <- search(req)
-    keyed = results map (keyResult(req, _))
-    grouped = keyed groupBy keyString
-    mapped = grouped map {
-      case (key, results) =>
-        val count = results.size
-        val topResults = results.take(req.config.evidenceLimit)
-        GroupedBlackLabResult(key, count, topResults)
+    grouped = req.target match {
+      case Some(target) => SearchResultGrouper.groupResults(req, results)
+      case None => SearchResultGrouper.identityGroupResults(req, results)
     }
     qexpr <- parse(req)
-    resp = SearchResponse(qexpr, mapped.toSeq)
+    resp = SearchResponse(qexpr, grouped)
   } yield resp
-  def keyResult(req: SearchRequest, result: BlackLabResult): KeyedBlackLabResult = {
-    val providedInterval = for {
-      name <- req.config.groupBy
-      i <- result.captureGroups.get(name)
-    } yield i
-    val firstInterval = result.captureGroups.values.toSeq.headOption
-    val candidateIntervals = Seq(providedInterval, firstInterval, Some(result.matchOffset))
-    val keyInterval = candidateIntervals.flatten.head
-    KeyedBlackLabResult(keyInterval, result)
-  }
-  def keyString(kr: KeyedBlackLabResult): String = {
-    val i = kr.key
-    val wordData = kr.result.wordData.slice(i.start, i.end)
-    val words = wordData map (_.word.toLowerCase.trim)
-    words mkString " "
-  }
   def wordAttributes(req: WordInfoRequest): Try[Seq[(String, String)]] = for {
     textPattern <- semantics(QWord(req.word))
     hits <- blackLabHits(textPattern, req.config.limit)

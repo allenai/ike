@@ -27,7 +27,7 @@ var ConfigInterface = React.createClass({
       <div>
         <Input
           type="checkbox"
-          label="Hide rows that are in dictionary"
+          label="Hide rows that are in table"
           checked={config.hideAdded}
           onChange={hideAddedChange}/>
         <Input
@@ -44,7 +44,7 @@ var ConfigInterface = React.createClass({
         </Input>
         <Input
           type="select"
-          label="Evidence Per Row"
+          label="Evidence Per Result Group"
           onChange={eLimitChange}
           value={config.evidenceLimit}>
           <option value="1">1</option>

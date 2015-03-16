@@ -3,23 +3,21 @@ var bs = require('react-bootstrap');
 var ResultContext = React.createClass({
   render: function() {
     var context = this.props.context;
-    var start = context.key[0];
-    var end = context.key[1];
-    var wordData = context.result.wordData;
-    var words = wordData.map(function(d) { return d.word; });
-    var numWords = words.length;
-    var leftWords = words.slice(0, start).join(" ");
-    var middleWords = words.slice(start, end).join(" ");
-    var rightWords = words.slice(end, numWords).join(" ");
-    return (
-      <div>
-        <span>{leftWords}</span>
-        {" "}
-        <span className='highlighted'>{middleWords}</span>
-        {" "}
-        <span>{rightWords}</span>
-      </div>
-    );
+    var words = context.result.wordData.map(function(w) { return w.word });
+    var spans = context.keys;
+    var highlightedIndex = function(i) {
+      return spans.some(function(span) {
+        return span[0] <= i && i < span[1];
+      });
+    };
+    var highlighted = words.map(function(word, i) {
+      if (highlightedIndex(i)) {
+        return <span key={i} className='highlighted'>{word} </span>
+      } else {
+        return <span key={i}>{word} </span>;
+      }
+    });
+    return <div>{highlighted}</div>;
   }
 });
 module.exports = ResultContext;

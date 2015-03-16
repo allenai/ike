@@ -3,6 +3,7 @@ var bs = require('react-bootstrap');
 var SearchForm = require('./SearchForm.js');
 var QueryViewer = require('./QueryViewer.js');
 var SearchResults = require('./SearchResults.js');
+var TableManager = require('../../managers/TableManager.js');
 var xhr = require('xhr');
 var Navbar = bs.Navbar;
 var Nav = bs.Nav;
@@ -29,7 +30,8 @@ var SearchInterface = React.createClass({
         limit: config.limit,
         evidenceLimit: config.evidenceLimit
       },
-      dictionaries: this.props.dicts.value
+      tables: TableManager.getTables(),
+      target: this.props.target.value
     };
   },
   makeRequestData: function(queryValue) {
@@ -54,7 +56,7 @@ var SearchInterface = React.createClass({
   },
   searchSuccess: function(response) {
     var results = this.props.results;
-    results.value.rows = response.rows;
+    results.value.groups = response.groups;
     this.props.results.value.errorMessage = null;
     results.requestChange(results.value);
     this.setState({qexpr: response.qexpr});
@@ -75,9 +77,9 @@ var SearchInterface = React.createClass({
     results.value.pending = false;
     results.requestChange(results.value);
   },
-  clearRows: function() {
+  clearGroups: function() {
     var results = this.props.results;
-    results.value.rows = [];
+    results.value.groups = [];
     results.requestChange(results.value);
   },
   clearQuery: function() {
@@ -90,7 +92,7 @@ var SearchInterface = React.createClass({
     if (this.hasPendingRequest()) {
       this.cancelRequest();
     }
-    this.clearRows();
+    this.clearGroups();
     var queryValue;
     if (this.state.qexpr == null) {
       queryValue = this.state.query;
@@ -121,7 +123,6 @@ var SearchInterface = React.createClass({
   render: function() {
     var query = this.linkState('query');
     var target = this.props.target;
-    var dicts = this.props.dicts;
     var config = this.props.config;
     var results = this.props.results;
     var handleSubmit = this.handleSubmit;
@@ -131,20 +132,16 @@ var SearchInterface = React.createClass({
       <SearchForm
         handleSubmit={handleSubmit}
         target={target}
-        dicts={dicts}
         query={query}/>;
     var queryViewer =
       <QueryViewer
         target={target}
-        dicts={dicts}
         config={config}
         handleChange={handleChange}
         rootState={qexpr}/>;
     var searchResults =
       <SearchResults
-        key={results.value.rows}
         target={target}
-        dicts={dicts}
         query={query}
         results={results}
         config={config}/>;

@@ -229,7 +229,6 @@ var QPosFromWord = React.createClass({
   mixins: [QExprMixin],
   handleChange: function(e) {
     var value = e.target.value;
-    console.log(value);
     var qexpr = this.props.qexpr;
     qexpr.value = value;
     this.updateSelf(qexpr);
@@ -273,7 +272,6 @@ var QClusterFromWord = React.createClass({
       value: word,
       type: "QWord"
     };
-    console.log(replacement);
     this.updateSelf(replacement);
   },
   render: function() {
