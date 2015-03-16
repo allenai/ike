@@ -29,9 +29,8 @@ var DictApp = React.createClass({
         request: null,
         errorMessage: null
       },
-      tables: {
-      },
-      target: null
+      tables: TableManager.loadTablesFromLocalStorage(),
+      target: TableManager.loadTargetFromLocalStorage()
     };
   },
   renderContent: function() {
