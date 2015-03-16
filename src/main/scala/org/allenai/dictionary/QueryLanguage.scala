@@ -7,22 +7,25 @@ import java.text.ParseException
 
 sealed trait QExpr
 sealed trait QLeaf extends QExpr
-case class QWord(value: String) extends QExpr with QLeaf
-case class QCluster(value: String) extends QExpr with QLeaf
-case class QPos(value: String) extends QExpr with QLeaf
-case class QDict(value: String) extends QExpr with QLeaf
+sealed trait QAtom extends QExpr {
+  val qexpr: QExpr
+}
+sealed trait QCapture extends QAtom
+
+case class QWord(value: String) extends QLeaf
+case class QCluster(value: String) extends QLeaf
+case class QPos(value: String) extends QLeaf
+case class QDict(value: String) extends QLeaf
 case class QClusterFromWord(value: Int, wordValue: String, clusterId: String)
-  extends QExpr
-  with QLeaf
+  extends QLeaf
 case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])
-  extends QExpr
-  with QLeaf
-case class QWildcard() extends QExpr with QLeaf
-case class QNamed(qexpr: QExpr, name: String) extends QExpr
-case class QUnnamed(qexpr: QExpr) extends QExpr
-case class QNonCap(qexpr: QExpr) extends QExpr
-case class QStar(qexpr: QExpr) extends QExpr
-case class QPlus(qexpr: QExpr) extends QExpr
+  extends QLeaf
+case class QWildcard() extends QLeaf
+case class QNamed(qexpr: QExpr, name: String) extends QAtom
+case class QUnnamed(qexpr: QExpr) extends QAtom
+case class QNonCap(qexpr: QExpr) extends QAtom
+case class QStar(qexpr: QExpr) extends QAtom
+case class QPlus(qexpr: QExpr) extends QAtom
 case class QSeq(qexprs: Seq[QExpr]) extends QExpr
 case object QSeq {
   def fromSeq(seq: Seq[QExpr]): QExpr = seq match {
@@ -37,6 +40,7 @@ case object QDisj {
     case _ => QDisj(seq)
   }
 }
+case class QAnd(qexpr1: QExpr, qexpr2: QExpr) extends QExpr
 
 object QExprParser extends RegexParsers {
   val posTagSet = Seq("PRP$", "NNPS", "WRB", "WP$", "WDT", "VBZ", "VBP", "VBN", "VBG", "VBD", "SYM",
@@ -102,7 +106,67 @@ object QueryLanguage {
       case QPlus(expr) => QPlus(recurse(expr))
       case QStar(expr) => QStar(recurse(expr))
       case QUnnamed(expr) => QUnnamed(recurse(expr))
+      case QAnd(expr1, expr2) => QAnd(recurse(expr1), recurse(expr2))
     }
     Try(recurse(expr))
+  }
+
+  /**
+   * Converts a query to its string format
+   *
+   * @param query query to evaluate
+   * @return String representation of the query
+   * @throws NotImplementedError if the query contains QAnd, QPosFromWord, or QClusterFromWord
+   */
+  def getQueryString(query: QExpr): String = query match {
+    case QWord(value) => value
+    case QCluster(value) => "^" + value
+    case QPos(value) => value
+    case QDict(value) => value
+    case QWildcard() => "."
+    case QSeq(children) => children.map(getQueryString).mkString(" ")
+    case QDisj(children) => "{" + children.map(getQueryString).mkString(",") + "}"
+    case QNamed(expr, name) => "(?<" + name + ">" + getQueryString(expr) + ")"
+    case QNonCap(expr) => "(?:" + getQueryString(expr) + ")"
+    case QPlus(expr) => "(?:" + getQueryString(expr) + ")+"
+    case QStar(expr) => "(?:" + getQueryString(expr) + ")*"
+    case QUnnamed(expr) => "(" + getQueryString(expr) + ")"
+    case (QClusterFromWord(_, _, _)|QPosFromWord(_, _, _)|QAnd(_, _)) =>
+      throw new NotImplementedError("No implementation for " + query.getClass.getName)
+  }
+
+  /**
+   * @param qexpr query expression to evaluate
+   * @return All capture groups that are present in the query
+   */
+  def getCaptureGroups(qexpr: QExpr): Seq[QCapture] = qexpr match {
+    case q: QCapture => Seq(q)
+    case q: QAtom => getCaptureGroups(q.qexpr)
+    case q: QLeaf => Seq()
+    case QSeq(children) => children.flatMap(getCaptureGroups)
+    case QDisj(children) => children.flatMap(getCaptureGroups)
+    case QAnd(expr1, expr2) => getCaptureGroups(expr1) ++ getCaptureGroups(expr2)
+  }
+
+  /**
+   * @param qexpr query to evaluate
+   * @return number of tokens the query will match, or -1 if the query
+   *         can match a variable number of tokens'
+   */
+  def getQueryLength(qexpr: QExpr): Int = qexpr match {
+    case QDict(_) => -1
+    case QPlus(_) => -1
+    case QStar(_) => -1
+    case l: QLeaf => 1
+    case QSeq(seq) => {
+      val lengths = seq.map(getQueryLength)
+      if (lengths.forall(_ != -1)) lengths.sum else -1
+    }
+    case QDisj(seq) => {
+      val lengths = seq.map(getQueryLength)
+      if (lengths.forall(_ == lengths.head)) lengths.head else -1
+    }
+    case q: QAtom => getQueryLength(q.qexpr)
+    case QAnd(q1, q2) => math.min(getQueryLength(q1), getQueryLength(q2))
   }
 }
