@@ -17,8 +17,6 @@ import scala.concurrent.duration.DurationInt
 import akka.io.IO
 import spray.can.Http
 import akka.pattern.ask
-import spray.json._
-import DefaultJsonProtocol._
 import JsonSerialization._
 import akka.actor.ActorContext
 import com.typesafe.config.ConfigFactory
@@ -62,13 +60,20 @@ class DictionaryToolActor extends Actor with BasicService with SprayJsonSupport 
       }
     }
   } ~
-    pathPrefix("api" / "wordInfo") {
-      post {
-        entity(as[WordInfoRequest]) { req =>
-          complete(searchApp.wordInfo(req))
-        }
+  pathPrefix("api" / "wordInfo") {
+    post {
+      entity(as[WordInfoRequest]) { req =>
+        complete(searchApp.wordInfo(req))
       }
     }
+  } ~
+  pathPrefix("api" / "suggestQuery") {
+    post {
+      entity(as[SuggestQueryRequest]) { req =>
+        complete(searchApp.suggestQuery(req))
+      }
+    }
+  }
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {

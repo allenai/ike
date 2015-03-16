@@ -24,3 +24,6 @@ public/
 .project
 .settings/
 /bin/
+
+# intellij
+.idea
