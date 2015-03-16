@@ -2,9 +2,9 @@ import Dependencies._
 
 scalaVersion := "2.11.5"
 
-val dictionaryBuilder = project.in(file(".")).enablePlugins(WebappPlugin)
+val okcorpus = project.in(file(".")).enablePlugins(WebappPlugin)
 
-name := "dictionary-builder"
+name := "okcorpus"
 
 description := "buildin' them electric dictionaries"
 
