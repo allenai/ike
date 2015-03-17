@@ -7,6 +7,7 @@ var SearchInterface = require('./components/search/SearchInterface.js');
 var TablesInterface = require('./components/table/TablesInterface.js');
 var TableManager = require('./managers/TableManager.js');
 var ConfigInterface = require('./components/config/ConfigInterface.js');
+var HelpInterface = require('./components/help/HelpInterface.js');
 var DictApp = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
   componentDidMount: function() {
@@ -45,6 +46,7 @@ var DictApp = React.createClass({
       <SearchInterface config={config} results={results} target={target}/>;
     var tablesInterface = <TablesInterface target={target}/>;
     var configInterface = <ConfigInterface config={config}/>;
+    var helpInterface = <HelpInterface/>; 
     return (
       <div>
         <TabbedArea animation={false}>
@@ -56,6 +58,9 @@ var DictApp = React.createClass({
           </TabPane>
           <TabPane className="mainContent" eventKey={3} tab="Configuration">
             {configInterface}
+          </TabPane>
+          <TabPane className="mainContent" eventKey={4} tab="Help">
+            {helpInterface}
           </TabPane>
         </TabbedArea>
       </div>
