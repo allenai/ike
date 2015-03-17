@@ -7,7 +7,7 @@ TableManager = {
   },
   deserializeTables: function() {
     try {
-      var serialized = localStorage.tables;
+      var serialized = localStorage.getItem('tables');
       var deserialized = JSON.parse(serialized);
       var t = typeof deserialized;
       if (t == 'object') {
@@ -21,18 +21,6 @@ TableManager = {
       return {};
     }
   },
-  /** Returns the name of the first table in localStorage, or null if not 
-    * available.
-    */
-  loadTargetFromLocalStorage: function() {
-    if (this.hasTablesInLocalStorage()) {
-      var deserialized = this.deserializeTables();
-      var tableNames = Object.keys(deserialized);
-      return tableNames.length > 0 ? tableNames[0] : null;
-    } else {
-      return null;
-    }
-  },
   /** Loads the tables from localStorage and adds them to the TableManager
     * data structures.
     */
@@ -44,13 +32,18 @@ TableManager = {
         var table = deserialized[tableName];
         this.createTable(table);
       }.bind(this));
+      return deserialized;
     } else {
-      return tables;
+      return {};
     }
   },
   saveTablesToLocalStorage: function() {
     var serialized = JSON.stringify(tables);
-    localStorage.tables = serialized;
+    try {
+      localStorage.setItem('tables', serialized);
+    } catch (err) {
+      alert('Could not save tables: ' + err.message);
+    }
   },
   rowId: function(tableName, rowType, row) {
     var rowString = this.rowString(row);
