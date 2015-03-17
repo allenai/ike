@@ -21,8 +21,8 @@ case class QClusterFromWord(value: Int, wordValue: String, clusterId: String)
 case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])
   extends QLeaf
 case class QWildcard() extends QLeaf
-case class QNamed(qexpr: QExpr, name: String) extends QAtom
-case class QUnnamed(qexpr: QExpr) extends QAtom
+case class QNamed(qexpr: QExpr, name: String) extends QCapture
+case class QUnnamed(qexpr: QExpr) extends QCapture
 case class QNonCap(qexpr: QExpr) extends QAtom
 case class QStar(qexpr: QExpr) extends QAtom
 case class QPlus(qexpr: QExpr) extends QAtom
