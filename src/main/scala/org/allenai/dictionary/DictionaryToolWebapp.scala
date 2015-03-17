@@ -24,14 +24,16 @@ import com.typesafe.config.ConfigFactory
 import scala.util.control.NonFatal
 
 object DictionaryToolWebapp {
+  lazy val config = ConfigFactory.load().getConfig("DictionaryToolWebapp")
   val name = "dictionary-tool"
   def main(args: Array[String]): Unit = {
     implicit val system = ActorSystem("dictionary-tool")
+    val port = config.getInt("port")
     val service = system.actorOf(Props[DictionaryToolActor], "webapp-actor")
 
     {
       implicit val timeout = Timeout(30.seconds)
-      IO(Http) ? Http.Bind(service, interface = "0.0.0.0", port = 8080)
+      IO(Http) ? Http.Bind(service, interface = "0.0.0.0", port = port)
     }
   }
 }
@@ -52,7 +54,7 @@ trait BasicService extends HttpService {
 class DictionaryToolActor extends Actor with BasicService with SprayJsonSupport {
   import JsonSerialization._
   val config = ConfigFactory.load
-  val searchApp = SearchApp(config.getConfig("index"))
+  val searchApp = SearchApp(config.getConfig("DictionaryToolWebapp.index"))
   val serviceRoute = pathPrefix("api" / "groupedSearch") {
     post {
       entity(as[SearchRequest]) { req =>
@@ -60,20 +62,20 @@ class DictionaryToolActor extends Actor with BasicService with SprayJsonSupport 
       }
     }
   } ~
-  pathPrefix("api" / "wordInfo") {
-    post {
-      entity(as[WordInfoRequest]) { req =>
-        complete(searchApp.wordInfo(req))
+    pathPrefix("api" / "wordInfo") {
+      post {
+        entity(as[WordInfoRequest]) { req =>
+          complete(searchApp.wordInfo(req))
+        }
+      }
+    } ~
+    pathPrefix("api" / "suggestQuery") {
+      post {
+        entity(as[SuggestQueryRequest]) { req =>
+          complete(searchApp.suggestQuery(req))
+        }
       }
     }
-  } ~
-  pathPrefix("api" / "suggestQuery") {
-    post {
-      entity(as[SuggestQueryRequest]) { req =>
-        complete(searchApp.suggestQuery(req))
-      }
-    }
-  }
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
