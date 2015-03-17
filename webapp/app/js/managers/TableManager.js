@@ -2,6 +2,49 @@ var tables = {};
 var listeners = [];
 var rowIndex = {};
 TableManager = {
+  hasTablesInLocalStorage: function() {
+    return ('tables' in localStorage);
+  },
+  deserializeTables: function() {
+    try {
+      var serialized = localStorage.getItem('tables');
+      var deserialized = JSON.parse(serialized);
+      var t = typeof deserialized;
+      if (t == 'object') {
+        return deserialized;
+      } else {
+        console.warn('Expected localStorage.tables to be object, found ' + t);
+        return {};
+      }
+    } catch (err) {
+      console.warn('Could not deserialize tables: ' + err.message);
+      return {};
+    }
+  },
+  /** Loads the tables from localStorage and adds them to the TableManager
+    * data structures.
+    */
+  loadTablesFromLocalStorage: function() {
+    if (this.hasTablesInLocalStorage()) {
+      var deserialized = this.deserializeTables();
+      var tableNames = Object.keys(deserialized);
+      tableNames.map(function(tableName) {
+        var table = deserialized[tableName];
+        this.createTable(table);
+      }.bind(this));
+      return deserialized;
+    } else {
+      return {};
+    }
+  },
+  saveTablesToLocalStorage: function() {
+    var serialized = JSON.stringify(tables);
+    try {
+      localStorage.setItem('tables', serialized);
+    } catch (err) {
+      alert('Could not save tables: ' + err.message);
+    }
+  },
   rowId: function(tableName, rowType, row) {
     var rowString = this.rowString(row);
     var fields = [tableName, rowType, rowString];
@@ -52,18 +95,27 @@ TableManager = {
     listeners.map(function(listener) {
       listener(tables);
     });
+    this.saveTablesToLocalStorage();
   },
   hasTable: function(tableName) {
     return tableName in tables;
   },
   createTable: function(table) {
     if (!this.hasTable(table.name)) {
+      var positive = 'positive' in table ? table.positive : [];
+      var negative = 'negative' in table ? table.negative : [];
       tables[table.name] = {
         name: table.name,
         cols: table.cols.slice(0),
-        positive: [],
-        negative: []
+        positive: positive,
+        negative: negative
       };
+      positive.map(function(row) {
+        this.addRowIndex(table.name, 'positive', row);
+      }.bind(this));
+      negative.map(function(row) {
+        this.addRowIndex(table.name, 'negative', row);
+      }.bind(this));
       this.updateListeners();
     }
   },
@@ -77,14 +129,17 @@ TableManager = {
     posRows.map(this.removeRowIndex);
     negRows.map(this.removeRowIndex);
   },
+  addRowIndex: function(tableName, rowType, row) {
+    var id = this.rowId(tableName, rowType, row);
+    rowIndex[id] = true;
+  },
   addRow: function(tableName, rowType, row) {
     var hasTable = this.hasTable(tableName);
     var hasRow = this.hasRow(tableName, rowType, row);
     if (hasTable && !hasRow) {
       var rows = tables[tableName][rowType];
       rows.unshift(row);
-      var id = this.rowId(tableName, rowType, row);
-      rowIndex[id] = true;
+      this.addRowIndex(tableName, rowType, row);
       this.updateListeners();
     }
   },
