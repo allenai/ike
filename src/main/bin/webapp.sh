@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# Hack to set up the AWS env variables needed to read from S2
+# Hack to set up the AWS env variables needed to read from S2. Assumes host
+# has this file. This is a temp fix. 
+# TODO: get rid of this when our ops infrastructure handles this issue.
+# https://github.com/allenai/okcorpus/issues/35
 source ~/aws-env
 
 # Regular stuff below
