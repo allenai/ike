@@ -9,9 +9,9 @@ import nl.inl.blacklab.search.HitsWindow
 import scala.util.Success
 
 case class SuggestQueryRequest(query: String, tables: Map[String, Table],
-                             target: String, narrow: Boolean, config: SuggestQueryConfig)
+  target: String, narrow: Boolean, config: SuggestQueryConfig)
 case class SuggestQueryConfig(beamSize: Int, depth: Int, maxSampleSize: Int,
-                            pWeight: Double, nWeight: Double, uWeight: Double, allowDisjunctions: Boolean)
+  pWeight: Double, nWeight: Double, uWeight: Double, allowDisjunctions: Boolean)
 case class ScoredStringQuery(query: String, score: Double, msg: String)
 case class SuggestQueryResponse(scoredQueries: Seq[ScoredStringQuery])
 case class WordInfoRequest(word: String, config: SearchConfig)

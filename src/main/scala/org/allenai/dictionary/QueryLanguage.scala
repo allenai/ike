@@ -111,13 +111,12 @@ object QueryLanguage {
     Try(recurse(expr))
   }
 
-  /**
-   * Converts a query to its string format
-   *
-   * @param query query to evaluate
-   * @return String representation of the query
-   * @throws NotImplementedError if the query contains QAnd, QPosFromWord, or QClusterFromWord
-   */
+  /** Converts a query to its string format
+    *
+    * @param query query to evaluate
+    * @return String representation of the query
+    * @throws NotImplementedError if the query contains QAnd, QPosFromWord, or QClusterFromWord
+    */
   def getQueryString(query: QExpr): String = query match {
     case QWord(value) => value
     case QCluster(value) => "^" + value
@@ -131,14 +130,13 @@ object QueryLanguage {
     case QPlus(expr) => "(?:" + getQueryString(expr) + ")+"
     case QStar(expr) => "(?:" + getQueryString(expr) + ")*"
     case QUnnamed(expr) => "(" + getQueryString(expr) + ")"
-    case (QClusterFromWord(_, _, _)|QPosFromWord(_, _, _)|QAnd(_, _)) =>
+    case (QClusterFromWord(_, _, _) | QPosFromWord(_, _, _) | QAnd(_, _)) =>
       throw new NotImplementedError("No implementation for " + query.getClass.getName)
   }
 
-  /**
-   * @param qexpr query expression to evaluate
-   * @return All capture groups that are present in the query
-   */
+  /** @param qexpr query expression to evaluate
+    * @return All capture groups that are present in the query
+    */
   def getCaptureGroups(qexpr: QExpr): Seq[QCapture] = qexpr match {
     case q: QCapture => Seq(q)
     case q: QAtom => getCaptureGroups(q.qexpr)
@@ -148,11 +146,10 @@ object QueryLanguage {
     case QAnd(expr1, expr2) => getCaptureGroups(expr1) ++ getCaptureGroups(expr2)
   }
 
-  /**
-   * @param qexpr query to evaluate
-   * @return number of tokens the query will match, or -1 if the query
-   *         can match a variable number of tokens'
-   */
+  /** @param qexpr query to evaluate
+    * @return number of tokens the query will match, or -1 if the query
+    *        can match a variable number of tokens'
+    */
   def getQueryLength(qexpr: QExpr): Int = qexpr match {
     case QDict(_) => -1
     case QPlus(_) => -1
