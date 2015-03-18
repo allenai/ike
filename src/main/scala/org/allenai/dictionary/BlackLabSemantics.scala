@@ -42,6 +42,12 @@ object BlackLabSemantics {
         case Some(string) => blqHelper(QPos(string))
         case None => blqHelper(QWord(word))
       }
+      case QSimilarPhrases(qwords, pos, phrases) => {
+        val selected = phrases.slice(0, pos)
+        val seqs = QSeq(qwords) +: selected.map(p => QSeq(p.qwords))
+        val disj = QDisj(seqs)
+        blqHelper(disj)
+      }
     }
     blqHelper(qexpr)
   }

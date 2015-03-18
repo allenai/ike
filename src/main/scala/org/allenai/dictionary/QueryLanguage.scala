@@ -20,6 +20,9 @@ case class QClusterFromWord(value: Int, wordValue: String, clusterId: String)
   extends QLeaf
 case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])
   extends QLeaf
+case class SimilarPhrase(qwords: Seq[QWord], similarity: Double)
+case class QSimilarPhrases(qwords: Seq[QWord], pos: Int, phrases: Seq[SimilarPhrase])
+  extends QLeaf
 case class QWildcard() extends QLeaf
 case class QNamed(qexpr: QExpr, name: String) extends QCapture
 case class QUnnamed(qexpr: QExpr) extends QCapture
@@ -132,6 +135,7 @@ object QueryLanguage {
     case QUnnamed(expr) => "(" + getQueryString(expr) + ")"
     case (QClusterFromWord(_, _, _) | QPosFromWord(_, _, _) | QAnd(_, _)) =>
       throw new NotImplementedError("No implementation for " + query.getClass.getName)
+    case x: QSimilarPhrases => ???
   }
 
   /** @param qexpr query expression to evaluate
