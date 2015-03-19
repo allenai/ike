@@ -21,7 +21,8 @@ libraryDependencies ++= Seq(
     lucene("analyzers-common"),
     lucene("highlighter"),
     lucene("queries"),
-    lucene("queryparser")
+    lucene("queryparser"),
+    "nl.inl" %% "blacklab" % "1.0-ALLENAI-2"
 )
 
 mainClass in Revolver.reStart := Some("org.allenai.dictionary.DictionaryToolWebapp")
