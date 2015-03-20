@@ -74,12 +74,10 @@ object QuerySuggester {
     * @param negativeTerms Negative examples
     * @return HitAnalysis object for the given Hits object.
     */
-  def buildHitAnalysis(
-                          hits: Hits,
-                          generators: Seq[TokenQueryOpGenerator],
-                          positiveTerms: Set[TableRow],
-                          negativeTerms: Set[TableRow]
-                          ): HitAnalysis = {
+  def buildHitAnalysis(hits: Hits,
+                       generators: Seq[TokenQueryOpGenerator],
+                       positiveTerms: Set[TableRow],
+                       negativeTerms: Set[TableRow]): HitAnalysis = {
     val positiveStrings = positiveTerms.map(x => x.values.head.qwords.
         map(x => x.value).mkString(" "))
     val negativeStrings = negativeTerms.map(x => x.values.head.qwords.
@@ -141,9 +139,12 @@ object QuerySuggester {
     * @return Sequence of CompoundQueryOps, together with their score and a string
     *       message about some statistics about that op.
     */
-  def selectOperator(hitAnalysis: HitAnalysis, evaluationFunction: QueryEvaluator,
+  def selectOperator(hitAnalysis: HitAnalysis,
+                     evaluationFunction: QueryEvaluator,
                      opBuilder: EvaluatedOp => CompoundQueryOp,
-                     beamSize: Int, depth: Int, maxReturn: Int): Seq[ScoredOps] = {
+                     beamSize: Int,
+                     depth: Int,
+                     maxReturn: Int): Seq[ScoredOps] = {
 
     // Reverse ordering so the smallest scoring operators are at the head
     val priorityQueue = scala.collection.mutable.PriorityQueue()(
@@ -231,9 +232,12 @@ object QuerySuggester {
     * @return Suggested queries, along with their scores and a String msg details some
     *       statistics about each query.
     */
-  def suggestQuery(searcher: Searcher, startingQuery: QExpr,
+  def suggestQuery(searcher: Searcher,
+                   startingQuery: QExpr,
                    tables: Map[String, Table],
-                   target: String, narrow: Boolean, config: SuggestQueryConfig): Seq[ScoredQuery] = {
+                   target: String,
+                   narrow: Boolean,
+                   config: SuggestQueryConfig): Seq[ScoredQuery] = {
 
     val targetDictionary = tables.get(target) match {
       case Some(dict) => dict
