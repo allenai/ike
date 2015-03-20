@@ -304,7 +304,7 @@ object QuerySuggester {
     var hitAnalysis = {
       logger.debug(s"Retrieving unlabelled documents...")
       val startTime = System.nanoTime()
-      val hits = hitGatherer.getRandomSample(startingQuery, searcher)
+      val hits = hitGatherer.getSample(startingQuery, searcher)
       val window = hits.window(0, (config.maxSampleSize * numUnlabelled).toInt)
       val analysis = parseHits(window)
       val retrieveTime = System.nanoTime()

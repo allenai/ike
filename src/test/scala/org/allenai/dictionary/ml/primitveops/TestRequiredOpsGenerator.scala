@@ -20,7 +20,7 @@ class TestRequiredOpsGenerator extends UnitSpec with ScratchDirectory {
       QUnnamed(QWord("like")),
       QWord("bananas")
     ))
-    val hits = FuzzySequenceSampler(1, 1).getRandomSample(query, searcher)
+    val hits = FuzzySequenceSampler(1, 1).getSample(query, searcher)
     hits.get(0) // Ensure Hits loads up the captureGroupNames by requesting the first hit
     val captureGroups = hits.getCapturedGroupNames
     val captureIndices = SpansFuzzySequence.getMissesCaptureGroupNames(3).

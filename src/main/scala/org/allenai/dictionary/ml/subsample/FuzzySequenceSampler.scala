@@ -9,6 +9,7 @@ import org.apache.lucene.search.spans.SpanQuery
 object FuzzySequenceSampler {
   val captureGroupName = "capture"
 }
+
 /** Sampler that returns sentences that could be matched by a query that is
   * within an edit distance of the given query. See SpansFuzzySequence.
   *
@@ -33,7 +34,7 @@ case class FuzzySequenceSampler(minEdits: Int, maxEdits: Int)
       Seq(captureGroup))
   }
 
-  override def getRandomSample(qexpr: QExpr, searcher: Searcher): Hits = {
+  override def getSample(qexpr: QExpr, searcher: Searcher): Hits = {
     val tokenizedQuery = TokenizedQuery.buildFromQuery(qexpr)
     searcher.find(buildFuzzySequenceQuery(tokenizedQuery, searcher))
   }

@@ -66,7 +66,7 @@ case class MatchesSampler() extends Sampler() {
     recurse(qexpr)
   }
 
-  override def getRandomSample(qexpr: QExpr, searcher: Searcher): Hits = {
+  override def getSample(qexpr: QExpr, searcher: Searcher): Hits = {
     searcher.find(BlackLabSemantics.blackLabQuery(qexpr))
   }
 
