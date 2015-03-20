@@ -1,15 +1,14 @@
 package org.allenai.dictionary.ml
 
-import org.allenai.dictionary.ml.compoundops.{OpConjunctionOfDisjunctions, OpConjunction, EvaluatedOp}
+import org.allenai.dictionary.ml.compoundops.{ OpConjunctionOfDisjunctions, OpConjunction, EvaluatedOp }
 
 import scala.collection.JavaConverters._
-import org.allenai.common.testkit.{ScratchDirectory, UnitSpec}
+import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary.index.TestData
 import org.allenai.dictionary.ml.QuerySuggester.HitAnalysis
 import org.allenai.dictionary.ml.primitveops._
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml.Label._
-
 
 import scala.collection.immutable.IntMap
 
@@ -25,13 +24,14 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
   "SelectOperator" should "Select correct AND query" in {
 
     def buildExample(k: Int) = {
-       Example(if (k == 1) {
-         Positive
-       } else if(k == -1) {
-         Negative
-       } else {
-         Unknown
-       }, 0, "")
+      val label = if (k == 1) {
+        Positive
+      } else if (k == -1) {
+        Negative
+      } else {
+        Unknown
+      }
+      Example(label, 0, "")
     }
 
     val examples = List(1, 1, 1, 1, 1, -1, -1, -1, -1, -1, 0).
@@ -42,25 +42,27 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val op3 = SetToken(Prefix(3), QWord("p3"))
 
     val operatorHits = Map[TokenQueryOp, IntMap[Int]](
-      (op1, buildMap(List(1,2,3,4,5,6,7))),
-      (op2, buildMap(List(1,2,3,4,5,7,8,9))),
-      (op3, buildMap(List(6,7,8,9,10)))
+      (op1, buildMap(List(1, 2, 3, 4, 5, 6, 7))),
+      (op2, buildMap(List(1, 2, 3, 4, 5, 7, 8, 9))),
+      (op3, buildMap(List(6, 7, 8, 9, 10)))
     )
     val data = HitAnalysis(operatorHits, examples)
 
     val scoredQueries = QuerySuggester.selectOperator(
       data, PositiveMinusNegative(examples, 1),
       (x: EvaluatedOp) => OpConjunction.apply(x),
-      3, 2, 3)
+      3, 2, 3
+    )
 
     // Best Results is ANDing op1 and op2
     assertResult(Set(
       Set(op1, op2),
       Set(op1),
-      Set(op2))) {scoredQueries.map(_.ops.ops).toSet}
+      Set(op2)
+    )) { scoredQueries.map(_.ops.ops).toSet }
   }
 
-  "SelectOperator" should "Select correct OR queries" in {
+  it should "Select correct OR queries" in {
     val examples = (Seq(Unknown) ++ Seq.fill(5)(Positive) ++
       Seq.fill(5)(Negative) ++ Seq(Unknown)).
       map(x => Example(x, 0, "")).toIndexedSeq
@@ -71,17 +73,19 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val op4 = SetToken(Prefix(3), QWord("p4"))
 
     val operatorHits = Map[TokenQueryOp, IntMap[Int]](
-      (op1 -> buildMap(List(1,2,3))),
-      (op2 -> buildMap(List(3,4,7,6,8))),
-      (op3 -> buildMap(List(1,2,7,6,9))),
-      (op4 -> buildMap(List(1,2,3,4,5,10,11)))
+      op1 -> buildMap(List(1, 2, 3)),
+      op2 -> buildMap(List(3, 4, 7, 6, 8)),
+      op3 -> buildMap(List(1, 2, 7, 6, 9)),
+      op4 -> buildMap(List(1, 2, 3, 4, 5, 10, 11))
     )
     val data = HitAnalysis(operatorHits, examples)
     val scoredQueries = QuerySuggester.selectOperator(
       data, PositiveMinusNegative(examples, 2),
       (x: EvaluatedOp) => OpConjunctionOfDisjunctions(x),
-      20, 4, 2)
+      20, 4, 2
+    )
 
+    // Best answer is (op2 OR op3) AND op4
     assertResult(Set(op2, op3, op4))(scoredQueries.head.ops.ops)
     assertResult(4)(scoredQueries.head.score)
   }
@@ -94,9 +98,9 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val hitsFounds = hits.asScala.map(hits.getKwic(_).getMatch("word").get(0))
     assertResult(Seq("mango", "those", "bananas"))(hitsFounds)
 
-
     // Get this hits
-    val positiveTerms = Set("qwerty", "bananas").map(x => TableRow(Seq(TableValue(Seq(QWord(x))))))
+    val positiveTerms = Set("qwerty", "bananas").
+        map(x => TableRow(Seq(TableValue(Seq(QWord(x))))))
     val negativeTerms = Set("mango").map(x => TableRow(Seq(TableValue(Seq(QWord(x))))))
     val generator = PrefixOpGenerator(QLeafGenerator(Set(), Set(2)), Seq(1))
     val hitAnalysis = QuerySuggester.buildHitAnalysis(
@@ -111,7 +115,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val op10 = SetToken(Prefix(1), QCluster("10"))
     val op11 = SetToken(Prefix(1), QCluster("11"))
 
-    assertResult(Set(op10, op11))(hitAnalysis.operatorHits.keys.toSet)
+    assertResult(Set(op10, op11))(hitAnalysis.operatorHits.keySet)
     assertResult(Set(0, 1))(hitAnalysis.operatorHits.get(op10).get.keySet)
     assertResult(Set(2))(hitAnalysis.operatorHits.get(op11).get.keySet)
   }
