@@ -8,8 +8,6 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.spans.{ SpanQuery, Spans }
 import org.apache.lucene.util.Bits
 
-case class QueryOrPlaceholder(either: Either[SpanQuery, Int]);
-
 /** Gathers 'Fuzzy' matches to a sequence. In other words matches sequences within
   * <code>minMatches</code> to <code>maxMatches</code> inclusive edit distance of the input
   * sequence of clauses, where an edit is changing a single token within the sequence
