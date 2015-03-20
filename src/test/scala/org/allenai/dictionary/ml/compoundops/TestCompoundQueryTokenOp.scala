@@ -30,16 +30,16 @@ class TestCompoundQueryTokenOp extends UnitSpec {
       case _ => throw new RuntimeException()
     }
 
-    assertResult(prefix3.qexpr) { qExpr(0) }
-    assertResult(prefix22.qexpr) { qExpr(1) }
-    assertResult(QWildcard()) { qExpr(2) }
-    assertResult(QWord("one")) { qExpr(3) }
-    assertResult(QUnnamed(QSeq(Seq(QWord("c1"), replace3.qexpr)))) { qExpr(4) }
-    assertResult(QWord("two")) { qExpr(5) }
-    assertResult(suffix1.qexpr) { qExpr(6) }
-    assertResult(QWildcard()) { qExpr(7) }
-    assertResult(suffix3.qexpr) { qExpr(8) }
-    assertResult(9){ qExpr.size }
+    assertResult(prefix3.qexpr)(qExpr(0))
+    assertResult(prefix22.qexpr)(qExpr(1))
+    assertResult(QWildcard())(qExpr(2))
+    assertResult(QWord("one"))(qExpr(3))
+    assertResult(QUnnamed(QSeq(Seq(QWord("c1"), replace3.qexpr))))(qExpr(4))
+    assertResult(QWord("two"))(qExpr(5))
+    assertResult(suffix1.qexpr)(qExpr(6))
+    assertResult(QWildcard())(qExpr(7))
+    assertResult(suffix3.qexpr)(qExpr(8))
+    assertResult(9)(qExpr.size)
   }
 
   "CompoundOp" should "apply AddToken ops" in {
@@ -47,7 +47,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
     val ops = Seq(add22, add21)
     val modified = CompoundQueryOp.applyOps(tokenized, ops)
-    assertResult(Set(add22.qexpr, add21.qexpr, tokenized.getSeq(1))){
+    assertResult(Set(add22.qexpr, add21.qexpr, tokenized.getSeq(1))) {
       modified.getSeq(1) match {
         case QDisj(seq) => seq.toSet
         case _ => throw new RuntimeException()
@@ -61,7 +61,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     val start = QueryLanguage.parse("(c1 c2 c3) h").get
     val tokenized = TokenizedQuery.buildFromQuery(start)
     val modified = CompoundQueryOp.applyOps(tokenized, ops).getSeq
-    assertResult(Set(prefix21.qexpr, prefix22.qexpr)){
+    assertResult(Set(prefix21.qexpr, prefix22.qexpr)) {
       modified(0) match {
         case QDisj(seq) => seq.toSet
         case _ => Set()
@@ -70,7 +70,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     assertResult(QWildcard())(modified(1))
     assertResult(QWord("c1"))(modified(2))
     assertResult(QWord("c2"))(modified(3))
-    assertResult(Set(replace3.qexpr, add3.qexpr, QWord("c3"))){
+    assertResult(Set(replace3.qexpr, add3.qexpr, QWord("c3"))) {
       modified(4) match {
         case QDisj(seq) => seq.toSet
         case _ => Set()
@@ -78,5 +78,6 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     }
     assertResult(QWord("h"))(modified(5))
     assertResult(suffix1.qexpr)(modified(6))
+    assertResult(7)(modified.size)
   }
 }
