@@ -47,8 +47,8 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
     val ops = Seq(add22, add21)
     val modified = CompoundQueryOp.applyOps(tokenized, ops)
-    assertResult(Set(add22.qexpr, add21.qexpr, tokenized.getSeq()(1))){
-      modified.getSeq()(1) match {
+    assertResult(Set(add22.qexpr, add21.qexpr, tokenized.getSeq(1))){
+      modified.getSeq(1) match {
         case QDisj(seq) => seq.toSet
         case _ => throw new RuntimeException()
       }
@@ -60,7 +60,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     val ops = Seq(suffix1, replace3, prefix21, prefix22, add3)
     val start = QueryLanguage.parse("(c1 c2 c3) h").get
     val tokenized = TokenizedQuery.buildFromQuery(start)
-    val modified = CompoundQueryOp.applyOps(tokenized, ops).getSeq()
+    val modified = CompoundQueryOp.applyOps(tokenized, ops).getSeq
     assertResult(Set(prefix21.qexpr, prefix22.qexpr)){
       modified(0) match {
         case QDisj(seq) => seq.toSet

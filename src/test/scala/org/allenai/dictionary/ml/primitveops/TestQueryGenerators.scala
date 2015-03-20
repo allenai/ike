@@ -26,7 +26,7 @@ class TestQueryGenerators extends UnitSpec with ScratchDirectory {
   "AddPrefixGenerator" should "create correct operators" in {
     val hits = searcher.find(BlackLabSemantics.blackLabQuery(
       QDisj(Seq(QWord("not"), QWord("bananas")))))
-    val generator = QueryPrefixGenerator(QLeafGenerator(Set("pos", "word")), Seq(1, 3, 8))
+    val generator = PrefixOpGenerator(QLeafGenerator(Set("pos", "word")), Seq(1, 3, 8))
     val operators = hits.flatMap(hit => {
         generator.generateOperations(hit, hits)
     }).toSeq
@@ -45,7 +45,7 @@ class TestQueryGenerators extends UnitSpec with ScratchDirectory {
   "AddSuffixGenerator" should "create correct operators" in {
     val hits = searcher.find(BlackLabSemantics.blackLabQuery(
       QDisj(Seq(QWord("They"), QWord("mango"), QWord(".")))))
-    val generator = QuerySuffixGenerator(QLeafGenerator(Set("word"), Set(2)), Seq(1, 2, 8))
+    val generator = SuffixOpGenerator(QLeafGenerator(Set("word"), Set(2)), Seq(1, 2, 8))
     val operators = hits.flatMap(hit => {
       generator.generateOperations(hit, hits)
     }).toSeq
@@ -111,7 +111,7 @@ class TestQueryGenerators extends UnitSpec with ScratchDirectory {
       QDisj(Seq(QWord("I"), QWord("hate"))),
       QUnnamed(QWord("like")),
       QWord("bananas")))
-    val hits = FuzzySequenceSampler(1, 1, "capture").getRandomSample(query, searcher)
+    val hits = FuzzySequenceSampler(1, 1).getRandomSample(query, searcher)
     hits.get(0) // Ensure Hits loads up the captureGroupNames by requesting the first hit
     val captureGroups = hits.getCapturedGroupNames()
     val captureIndices = SpansFuzzySequence.getMissesCaptureGroupNames(3).map(x => captureGroups.indexOf(x))

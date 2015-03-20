@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.subsample
 
 import nl.inl.blacklab.search.Span
-import nl.inl.blacklab.search.lucene.{BLSpans, DocFieldLengthGetter, HitQueryContext, SpansUnique}
+import nl.inl.blacklab.search.lucene.{ BLSpans, DocFieldLengthGetter, HitQueryContext, SpansUnique }
 import nl.inl.blacklab.search.sequences.PerDocumentSortedSpans
 
 object SpansFuzzySequence {
@@ -13,11 +13,11 @@ object SpansFuzzySequence {
 private case class Match(doc: Int, start: Int)
 
 /* Clause with an index number, represent what subspace of our sequence the clause covers */
-private case class SeqClause(clause: BLSpans, sequenceStart: Int, 
-                             clauseNum: Int) extends Ordered[SeqClause] {
+private case class SeqClause(clause: BLSpans, sequenceStart: Int,
+    clauseNum: Int) extends Ordered[SeqClause] {
 
   /* If this clause is participating in a sequence, where would that sequence start */
-  def matchStart = clause.start - sequenceStart
+  def matchStart: Int = clause.start - sequenceStart
 
   override def compare(that: SeqClause): Int = {
     if (that.clause.doc != clause.doc) {
@@ -34,33 +34,32 @@ case class CaptureSpan(name: String, start: Int, end: Int) {
   require(end > start)
 }
 
-/**
- * Gathers 'Fuzzy' matches to a sequence. In other words matches sequences within
- * <code>minMatches</code> to <code>maxMatches</code> inclusive edit distance of the input
- * sequence of clauses, where an edit is changing a single token within the sequence
- * (removing or adding tokens is not allowed currently). Input clauses must be fixed length.
- * additionally supports return subsequences of its matches as capture groups, and
- * returning spans indicating which clauses were left out of each sequence it
- * finds as a capture group.
- *
- * @param clauses Clauses to of the fuzzy sequence, should be fixed length
- * @param documentLengthGetter Getter to find the lenghts of documents
- * @param minMatches minum number of claues to participate in each match
- * @param maxMatches maximum number of clauses to participate in each match
- * @param ignoreLastToken whether the the last token of sentences should be skipped
- * @param sequencesToCapture Subsequence of return as capture groups
- * @param registerMisses Whether to return clauses that missed a match as spans
- *                       indicating where the missed clause 'should' have been places
- */
-class SpansFuzzySequence (
-  private val clauses: Seq[Either[BLSpans, Int]],
-  private val documentLengthGetter: DocFieldLengthGetter,
-  private var minMatches: Int,
-  private var maxMatches: Int,
-  private val ignoreLastToken: Boolean,
-  private val sequencesToCapture: Seq[CaptureSpan],
-  private val registerMisses: Boolean
-  ) extends BLSpans {
+/** Gathers 'Fuzzy' matches to a sequence. In other words matches sequences within
+  * <code>minMatches</code> to <code>maxMatches</code> inclusive edit distance of the input
+  * sequence of clauses, where an edit is changing a single token within the sequence
+  * (removing or adding tokens is not allowed currently). Input clauses must be fixed length.
+  * additionally supports return subsequences of its matches as capture groups, and
+  * returning spans indicating which clauses were left out of each sequence it
+  * finds as a capture group.
+  *
+  * @param clauses Clauses to of the fuzzy sequence, should be fixed length
+  * @param documentLengthGetter Getter to find the lenghts of documents
+  * @param minMatches minum number of claues to participate in each match
+  * @param maxMatches maximum number of clauses to participate in each match
+  * @param ignoreLastToken whether the the last token of sentences should be skipped
+  * @param sequencesToCapture Subsequence of return as capture groups
+  * @param registerMisses Whether to return clauses that missed a match as spans
+  *                     indicating where the missed clause 'should' have been places
+  */
+class SpansFuzzySequence(
+    private val clauses: Seq[Either[BLSpans, Int]],
+    private val documentLengthGetter: DocFieldLengthGetter,
+    private var minMatches: Int,
+    private var maxMatches: Int,
+    private val ignoreLastToken: Boolean,
+    private val sequencesToCapture: Seq[CaptureSpan],
+    private val registerMisses: Boolean
+) extends BLSpans {
 
   def this(
     clauses: => Seq[BLSpans], // use "=>" to avoid conflicting signature w/previous constructor
@@ -69,9 +68,10 @@ class SpansFuzzySequence (
     maxMatches: Int,
     ignoreLastToken: Boolean,
     sequencesToCapture: Seq[CaptureSpan],
-    registerMisses: Boolean) = {
-      this(clauses map (Left(_)), documentLengthGetter, minMatches, maxMatches,
-        ignoreLastToken, sequencesToCapture, registerMisses)
+    registerMisses: Boolean
+  ) = {
+    this(clauses map (Left(_)), documentLengthGetter, minMatches, maxMatches,
+      ignoreLastToken, sequencesToCapture, registerMisses)
   }
 
   def this(
@@ -79,7 +79,8 @@ class SpansFuzzySequence (
     documentEnds: DocFieldLengthGetter,
     minMatches: Int,
     ignoreLastToken: Boolean,
-    sequencesToCapture: Seq[CaptureSpan]=Seq()) = {
+    sequencesToCapture: Seq[CaptureSpan] = Seq()
+  ) = {
     this(clauses, documentEnds, minMatches, -1,
       ignoreLastToken, sequencesToCapture, false)
   }
@@ -92,16 +93,16 @@ class SpansFuzzySequence (
   var hitLength = -1
 
   /* Spans object we are using */
-  private val realClauses = clauses flatMap (x => x match {
+  private val realClauses = clauses flatMap {
     case Left(c) => Some(c)
     case _ => None
-  })
+  }
 
   /* Number of matches that implicitly match everything */
-  private val implicitMatches = clauses.map(x => x match {
+  private val implicitMatches = clauses.map {
     case Right(n: Int) => 1
     case _ => 0
-  }).sum
+  }.sum
 
   /* Clauses that are candidates for participating in a fuzzy sequence match. Never
    * contains clauses that are empty. */
@@ -148,14 +149,13 @@ class SpansFuzzySequence (
     // Have all our clauses that need to skip ahead skip, filter
     // any that became empty
     aliveClauses = aliveClauses.filter(sc => {
-        if (sc.clause.doc() < target) {
-          val prevDoc = sc.clause.doc
-          val hasNext = sc.clause.skipTo(target)
-          if (!hasNext) deadClauses = sc +: deadClauses
-          hasNext
-        } else {
-          true
-        }
+      if (sc.clause.doc() < target) {
+        val hasNext = sc.clause.skipTo(target)
+        if (!hasNext) deadClauses = sc +: deadClauses
+        hasNext
+      } else {
+        true
+      }
     })
     more = if (aliveClauses.size + implicitMatches < minMatches) {
       // Not enough clauses could advance to target
@@ -168,7 +168,7 @@ class SpansFuzzySequence (
       moveToValidMatch()
     }
     more
-  }  
+  }
 
   /*
    * Initialize this by calling next() and assigning aliveClauses, deadClauses, currentMatch
@@ -199,29 +199,27 @@ class SpansFuzzySequence (
 
     assert(sequencesToCapture.forall(_.end <= hitLength))
 
-    if (maxMatches == -1) {
-      maxMatches = hitLength
+    if (maxMatches == -1) maxMatches = hitLength
+
+    val sequencedClauses = clauses.zipWithIndex.flatMap {
+      case (clause, index) =>
+        clause match {
+          case Right(n) => None
+          case Left(spans) =>
+            val wrappedSpans =
+              if (!spans.hitsStartPointSorted()) {
+                new PerDocumentSortedSpans(spans, false, !spans.hitsAreUnique())
+              } else if (!spans.hitsAreUnique()) {
+                new SpansUnique(spans)
+              } else {
+                spans
+              }
+            Some(SeqClause(wrappedSpans, startIndices(index), index))
+        }
     }
 
-    val sequencedClauses = clauses.zipWithIndex.flatMap{case (clause, index) => {
-      clause match {
-        case Right(n) => None
-        case Left(spans) => {
-          val wrappedSpans =
-            if (!spans.hitsStartPointSorted()) {
-              new PerDocumentSortedSpans(spans, false, !spans.hitsAreUnique())
-            } else if (!spans.hitsAreUnique()) {
-              new SpansUnique(spans)
-            } else {
-              spans
-            }
-          Some(SeqClause(wrappedSpans, startIndices(index), index))
-        }
-      }
-    }}
-
-    aliveClauses = sequencedClauses zip(hasNext) filter(_._2) map(_._1)
-    deadClauses = sequencedClauses zip(hasNext) filterNot(_._2) map(_._1)
+    aliveClauses = sequencedClauses zip hasNext filter (_._2) map (_._1)
+    deadClauses = sequencedClauses zip hasNext filterNot (_._2) map (_._1)
 
     if (aliveClauses.size + implicitMatches < minMatches) {
       false
@@ -248,10 +246,13 @@ class SpansFuzzySequence (
         val hasNext = sc.clause.next()
         if (!hasNext) deadClauses = sc +: deadClauses
         hasNext
-      } else true
+      } else {
+        true
+      }
     })
-    if (aliveClauses.size + implicitMatches < minMatches) false
-    else {setCurrentMatch(); true}
+    if (aliveClauses.size + implicitMatches < minMatches) {
+      false
+    } else { setCurrentMatch(); true }
   }
 
   /*
@@ -271,16 +272,14 @@ class SpansFuzzySequence (
     // Check document bounds
     val pad = if (ignoreLastToken) 1 else 0
     if (currentMatch.start < 0 ||
-      ((documentLengthGetter.getFieldLength(currentMatch.doc) - pad) <= end)
-    ) {
+      ((documentLengthGetter.getFieldLength(currentMatch.doc) - pad) <= end)) {
       return false
     }
 
-    val numMatches = aliveClauses.map({
-      case sc => {
+    val numMatches = aliveClauses.map {
+      case sc =>
         if (sc.clause.doc == doc && sc.matchStart == currentMatch.start) 1 else 0
-      }
-    }).sum + implicitMatches
+    }.sum + implicitMatches
 
     numMatches >= minMatches && numMatches <= maxMatches
   }
@@ -288,28 +287,28 @@ class SpansFuzzySequence (
   override def passHitQueryContextToClauses(context: HitQueryContext): Unit = {
     realClauses.foreach(x => x.setHitQueryContext(context))
   }
-  
+
   override def setHitQueryContext(context: HitQueryContext): Unit = {
-    super.setHitQueryContext(context);
+    super.setHitQueryContext(context)
     captureIndices = sequencesToCapture.map(x => context.registerCapturedGroup(x.name))
     if (registerMisses) {
       val missedClauseNames = SpansFuzzySequence.getMissesCaptureGroupNames(clauses.size)
-      missedClauseIndices = missedClauseNames.map(x => context.registerCapturedGroup(x)).toIndexedSeq
+      missedClauseIndices = missedClauseNames.map(x =>
+        context.registerCapturedGroup(x)).toIndexedSeq
     }
   }
 
   override def getCapturedGroups(capturedGroups: Array[Span]): Unit = {
     // Fill capturedGroups with the subsequences this is capturing
-    captureIndices.zip(sequencesToCapture)map{
-      case (index, CaptureSpan(_, cStart, cEnd)) => {
+    captureIndices.zip(sequencesToCapture) foreach {
+      case (index, CaptureSpan(_, cStart, cEnd)) =>
         capturedGroups.update(index, new Span(start + cStart, start + cEnd))
-      }
     }
 
     if (registerMisses) {
       // Fill with any clauses that did not participate in the current match
-      aliveClauses foreach(clause => {
-        if (clause.matchStart != start || clause.clause.doc != doc){
+      aliveClauses foreach (clause => {
+        if (clause.matchStart != start || clause.clause.doc != doc) {
           val missedStart = start + clause.sequenceStart
           val missedEnd = missedStart + clause.clause.hitsLength()
           capturedGroups(missedClauseIndices(clause.clauseNum)) =
@@ -324,7 +323,7 @@ class SpansFuzzySequence (
           new Span(missedStart, missedEnd)
       })
     }
-    if (childClausesCaptureGroups) realClauses.map(_.getCapturedGroups(capturedGroups))
+    if (childClausesCaptureGroups) realClauses.foreach(_.getCapturedGroups(capturedGroups))
   }
 
   override def hitsLength(): Int = hitLength

@@ -43,8 +43,8 @@ class TestHitsGatherer extends UnitSpec with ScratchDirectory {
 
   def buildTable(positive: Seq[String], negative: Seq[String]): Table = {
     Table("testTable", Seq("testCol"),
-      positive.map(x => TableRow(Seq(TableValue(x.split(" ").map(QWord(_)))))),
-      negative.map(x => TableRow(Seq(TableValue(x.split(" ").map(QWord(_))))))
+      positive.map(x => TableRow(Seq(TableValue(x.split(" ").map(QWord.apply))))),
+      negative.map(x => TableRow(Seq(TableValue(x.split(" ").map(QWord.apply)))))
     )
   }
 
@@ -53,13 +53,13 @@ class TestHitsGatherer extends UnitSpec with ScratchDirectory {
     val table = buildTable(Seq("mango"), Seq())
 
     assertResult(Seq("mango", "those")){
-      val hits = FuzzySequenceSampler(1, 1, "test").getRandomSample(testQuery, searcher)
-      hitToCaptures(hits, "test")
+      val hits = FuzzySequenceSampler(1, 1).getRandomSample(testQuery, searcher)
+      hitToCaptures(hits, FuzzySequenceSampler.captureGroupName)
     }
 
     assertResult(Seq("mango")){
-      val hits = FuzzySequenceSampler(1, 1, "test").getLabelledSample(testQuery, searcher, table)
-      hitToCaptures(hits, "test")
+      val hits = FuzzySequenceSampler(1, 1).getLabelledSample(testQuery, searcher, table)
+      hitToCaptures(hits, FuzzySequenceSampler.captureGroupName)
     }
   }
 
@@ -69,7 +69,7 @@ class TestHitsGatherer extends UnitSpec with ScratchDirectory {
         QDisj(Seq(QWord("like"), QWord("hate"))),
         QUnnamed(QDisj(Seq(QWord("those"), QWord("great"))))
       ))
-    val hits = FuzzySequenceSampler(0, 1, "test").getRandomSample(testQuery, searcher)
+    val hits = FuzzySequenceSampler(0, 1).getRandomSample(testQuery, searcher)
     val captures = hitToAllCaptures(hits)
     assertResult(Seq("mango", null, null, "mango"))(captures(0)) // Last word did not match
     assertResult(Seq("those", null, null, null))(captures(1)) // all words matched

@@ -14,6 +14,7 @@ suggested queries will match more sentences than the original query).
 ### Limitations
 Currently only fixed length queries are supported, which means queries that contain control
  characters like '*' or '+' are not supported.
+Only one column tables are supported.
 Currently only the following changes can be made to a user's query
 1. Adding a prefix to the original query (ex. "fat cat" => "the fat cat")
 2. Adding a suffix to the original query (ex. "fat cat" => "fat cat ran")
@@ -40,19 +41,22 @@ larger and larger combinations of primitive operations using a beam search. This
     2. A 'combiner' that knows how to combined the primitive operations, and which primitive operations are
        compatible and so can be applied to the same query.
 
-When evaluating queries we avoid running them on the index (this we take way too much time). 
+When evaluating queries we avoid running them on the index, this would take too much time since 
+we need to evaluate thousands of queries.
 Instead we keep track, for each primitive query operation, which sentences from our subsample 
 would match our query if the primitive operation is applied to it. So, for example, if we are using 
 a primitive operation that adds 'the' as a prefix to the original query, and our original query
 was 'cat', we record which sentences from our subsample includes the full phrase 'the cat'. For operations
-that combine several primitive operations we can then take the intersection of the sentences each primtive
- operation matches to find out what sentences the combined operation would match.
+that combine several primitive operations we can then take the intersection of the sentences each
+ primitive operation matches to find out what sentences the combined operation would match.
  
 In addition to which sentences a primitive operation would allow the initial query to match, we also mark which 
 sentences a primitive operation is 'required' for. These sentences are ones that the initial query will
 not match unless the primitive operation is applied to it. For example, if the initial query is 'the cat' and our
-primitive operation is "replace 'the' with 'DT'" we mark that primitive operation as being required for the sentence
-'a cat' and not required for the sentence 'the cat'. When make use of 'broadening' query suggestion we keep track of 
+primitive operation is replaces 'the' with 'DT' the primitive operation is required 
+for the sentence
+'a cat' and not required for the sentence 'the cat'. When making 'broadening' query suggestion we
+keep track of 
 number of edits would be needed to make made to the user's query to match each sentences, and then track the number
 of 'required' operators that were applied to each sentence to determine if the query would match the starting
 sentence.

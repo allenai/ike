@@ -2,7 +2,7 @@ package org.allenai.dictionary.ml
 
 import org.allenai.dictionary._
 
-case class UnconvertibleQuery(msg:String)  extends Exception
+case class UnconvertibleQuery(msg: String) extends Exception
 
 object TokenizedQuery {
 
@@ -24,31 +24,30 @@ object TokenizedQuery {
     var capture = Seq[QExpr]()
     var onLeft = true
     tokenize.foreach(token => token match {
-      case c: QCapture => {capture = toTokens(c.qexpr); onLeft = false}
+      case c: QCapture => { capture = toTokens(c.qexpr); onLeft = false }
       case _ if onLeft => left = left :+ token
       case _ => right = right :+ token
     })
-    if(capture.size == 0) {
+    if (capture.size == 0) {
       throw new UnconvertibleQuery("Capture group has size zero")
     }
     TokenizedQuery(left, capture, right)
   }
 }
 
-/**
- * Query that has been 'tokenized' into sequences of fixes length tokens.
- *
- * @param left Tokens before the capture group (might be empty)
- * @param capture Tokens in the capture group
- * @param right Tokens after the capture group (might be empty)
- */
+/** Query that has been 'tokenized' into sequences of fixes length tokens.
+  *
+  * @param left Tokens before the capture group (might be empty)
+  * @param capture Tokens in the capture group
+  * @param right Tokens after the capture group (might be empty)
+  */
 case class TokenizedQuery(left: Seq[QExpr], capture: Seq[QExpr], right: Seq[QExpr]) {
 
-  def getQuery(): QExpr = {
+  def getQuery: QExpr = {
     QSeq((left :+ QUnnamed(QSeq(capture))) ++ right)
   }
 
-  def getSeq(): Seq[QExpr] = {
+  def getSeq: Seq[QExpr] = {
     (left ++ capture) ++ right
   }
 }

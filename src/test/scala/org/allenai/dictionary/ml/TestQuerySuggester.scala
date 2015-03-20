@@ -98,7 +98,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     // Get this hits
     val positiveTerms = Set("qwerty", "bananas").map(x => TableRow(Seq(TableValue(Seq(QWord(x))))))
     val negativeTerms = Set("mango").map(x => TableRow(Seq(TableValue(Seq(QWord(x))))))
-    val generator = QueryPrefixGenerator(QLeafGenerator(Set(), Set(2)), Seq(1))
+    val generator = PrefixOpGenerator(QLeafGenerator(Set(), Set(2)), Seq(1))
     val hitAnalysis = QuerySuggester.buildHitAnalysis(
       hits, Seq(generator), positiveTerms, negativeTerms
     )

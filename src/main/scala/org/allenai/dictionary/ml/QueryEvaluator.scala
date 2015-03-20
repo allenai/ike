@@ -6,10 +6,9 @@ import scala.collection.immutable.IntMap
 
 import Label._
 
-/**
- * Trait for classes the return a scores for the results of a query the reflects how
- * good that query will be as a stand alone pattern.
- */
+/** Trait for classes the return a scores for the results of a query the reflects how
+  * good that query will be as a stand alone pattern.
+  */
 abstract class QueryEvaluator(examples: IndexedSeq[Example]) {
 
   // Cache these counts for subclasses to use
@@ -17,86 +16,85 @@ abstract class QueryEvaluator(examples: IndexedSeq[Example]) {
   val negativeSize: Double = examples count (_.label == Negative)
   val unlabelledSize: Double = examples count (_.label == Unknown)
 
-  /**
-   * @return Whether this evaluator makes use of unlabelled examples
-   *         to compute its scoring function
-   */
+  /** @return Whether this evaluator makes use of unlabelled examples
+    *       to compute its scoring function
+    */
   def usesUnlabelledData(): Boolean
 
-  /**
-   * @return Whether this evaluator accounts for the current search depth when computing
-   *         its scoring function.
-   */
+  /** @return Whether this evaluator accounts for the current search depth when computing
+    *       its scoring function.
+    */
   def usesDepth(): Boolean
 
-  /**
-   * Returns a score determining the general 'goodness' of a query operation
-   *
-   * @param ops The operation to score
-   * @param depth Depth of the current search
-   * @return score of the query
-   */
+  /** Returns a score determining the general 'goodness' of a query operation
+    *
+    * @param ops The operation to score
+    * @param depth Depth of the current search
+    * @return score of the query
+    */
   def evaluate(ops: CompoundQueryOp, depth: Int): Double
 
-  /**
-   * @return Returns a message describing how they score for the given operation was
-   *         arrived at. This message might be displayed on the frontend to users.
-   */
+  /** @return Returns a message describing how they score for the given operation was
+    *       arrived at. This message might be displayed on the frontend to users.
+    */
   def evaluationMsg(ops: CompoundQueryOp, depth: Int): String = {
-    return evaluate(ops, depth).toString
+    evaluate(ops, depth).toString
   }
 
-  /**
-   * @return As evaluationMsg, but may return a more detailed message. This message
-   *         will only be used for debugging
-   */
+  /** @return As evaluationMsg, but may return a more detailed message. This message
+    *       will only be used for debugging
+    */
   def evaluationMsgLong(ops: CompoundQueryOp, depth: Int): String = {
-    return evaluate(ops, depth).toString
+    evaluate(ops, depth).toString
   }
 
-  /**
-   * Counts the number of positive, negative, and unlabelled examples a mapping
-   * from (sentence_id -> # of edits made to that sentence) would match
-   */
+  /** Counts the number of positive, negative, and unlabelled examples a mapping
+    * from (sentence_id -> # of edits made to that sentence) would match
+    */
   protected def countOccurances(map: IntMap[Int]): (Int, Int, Int) = {
     var positive = 0
     var negative = 0
     var unlabelled = 0
-    map.foreach{ case (key, numEdits) => {
-      val example = examples(key)
-      if (numEdits >= example.requiredEdits) {
-        if (example.label == Positive) {
-          positive += 1
-        } else if (example.label == Negative) {
-          negative += 1
-        } else {
-          unlabelled += 1
+    map.foreach {
+      case (key, numEdits) =>
+        val example = examples(key)
+        if (numEdits >= example.requiredEdits) {
+          if (example.label == Positive) {
+            positive += 1
+          } else if (example.label == Negative) {
+            negative += 1
+          } else {
+            unlabelled += 1
+          }
         }
-      }
-    }}
+    }
     (positive, negative, unlabelled)
   }
 
 }
 
-case class PositiveMinusNegative(examples: IndexedSeq[Example],
-                                  negativeWeight: Double)
-  extends QueryEvaluator(examples) {
+case class PositiveMinusNegative(
+  examples: IndexedSeq[Example],
+  negativeWeight: Double
+)
+    extends QueryEvaluator(examples) {
 
   val usesDepth = false
   val usesUnlabelledData = false
 
   override def evaluate(ops: CompoundQueryOp, depth: Int = 0): Double = {
-    val (positive, negative, _) = countOccurances(ops.numEdits);
-    positive - negative*negativeWeight
+    val (positive, negative, _) = countOccurances(ops.numEdits)
+    positive - negative * negativeWeight
   }
 }
 
-case class PRCoverageSum(examples: IndexedSeq[Example],
-                         positiveWeight: Double,
-                         negativeWeight: Double,
-                         unlabelledWeight: Double)
-  extends QueryEvaluator(examples) {
+case class PRCoverageSum(
+  examples: IndexedSeq[Example],
+  positiveWeight: Double,
+  negativeWeight: Double,
+  unlabelledWeight: Double
+)
+    extends QueryEvaluator(examples) {
 
   val usesDepth = false
   val usesUnlabelledData = true
@@ -109,16 +107,21 @@ case class PRCoverageSum(examples: IndexedSeq[Example],
 
     val (positiveHits, negativeHits, unlabelledHits) = countOccurances(matches)
 
-    (safeDivide(positiveHits, positiveSize),
+    (
+      safeDivide(positiveHits, positiveSize),
       safeDivide(negativeHits, negativeSize),
-      safeDivide(unlabelledHits, unlabelledSize))
+      safeDivide(unlabelledHits, unlabelledSize)
+    )
   }
 
   override def evaluate(ops: CompoundQueryOp, depth: Int): Double = {
     val matches = ops.numEdits
     val (p, n, u) = getCounts(matches)
-    if (p == 0 || u == 0) 0
-    else (p * positiveWeight + n * negativeWeight + u * unlabelledWeight)
+    if (p == 0 || u == 0) {
+      0
+    } else {
+      p * positiveWeight + n * negativeWeight + u * unlabelledWeight
+    }
   }
 
   override def evaluationMsg(ops: CompoundQueryOp, depth: Int): String = {
@@ -132,23 +135,25 @@ case class PRCoverageSum(examples: IndexedSeq[Example],
   }
 
   override def evaluationMsgLong(ops: CompoundQueryOp, depth: Int): String = {
-      val matches = ops.numEdits
-      val (p, n, u) = getCounts(matches)
-      evaluationMsg(ops, depth) + ("\n%.3f: p: (%.3f * %.3f = %.3f)" +
-        " n: (%.3f * %.3f = %.3f) u: (%.3f * %.3f = %.3f)").format(
-        evaluate(ops, depth), p, positiveWeight, p*positiveWeight,
-        n, negativeWeight, n*negativeWeight,
-        u, unlabelledWeight, u*unlabelledWeight
+    val matches = ops.numEdits
+    val (p, n, u) = getCounts(matches)
+    evaluationMsg(ops, depth) + ("\n%.3f: p: (%.3f * %.3f = %.3f)" +
+      " n: (%.3f * %.3f = %.3f) u: (%.3f * %.3f = %.3f)").format(
+        evaluate(ops, depth), p, positiveWeight, p * positiveWeight,
+        n, negativeWeight, n * negativeWeight,
+        u, unlabelledWeight, u * unlabelledWeight
       )
   }
 }
 
-case class PRCoverageSumPartial(examples: IndexedSeq[Example],
-                               positiveWeight: Double,
-                               negativeWeight: Double,
-                               unlabelledWeight: Double,
-                               maxDepth: Int)
-  extends QueryEvaluator(examples) {
+case class PRCoverageSumPartial(
+  examples: IndexedSeq[Example],
+  positiveWeight: Double,
+  negativeWeight: Double,
+  unlabelledWeight: Double,
+  maxDepth: Int
+)
+    extends QueryEvaluator(examples) {
 
   val usesDepth = true
   val usesUnlabelledData = true
@@ -157,35 +162,39 @@ case class PRCoverageSumPartial(examples: IndexedSeq[Example],
     if (denom == 0) 0 else num / denom.toDouble
   }
 
-  def getWeightedScore(numLeft: Int, editsDone: IntMap[Int]) = {
+  def getWeightedScore(numLeft: Int, editsDone: IntMap[Int]): (Double, Double, Double) = {
     var totalPositiveScore = 0.0
     var totalNegativeScore = 0.0
     var totalUnknownScore = 0.0
-    editsDone foreach {case (exNum, editsDone) => {
-      val example = examples(exNum)
-      val requiredEdits = example.requiredEdits
-      val editsStillNeeded = requiredEdits - editsDone
-      if (editsStillNeeded <= numLeft) {
-        val weight = 1 - math.max(editsStillNeeded, 0) / maxDepth
-        if (example.label == Positive) {
-          totalPositiveScore += weight
-        } else if (example.label == Negative) {
-          totalNegativeScore += weight
-        } else {
-          totalUnknownScore += weight
+    editsDone foreach {
+      case (exNum, numEditsDone) =>
+        val example = examples(exNum)
+        val requiredEdits = example.requiredEdits
+        val editsStillNeeded = requiredEdits - numEditsDone
+        if (editsStillNeeded <= numLeft) {
+          val weight = 1 - math.max(editsStillNeeded, 0) / maxDepth
+          if (example.label == Positive) {
+            totalPositiveScore += weight
+          } else if (example.label == Negative) {
+            totalNegativeScore += weight
+          } else {
+            totalUnknownScore += weight
+          }
         }
-      }
-    }}
-    (totalPositiveScore/positiveSize,
-      totalNegativeScore/negativeSize,
-      totalUnknownScore/unlabelledSize)
+    }
+    (totalPositiveScore / positiveSize,
+      totalNegativeScore / negativeSize,
+      totalUnknownScore / unlabelledSize)
   }
 
   override def evaluate(ops: CompoundQueryOp, depth: Int): Double = {
     val matches = ops.numEdits
     val (p, n, u) = getWeightedScore(maxDepth - depth, matches)
-    if (p == 0 || u == 0) 0
-    else (p * positiveWeight + n * negativeWeight + u * unlabelledWeight)
+    if (p == 0 || u == 0) {
+      0
+    } else {
+      p * positiveWeight + n * negativeWeight + u * unlabelledWeight
+    }
   }
 
   override def evaluationMsg(ops: CompoundQueryOp, depth: Int): String = {
@@ -203,9 +212,9 @@ case class PRCoverageSumPartial(examples: IndexedSeq[Example],
     val (p, n, u) = getWeightedScore(maxDepth - depth, matches)
     evaluationMsg(ops, depth) + ("\n%.3f: p: (%.3f * %.3f = %.3f)" +
       " n: (%.3f * %.3f = %.3f) u: (%.3f * %.3f = %.3f)").format(
-        evaluate(ops, depth), p, positiveWeight, p*positiveWeight,
-        n, negativeWeight, n*negativeWeight,
-        u, unlabelledWeight, u*unlabelledWeight
+        evaluate(ops, depth), p, positiveWeight, p * positiveWeight,
+        n, negativeWeight, n * negativeWeight,
+        u, unlabelledWeight, u * unlabelledWeight
       )
   }
 }

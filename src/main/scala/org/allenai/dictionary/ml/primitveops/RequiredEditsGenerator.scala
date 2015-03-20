@@ -1,22 +1,22 @@
 package org.allenai.dictionary.ml.primitveops
 
-import nl.inl.blacklab.search.{Hits, Hit}
+import nl.inl.blacklab.search.{ Hits, Hit }
 
-
-/**
- * Generates MarkedOps for all tokens in a hit. Uses the capture groups
- * stored by FuzzySequenceQuery to determine which of the proposed operators
- * should be marked as required or not.
- *
- * @param setToken used to generate SetToken ops
- * @param addToken used to generate AddToken ops
- * @param captureIndices the indices to find the capture groups where the
- *                       required edits have been (see FuzzySequenceQuery)
- */
-case class RequiredEditsGenerator(setToken: QLeafGenerator,
-                            addToken: QLeafGenerator,
-                            captureIndices: Seq[Int])
-  extends TokenQueryOpGenerator {
+/** Generates MarkedOps for all tokens in a hit. Uses the capture groups
+  * stored by FuzzySequenceQuery to determine which of the proposed operators
+  * should be marked as required or not.
+  *
+  * @param setToken used to generate SetToken ops
+  * @param addToken used to generate AddToken ops
+  * @param captureIndices the indices to find the capture groups where the
+  *                     required edits have been (see FuzzySequenceQuery)
+  */
+case class RequiredEditsGenerator(
+  setToken: QLeafGenerator,
+  addToken: QLeafGenerator,
+  captureIndices: Seq[Int]
+)
+    extends TokenQueryOpGenerator {
 
   override def generateOperations(hit: Hit, source: Hits): Seq[MarkedOp] = {
     val kwic = source.getKwic(hit)
@@ -30,7 +30,7 @@ case class RequiredEditsGenerator(setToken: QLeafGenerator,
       val kwicIndex = kwic.getHitStart + i
       val required = indicesToSet contains i
       val setTokens = setToken.generate(kwic, kwicIndex).
-        map((leaf => MarkedOp(SetToken(Match(i + 1), leaf), required)))
+        map(leaf => MarkedOp(SetToken(Match(i + 1), leaf), required))
       val addTokens = addToken.generate(kwic, kwicIndex).
         map(leaf => MarkedOp(AddToken(i + 1, leaf), required))
       setTokens ++ addTokens

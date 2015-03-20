@@ -2,42 +2,43 @@ package org.allenai.dictionary.ml.subsample
 
 import java.util
 
-
 import nl.inl.blacklab.search.lucene._
-import org.apache.lucene.index.{AtomicReaderContext, IndexReader, Term, TermContext}
+import org.apache.lucene.index.{ AtomicReaderContext, IndexReader, Term, TermContext }
 import org.apache.lucene.search.Query
-import org.apache.lucene.search.spans.{SpanQuery, Spans}
+import org.apache.lucene.search.spans.{ SpanQuery, Spans }
 import org.apache.lucene.util.Bits
 
 case class QueryOrPlaceholder(either: Either[SpanQuery, Int]);
 
-/**
- * Gathers 'Fuzzy' matches to a sequence. In other words matches sequences within
- * <code>minMatches</code> to <code>maxMatches</code> inclusive edit distance of the input
- * sequence of clauses, where an edit is changing a single token within the sequence
- * (removing or adding tokens is not allowed currently). Input clauses must be fixed length.
- * See SpansFuzzySequence.
- */
+/** Gathers 'Fuzzy' matches to a sequence. In other words matches sequences within
+  * <code>minMatches</code> to <code>maxMatches</code> inclusive edit distance of the input
+  * sequence of clauses, where an edit is changing a single token within the sequence
+  * (removing or adding tokens is not allowed currently). Input clauses must be fixed length.
+  * See SpansFuzzySequence.
+  */
 class SpanQueryFuzzySequence(
   mixedClauses: Seq[Either[SpanQuery, Int]],
   minMatches: Int,
   maxMatches: Int,
   captureMisses: Boolean,
   ignoreLastToken: Boolean,
-  sequencesToCapture: Seq[CaptureSpan])
-  extends SpanQueryBase(
-    (mixedClauses.flatMap(x => x match {
+  sequencesToCapture: Seq[CaptureSpan]
+)
+    extends SpanQueryBase(
+      (mixedClauses.flatMap(x => x match {
       case Left(query) => Some(query)
       case _ => None
-    })).toArray) {
+    })).toArray
+    ) {
 
   def this(
-    mixedClauses: => Seq[SpanQuery], // use "=>" to avoid conflicting signature w/previous constructor
+    mixedClauses: => Seq[SpanQuery], // use "=>" to avoid conflicting w/previous constructor
     minMatches: Int,
     maxMatches: Int,
     captureMisses: Boolean,
     ignoreLastToken: Boolean,
-    sequencesToCapture: Seq[CaptureSpan]) = {
+    sequencesToCapture: Seq[CaptureSpan]
+  ) = {
     this(mixedClauses map (Left(_)), minMatches, maxMatches, captureMisses,
       ignoreLastToken, sequencesToCapture)
   }
@@ -79,9 +80,11 @@ class SpanQueryFuzzySequence(
   }
 
   override def getSpans(atomicReaderContext: AtomicReaderContext, bits: Bits,
-                        map: util.Map[Term, TermContext]): Spans = {
-    val baseSpans: Seq[Either[BLSpans, Int]] = mixedClauses map(x => x match {
-      case Left(spans: SpanQuery) => Left(BLSpansWrapper.optWrap(spans.getSpans(atomicReaderContext, bits, map)))
+    map: util.Map[Term, TermContext]): Spans = {
+    val baseSpans: Seq[Either[BLSpans, Int]] = mixedClauses map (x => x match {
+      case Left(spans: SpanQuery) => Left(BLSpansWrapper.optWrap(
+        spans.getSpans(atomicReaderContext, bits, map)
+      ))
       case Right(n: Int) => Right(n)
     })
     val lengthGetter = new DocFieldLengthGetter(atomicReaderContext.reader(), getField)
