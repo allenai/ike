@@ -3,15 +3,18 @@ package org.allenai.dictionary.ml.subsample
 import java.util
 
 import nl.inl.blacklab.search.Span
-import nl.inl.blacklab.search.lucene.{BLSpans, HitQueryContext}
+import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
 
-
+/** Stub Spans class for testing
+ */
 case class SpansStub(
-                      private val docs: IndexedSeq[Int],
-                      private val starts: IndexedSeq[Int],
-                      private val ends: IndexedSeq[Int]) extends BLSpans {
+  private val docs: IndexedSeq[Int],
+    private val starts: IndexedSeq[Int],
+    private val ends: IndexedSeq[Int]
+) extends BLSpans {
 
-  def this(docs: Seq[Int], s: Seq[Int], e: Seq[Int]) = this(docs.toIndexedSeq, s.toIndexedSeq, e.toIndexedSeq)
+  def this(docs: Seq[Int], s: Seq[Int], e: Seq[Int]) =
+    this(docs.toIndexedSeq, s.toIndexedSeq, e.toIndexedSeq)
 
   def this(data: (Seq[Int], Seq[Int], Seq[Int])) = this(data._1, data._2, data._3)
 
@@ -23,7 +26,7 @@ case class SpansStub(
 
   override def hitsLength() = {
     if (docs.size > 0) {
-      val differences = starts.zip(ends).map { case (start, end) => end - start}
+      val differences = starts.zip(ends).map { case (start, end) => end - start }
       if (differences.forall(_ == differences.head)) differences.head else -1
     } else {
       // Force all length zero spans to be of length one for the moment
@@ -49,10 +52,10 @@ case class SpansStub(
   }
 
   override def skipTo(target: Int): Boolean = {
-    var more = true;
+    var more = true
     while (more && (current < 0 || doc() < target))
-      more = next();
-    return more;
+      more = next()
+    more
   }
 
   override def getPayload: util.Collection[Array[Byte]] = null

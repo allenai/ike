@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.subsample
 
 import nl.inl.blacklab.search.Hits
-import org.allenai.common.testkit.{ScratchDirectory, UnitSpec}
+import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary._
 import org.allenai.dictionary.index.TestData
 
@@ -25,12 +25,14 @@ class TestHitsGatherer extends UnitSpec with ScratchDirectory {
     hits.asScala.map(hit => {
       val kwic = hits.getKwic(hit)
       hits.getCapturedGroups(hit).map(span => {
-        if (span == null){
+        if (span == null) {
           null
         } else {
           val captureKwic = span.start - hit.start
-          kwic.getMatch("word").subList(captureKwic,
-            captureKwic + span.end - span.start).asScala.mkString(" ")
+          kwic.getMatch("word").subList(
+            captureKwic,
+            captureKwic + span.end - span.start
+          ).asScala.mkString(" ")
         }
       }).toSeq
     }).toSeq
@@ -44,31 +46,30 @@ class TestHitsGatherer extends UnitSpec with ScratchDirectory {
   def buildTable(positive: Seq[String], negative: Seq[String]): Table = {
     Table("testTable", Seq("testCol"),
       positive.map(x => TableRow(Seq(TableValue(x.split(" ").map(QWord.apply))))),
-      negative.map(x => TableRow(Seq(TableValue(x.split(" ").map(QWord.apply)))))
-    )
+      negative.map(x => TableRow(Seq(TableValue(x.split(" ").map(QWord.apply))))))
   }
 
-  "GeneralizationByFuzzySequence" should "Limit queries correctly" in {
+  "FuzzySequenceSampler" should "Limit queries correctly" in {
     val testQuery = QSeq(Seq(QWord("I"), QCluster("10"), QUnnamed(QWord("???"))))
     val table = buildTable(Seq("mango"), Seq())
 
-    assertResult(Seq("mango", "those")){
+    assertResult(Seq("mango", "those")) {
       val hits = FuzzySequenceSampler(1, 1).getRandomSample(testQuery, searcher)
       hitToCaptures(hits, FuzzySequenceSampler.captureGroupName)
     }
 
-    assertResult(Seq("mango")){
+    assertResult(Seq("mango")) {
       val hits = FuzzySequenceSampler(1, 1).getLabelledSample(testQuery, searcher, table)
       hitToCaptures(hits, FuzzySequenceSampler.captureGroupName)
     }
   }
 
-  "GeneralizationByFuzzySequence" should "capture misses correctly" in {
+  "FuzzySequenceSampler" should "capture misses correctly" in {
     val testQuery = QSeq(Seq(
-        QDisj(Seq(QWord("I"), QWord("taste"))),
-        QDisj(Seq(QWord("like"), QWord("hate"))),
-        QUnnamed(QDisj(Seq(QWord("those"), QWord("great"))))
-      ))
+      QDisj(Seq(QWord("I"), QWord("taste"))),
+      QDisj(Seq(QWord("like"), QWord("hate"))),
+      QUnnamed(QDisj(Seq(QWord("those"), QWord("great"))))
+    ))
     val hits = FuzzySequenceSampler(0, 1).getRandomSample(testQuery, searcher)
     val captures = hitToAllCaptures(hits)
     assertResult(Seq("mango", null, null, "mango"))(captures(0)) // Last word did not match
@@ -76,7 +77,7 @@ class TestHitsGatherer extends UnitSpec with ScratchDirectory {
     assertResult(Seq("great", null, "not", null))(captures(2)) // middle word did not match
   }
 
-  "LimitQuery" should "Convert wildcards captures to a disjunction" in {
+  "LimitQuery" should "Convert wildcards captures into a disjunction" in {
     val startingQuery = QSeq(Seq(QWord("the"), QUnnamed(QSeq(Seq(QWildcard(), QWildcard())))))
     val table = buildTable(Seq("a b", "d"), Seq("c", "1 2 3", "a c"))
     val expectedResults = QSeq(Seq(QWord("the"), QUnnamed(QDisj(Seq(
@@ -84,16 +85,18 @@ class TestHitsGatherer extends UnitSpec with ScratchDirectory {
       QSeq(Seq(QWord("a"), QWord("c")))
     )))))
     assertResult(expectedResults)(
-      MatchesSampler().limitQueryToDictionary(startingQuery, table))
+      MatchesSampler().limitQueryToDictionary(startingQuery, table)
+    )
   }
 
-  "DictionaryMatchesByQuery" should "test correctly" in {
+  "MatchesSampler" should "test correctly" in {
     val startingQuery = QUnnamed(QDisj(Seq(QWord("I"), QWord("mango"),
       QWord("not"), QWord("great"))))
     val table = buildTable(Seq("like", "hate", ".*", "not"), Seq("mango", "I"))
     val expectedResults = Seq("I", "mango", "I", "not")
 
     assertResult(expectedResults)(hitsToStrings(MatchesSampler().getLabelledSample(
-      startingQuery, searcher, table)))
-  }  
+      startingQuery, searcher, table
+    )))
+  }
 }
