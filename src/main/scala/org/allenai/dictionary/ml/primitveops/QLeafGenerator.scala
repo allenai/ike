@@ -5,10 +5,22 @@ import org.allenai.dictionary._
 
 object QLeafGenerator {
 
-  def propertyValueToLeaf(property: String, value: String): QLeaf = {
+  val blacklistWords = Set(".", ",", "{", "}", "(", ")", "+", "*")
+  def validWord(word: String): Boolean = {
+    !(blacklistWords contains word)
+  }
+
+  val blackListPos = Set(".", ",", ")", "(", ":")
+  def validPos(pos: String): Boolean = {
+    !(blackListPos contains pos)
+  }
+
+  def propertyValueToLeaf(property: String, value: String): Option[QLeaf] = {
     property match {
-      case "word" => QWord(value)
-      case "pos" => QPos(value)
+      case "word" if validWord(value) => Some(QWord(value))
+      case "word" => None
+      case "pos" if validPos(value) => Some(QPos(value))
+      case "pos" => None
       case _ => throw new IllegalArgumentException(property + " is not a valid property")
     }
   }
@@ -37,8 +49,10 @@ case class QLeafGenerator(
     val otherProps = properties.map(property => {
       val token = kwic.getTokens(property).get(index)
       QLeafGenerator.propertyValueToLeaf(property, token)
-    })
-    (clusters ++ otherProps ++ (if (wildCard) Seq(QWildcard()) else Seq())).toSeq
+    }).flatten
+    val withWildCard =
+      if (wildCard) (otherProps + QWildcard()) else otherProps
+    (withWildCard ++ clusters).toSeq
   }
 
   def getRequiredProperties: Seq[String] = {

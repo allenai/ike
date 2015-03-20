@@ -22,10 +22,11 @@ class TestSuffixOpGenerator extends UnitSpec with ScratchDirectory {
       generator.generateOperations(hit, hits)
     }).toSeq
 
+    // Note QWord(".") would be expected, but we blacklist that word atm since
+    // it cannot be escaped
     val expectedOperators = Set(
       (1, QWord("taste")),
       (2, QWord("not")),
-      (1, QWord(".")),
       (1, QCluster("10")),
       (2, QCluster("11")),
       (1, QCluster("11"))
