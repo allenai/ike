@@ -23,14 +23,15 @@ class TestRequiredOpsGenerator extends UnitSpec with ScratchDirectory {
     val hits = FuzzySequenceSampler(1, 1).getRandomSample(query, searcher)
     hits.get(0) // Ensure Hits loads up the captureGroupNames by requesting the first hit
     val captureGroups = hits.getCapturedGroupNames
-    val captureIndices = SpansFuzzySequence.getMissesCaptureGroupNames(3).map(x => captureGroups.indexOf(x))
+    val captureIndices = SpansFuzzySequence.getMissesCaptureGroupNames(3).
+        map(x => captureGroups.indexOf(x))
     val generator = RequiredEditsGenerator(
       QLeafGenerator(Set("pos")),
       QLeafGenerator(Set()),
       captureIndices
     )
 
-    def testWithContextSize(contextSize: Int) = {
+    def testWithContextSize(contextSize: Int): Unit = {
       hits.setContextSize(contextSize)
       val operators = hits.asScala.flatMap(hit => {
         generator.generateOperations(hit, hits)

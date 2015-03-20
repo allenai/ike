@@ -24,7 +24,7 @@ case class SpansStub(
 
   private var current = -1
 
-  override def hitsLength() = {
+  override def hitsLength(): Int = {
     if (docs.size > 0) {
       val differences = starts.zip(ends).map { case (start, end) => end - start }
       if (differences.forall(_ == differences.head)) differences.head else -1

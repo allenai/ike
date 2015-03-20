@@ -1,6 +1,6 @@
 package org.allenai.dictionary.ml
 
-import org.allenai.dictionary.ml.compoundops.{ OpConjunctionOfDisjunctions, OpConjunction, EvaluatedOp }
+import org.allenai.dictionary.ml.compoundops._
 
 import scala.collection.JavaConverters._
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
@@ -17,13 +17,13 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
   TestData.createTestIndex(scratchDir)
   val searcher = TestData.testSearcher(scratchDir)
 
-  def buildMap(ints: Seq[Int]) = {
+  def buildMap(ints: Seq[Int]): IntMap[Int] = {
     IntMap[Int](ints.map((_, 0)): _*)
   }
 
   "SelectOperator" should "Select correct AND query" in {
 
-    def buildExample(k: Int) = {
+    def buildExample(k: Int): Example = {
       val label = if (k == 1) {
         Positive
       } else if (k == -1) {
