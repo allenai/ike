@@ -117,7 +117,7 @@ case class PRCoverageSum(
   override def evaluate(ops: CompoundQueryOp, depth: Int): Double = {
     val matches = ops.numEdits
     val (p, n, u) = getCounts(matches)
-    if (p == 0 || u == 0) {
+    if (p == 0) {
       0
     } else {
       p * positiveWeight + n * negativeWeight + u * unlabelledWeight
@@ -158,7 +158,7 @@ case class PRCoverageSumPartial(
   val usesDepth = true
   val usesUnlabelledData = true
 
-  def safeDivide(num: Int, denom: Int): Double = {
+  def safeDivide(num: Double, denom: Double): Double = {
     if (denom == 0) 0 else num / denom.toDouble
   }
 
@@ -182,15 +182,17 @@ case class PRCoverageSumPartial(
           }
         }
     }
-    (totalPositiveScore / positiveSize,
-      totalNegativeScore / negativeSize,
-      totalUnknownScore / unlabelledSize)
+    (
+      safeDivide(totalPositiveScore, positiveSize),
+      safeDivide(totalNegativeScore, negativeSize),
+      safeDivide(totalUnknownScore, unlabelledSize)
+    )
   }
 
   override def evaluate(ops: CompoundQueryOp, depth: Int): Double = {
     val matches = ops.numEdits
     val (p, n, u) = getWeightedScore(maxDepth - depth, matches)
-    if (p == 0 || u == 0) {
+    if (p == 0) {
       0
     } else {
       p * positiveWeight + n * negativeWeight + u * unlabelledWeight
