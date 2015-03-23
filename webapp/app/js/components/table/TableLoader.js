@@ -63,9 +63,10 @@ var TableLoader = React.createClass({
       var newCols = headers.slice(0, headers.length - 1);
 
       // read the body
-      body = lines.slice(1);
-      if(!body.every(function(line) { return line.length == headers.length })) {
-        self.setState({error: "Input file has lines with an invalid number of columns."});
+      var body = lines.slice(1);
+      var errorLines = body.filter(function(line) { return line.length != headers.length });
+      if(errorLines.length != 0) {
+        self.setState({error: "Input file has a line with an invalid number of columns: " + errorLines[0]});
         return;
       };
 
