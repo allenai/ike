@@ -172,6 +172,8 @@ object QuerySuggester extends Logging {
 
     val alreadyFound = scala.collection.mutable.Set[CompoundQueryOp]()
 
+    // Start the beam search, note this search follows a breadth-first pattern where we keep a fixed
+    // number of nodes at each depth rather then the more typical depth-first style of beam search.
     for (i <- 1 until depth) {
       logger.debug(s"********* Depth $i *********")
       printQueue(i + 1)
@@ -187,8 +189,11 @@ object QuerySuggester extends Logging {
       }
 
       // Expand new nodes by trying to AND with every possible base operator
-      // note we iterate over a copy of the queue so we do not repeat ourselves
-      priorityQueue.to[Seq].foreach {
+      priorityQueue.filter {
+        // Filter out ops that are from a lower depth iteration since we have already tried
+        // expanding them
+        case (operator, score) => operator.ops.size == i
+      }.to[Seq].foreach { // iterate over a copy so we do not re-expand nodes
         case (operator, score) =>
           hitAnalysis.operatorHits.
               // Filter our unusable operators
@@ -208,8 +213,9 @@ object QuerySuggester extends Logging {
                 alreadyFound.add(newOperator)
               }
           }
+        }
       }
-    }
+
     logger.debug("******* DONE ************")
     printQueue(depth)
     priorityQueue.dequeueAll.reverse.take(maxReturn).map(x => ScoredOps(x._1, x._2,
