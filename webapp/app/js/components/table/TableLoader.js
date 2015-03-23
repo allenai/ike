@@ -45,9 +45,7 @@ var TableLoader = React.createClass({
       var buffer = new Buffer(data, 'base64');
       var text = buffer.toString();
       var trimAll = function(strings) { return strings.map(function(s) { return s.trim(); }) };
-      var nonemptyLine = function(line) {
-        return line.trim().length != 0
-      };
+      var nonemptyLine = function(line) { return line.trim().length != 0 };
       var lines = text.split('\n').filter(nonemptyLine).map(function(line) {
         return trimAll(line.split(','));
       });
