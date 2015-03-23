@@ -1,14 +1,12 @@
 package org.allenai.dictionary.ml.subsample
 
 import nl.inl.blacklab.search.{ Hits, Searcher }
+import org.allenai.common.Logging
 import org.allenai.dictionary._
-import org.slf4j.LoggerFactory
 
 /** Samples hits that the given query already matches.
   */
-case class MatchesSampler() extends Sampler() {
-
-  val logger = LoggerFactory.getLogger(getClass)
+case class MatchesSampler() extends Sampler() with Logging {
 
   /** Returns a modified query expression whose capture groups are limited
     * to matching entities in a dictionary.

@@ -1,11 +1,11 @@
 package org.allenai.dictionary.ml
 
 import nl.inl.blacklab.search._
+import org.allenai.common.Logging
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml.compoundops._
 import org.allenai.dictionary.ml.primitveops._
 import org.allenai.dictionary.ml.subsample._
-import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.collection.immutable.IntMap
 
@@ -28,9 +28,7 @@ import Label._
   */
 case class Example(label: Label, requiredEdits: Int, str: String)
 
-object QuerySuggester {
-
-  val logger = LoggerFactory.getLogger(getClass)
+object QuerySuggester extends Logging {
 
   /** Some cache analysis for a subsample of hits, in particular records the labels for each
     * sentence in the subsample and which sentences each primitive operation applies to.
