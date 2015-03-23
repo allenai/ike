@@ -14,7 +14,7 @@ case class ScoredQuery(query: QExpr, score: Double, msg: String)
 
 object Label extends Enumeration {
   type Label = Value
-  val Positive, Negative, Unknown = Value
+  val Positive, Negative, Unlabelled = Value
 }
 import Label._
 
@@ -115,7 +115,7 @@ object QuerySuggester extends Logging {
           } else if (negativeStrings contains capturedString.toLowerCase) {
             Negative
           } else {
-            Unknown
+            Unlabelled
           }
           val str = kwic.getMatch("word").asScala.mkString(" ")
           val requiredEdits = captureGroups.drop(1).count(_ != null)

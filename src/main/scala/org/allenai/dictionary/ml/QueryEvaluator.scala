@@ -14,7 +14,7 @@ abstract class QueryEvaluator(examples: IndexedSeq[Example]) {
   // Cache these counts for subclasses to use
   val positiveSize: Double = examples count (_.label == Positive)
   val negativeSize: Double = examples count (_.label == Negative)
-  val unlabelledSize: Double = examples count (_.label == Unknown)
+  val unlabelledSize: Double = examples count (_.label == Unlabelled)
 
   /** @return Whether this evaluator makes use of unlabelled examples
     *       to compute its scoring function
@@ -59,12 +59,10 @@ abstract class QueryEvaluator(examples: IndexedSeq[Example]) {
       case (key, numEdits) =>
         val example = examples(key)
         if (numEdits >= example.requiredEdits) {
-          if (example.label == Positive) {
-            positive += 1
-          } else if (example.label == Negative) {
-            negative += 1
-          } else {
-            unlabelled += 1
+          example.label match {
+            case Positive => positive += 1
+            case Negative => negative += 1
+            case Unlabelled => unlabelled += 1
           }
         }
     }
@@ -165,7 +163,7 @@ case class PRCoverageSumPartial(
   def getWeightedScore(numLeft: Int, editsDone: IntMap[Int]): (Double, Double, Double) = {
     var totalPositiveScore = 0.0
     var totalNegativeScore = 0.0
-    var totalUnknownScore = 0.0
+    var totalUnlabelledScore = 0.0
     editsDone foreach {
       case (exNum, numEditsDone) =>
         val example = examples(exNum)
@@ -173,19 +171,17 @@ case class PRCoverageSumPartial(
         val editsStillNeeded = requiredEdits - numEditsDone
         if (editsStillNeeded <= numLeft) {
           val weight = 1 - math.max(editsStillNeeded, 0) / maxDepth
-          if (example.label == Positive) {
-            totalPositiveScore += weight
-          } else if (example.label == Negative) {
-            totalNegativeScore += weight
-          } else {
-            totalUnknownScore += weight
+          example.label match {
+            case Positive => totalPositiveScore += weight
+            case Negative => totalNegativeScore += weight
+            case Unlabelled => totalUnlabelledScore += weight
           }
         }
     }
     (
       safeDivide(totalPositiveScore, positiveSize),
       safeDivide(totalNegativeScore, negativeSize),
-      safeDivide(totalUnknownScore, unlabelledSize)
+      safeDivide(totalUnlabelledScore, unlabelledSize)
     )
   }
 

@@ -29,7 +29,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       } else if (k == -1) {
         Negative
       } else {
-        Unknown
+        Unlabelled
       }
       Example(label, 0, "")
     }
@@ -63,8 +63,8 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
   }
 
   it should "Select correct OR queries" in {
-    val examples = (Seq(Unknown) ++ Seq.fill(5)(Positive) ++
-      Seq.fill(5)(Negative) ++ Seq(Unknown)).
+    val examples = (Seq(Unlabelled) ++ Seq.fill(5)(Positive) ++
+      Seq.fill(5)(Negative) ++ Seq(Unlabelled)).
       map(x => Example(x, 0, "")).toIndexedSeq
 
     val op1 = SetToken(Prefix(1), QWord("p1"))
@@ -108,7 +108,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     )
 
     assertResult(Example(Negative, 0, "mango"))(hitAnalysis.examples(0))
-    assertResult(Example(Unknown, 0, "those"))(hitAnalysis.examples(1))
+    assertResult(Example(Unlabelled, 0, "those"))(hitAnalysis.examples(1))
     assertResult(Example(Positive, 0, "bananas"))(hitAnalysis.examples(2))
     assertResult(3)(hitAnalysis.examples.size)
 
