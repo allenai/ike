@@ -69,3 +69,7 @@ sentence.
 4. QueryEvaluator.scala defines the evaluation functions to use.
 5. TokenizedQuery.scala breaks queries into sequences of smaller queries as a preprocessing step.
 6. QuerySuggester.scala 'glues' these pieces together and implements the actual beam search.
+
+Throughout the codebase we make heavy use of Scala's IntMap to keep track of which sentences a primitive operation would allow the starting query to match. In general, if a primitive or compound operation, when applied to the starting query, would then not prevent that query from matching a particular sentence, it will be one of the keys of the IntMap. The values of the IntMap will count the number of required edits made to that sentence. We use IntMap because:
+1. It will have a sparse representation, and we expect many of the rules we examine to be sparse
+2. It it optimized for merges (unions and intersections), operation we do frequently.
