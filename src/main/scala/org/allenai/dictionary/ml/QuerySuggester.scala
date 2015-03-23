@@ -341,12 +341,12 @@ object QuerySuggester extends Logging {
 
     val evalFunction =
       if (narrow) {
-        PRCoverageSum(
+        CoverageSum(
           hitAnalysis.examples,
           config.pWeight, config.nWeight, config.uWeight
         )
       } else {
-        PRCoverageSumPartial(
+        WeightedCoverageSum(
           hitAnalysis.examples,
           config.pWeight, config.nWeight, config.uWeight, config.depth
         )

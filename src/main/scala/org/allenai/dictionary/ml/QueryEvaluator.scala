@@ -6,8 +6,10 @@ import scala.collection.immutable.IntMap
 
 import Label._
 
-/** Trait for classes the return a scores for the results of a query the reflects how
-  * good that query will be as a stand alone pattern.
+/** Base class for classes that, given a query operation, returns a score that reflects how
+  * good that query would be as a suggestion to the user.
+  *
+  * @param examples The examples to evaluate query operation with
   */
 abstract class QueryEvaluator(examples: IndexedSeq[Example]) {
 
@@ -28,24 +30,25 @@ abstract class QueryEvaluator(examples: IndexedSeq[Example]) {
 
   /** Returns a score determining the general 'goodness' of a query operation
     *
-    * @param ops The operation to score
+    * @param op The operation to score, op.numEdits should specify the number of edits that
+    *           operation will make to each sentence in this.examples
     * @param depth Depth of the current search
     * @return score of the query
     */
-  def evaluate(ops: CompoundQueryOp, depth: Int): Double
+  def evaluate(op: CompoundQueryOp, depth: Int): Double
 
   /** @return Returns a message describing how they score for the given operation was
     *       arrived at. This message might be displayed on the frontend to users.
     */
-  def evaluationMsg(ops: CompoundQueryOp, depth: Int): String = {
-    evaluate(ops, depth).toString
+  def evaluationMsg(op: CompoundQueryOp, depth: Int): String = {
+    evaluate(op, depth).toString
   }
 
   /** @return As evaluationMsg, but may return a more detailed message. This message
     *       will only be used for debugging
     */
-  def evaluationMsgLong(ops: CompoundQueryOp, depth: Int): String = {
-    evaluate(ops, depth).toString
+  def evaluationMsgLong(op: CompoundQueryOp, depth: Int): String = {
+    evaluate(op, depth).toString
   }
 
   /** Counts the number of positive, negative, and unlabelled examples a mapping
@@ -77,16 +80,19 @@ case class PositiveMinusNegative(
 )
     extends QueryEvaluator(examples) {
 
-  val usesDepth = false
-  val usesUnlabelledData = false
+  override val usesDepth = false
+  override val usesUnlabelledData = false
 
-  override def evaluate(ops: CompoundQueryOp, depth: Int = 0): Double = {
-    val (positive, negative, _) = countOccurrences(ops.numEdits)
+  override def evaluate(op: CompoundQueryOp, depth: Int = 0): Double = {
+    val (positive, negative, _) = countOccurrences(op.numEdits)
     positive - negative * negativeWeight
   }
 }
 
-case class PRCoverageSum(
+/** Scores queries using a weighted sum of coverage on positive examples, coverage on negative
+  * examples, coverage on unlabelled examples.
+  */
+case class CoverageSum(
   examples: IndexedSeq[Example],
   positiveWeight: Double,
   negativeWeight: Double,
@@ -112,8 +118,8 @@ case class PRCoverageSum(
     )
   }
 
-  override def evaluate(ops: CompoundQueryOp, depth: Int): Double = {
-    val matches = ops.numEdits
+  override def evaluate(op: CompoundQueryOp, depth: Int): Double = {
+    val matches = op.numEdits
     val (p, n, u) = getCounts(matches)
     if (p == 0) {
       0
@@ -122,8 +128,8 @@ case class PRCoverageSum(
     }
   }
 
-  override def evaluationMsg(ops: CompoundQueryOp, depth: Int): String = {
-    val matches = ops.numEdits
+  override def evaluationMsg(op: CompoundQueryOp, depth: Int): String = {
+    val matches = op.numEdits
     val (positiveHits, negativeHits, unlabelledHits) = countOccurrences(matches)
     "P: %d/%1.0f, N: %d/%1.0f, U: %d/%1.0f".format(
       positiveHits, positiveSize,
@@ -132,19 +138,24 @@ case class PRCoverageSum(
     )
   }
 
-  override def evaluationMsgLong(ops: CompoundQueryOp, depth: Int): String = {
-    val matches = ops.numEdits
+  override def evaluationMsgLong(op: CompoundQueryOp, depth: Int): String = {
+    val matches = op.numEdits
     val (p, n, u) = getCounts(matches)
-    evaluationMsg(ops, depth) + ("\n%.3f: p: (%.3f * %.3f = %.3f)" +
+    evaluationMsg(op, depth) + ("\n%.3f: p: (%.3f * %.3f = %.3f)" +
       " n: (%.3f * %.3f = %.3f) u: (%.3f * %.3f = %.3f)").format(
-        evaluate(ops, depth), p, positiveWeight, p * positiveWeight,
+        evaluate(op, depth), p, positiveWeight, p * positiveWeight,
         n, negativeWeight, n * negativeWeight,
         u, unlabelledWeight, u * unlabelledWeight
       )
   }
 }
 
-case class PRCoverageSumPartial(
+/** Scores queries using a weighted sum of coverage on positive examples, coverage on negative
+  * examples, and coverage on unlabelled examples. Additionally down weights sentences based on
+  * how many more edits are needed for the query to match the input sentence, compared with the
+  * number of edits that could still potentially be added to the query.
+  */
+case class WeightedCoverageSum(
   examples: IndexedSeq[Example],
   positiveWeight: Double,
   negativeWeight: Double,
@@ -153,14 +164,18 @@ case class PRCoverageSumPartial(
 )
     extends QueryEvaluator(examples) {
 
-  val usesDepth = true
-  val usesUnlabelledData = true
+  override val usesDepth = true
+  override val usesUnlabelledData = true
 
-  def safeDivide(num: Double, denom: Double): Double = {
-    if (denom == 0) 0 else num / denom.toDouble
-  }
+  def getWeightedScore(
+    numberOfPossibleFutureEdits: Int,
+    editsDone: IntMap[Int]
+  ): (Double, Double, Double) = {
 
-  def getWeightedScore(numLeft: Int, editsDone: IntMap[Int]): (Double, Double, Double) = {
+    def safeDivide(num: Double, denom: Double): Double = {
+      if (denom == 0) 0 else num / denom.toDouble
+    }
+
     var totalPositiveScore = 0.0
     var totalNegativeScore = 0.0
     var totalUnlabelledScore = 0.0
@@ -169,7 +184,7 @@ case class PRCoverageSumPartial(
         val example = examples(exNum)
         val requiredEdits = example.requiredEdits
         val editsStillNeeded = requiredEdits - numEditsDone
-        if (editsStillNeeded <= numLeft) {
+        if (editsStillNeeded <= numberOfPossibleFutureEdits) {
           val weight = 1 - math.max(editsStillNeeded, 0) / maxDepth
           example.label match {
             case Positive => totalPositiveScore += weight
@@ -185,8 +200,8 @@ case class PRCoverageSumPartial(
     )
   }
 
-  override def evaluate(ops: CompoundQueryOp, depth: Int): Double = {
-    val matches = ops.numEdits
+  override def evaluate(op: CompoundQueryOp, depth: Int): Double = {
+    val matches = op.numEdits
     val (p, n, u) = getWeightedScore(maxDepth - depth, matches)
     if (p == 0) {
       0
@@ -195,8 +210,8 @@ case class PRCoverageSumPartial(
     }
   }
 
-  override def evaluationMsg(ops: CompoundQueryOp, depth: Int): String = {
-    val matches = ops.numEdits
+  override def evaluationMsg(op: CompoundQueryOp, depth: Int): String = {
+    val matches = op.numEdits
     val (positiveHits, negativeHits, unlabelledHits) = countOccurrences(matches)
     "P: %d/%1.0f, N: %d/%1.0f, U: %d/%1.0f".format(
       positiveHits, positiveSize,
@@ -205,12 +220,12 @@ case class PRCoverageSumPartial(
     )
   }
 
-  override def evaluationMsgLong(ops: CompoundQueryOp, depth: Int): String = {
-    val matches = ops.numEdits
+  override def evaluationMsgLong(op: CompoundQueryOp, depth: Int): String = {
+    val matches = op.numEdits
     val (p, n, u) = getWeightedScore(maxDepth - depth, matches)
-    evaluationMsg(ops, depth) + ("\n%.3f: p: (%.3f * %.3f = %.3f)" +
+    evaluationMsg(op, depth) + ("\n%.3f: p: (%.3f * %.3f = %.3f)" +
       " n: (%.3f * %.3f = %.3f) u: (%.3f * %.3f = %.3f)").format(
-        evaluate(ops, depth), p, positiveWeight, p * positiveWeight,
+        evaluate(op, depth), p, positiveWeight, p * positiveWeight,
         n, negativeWeight, n * negativeWeight,
         u, unlabelledWeight, u * unlabelledWeight
       )
