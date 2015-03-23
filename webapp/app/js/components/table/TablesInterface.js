@@ -5,6 +5,7 @@ var Col = bs.Col;
 var Accordion = bs.Accordion;
 var Panel = bs.Panel;
 var TableAdder = require('./TableAdder.js');
+var TableLoader = require('./TableLoader.js');
 var Table = require('./Table.js');
 var TableManager = require('../../managers/TableManager.js');
 var TableButtonToolbar = require('./TableButtonToolbar.js');
@@ -29,9 +30,14 @@ var TablesInterface = React.createClass({
   },
   adder: function() {
     return (
-      <Panel header="Create New Table">
-        <TableAdder onSubmit={this.addTable}/>
-      </Panel>
+      <div>
+        <Panel header="Create New Table">
+          <TableAdder onSubmit={this.addTable}/>
+        </Panel>
+        <Panel header="Upload Table">
+          <TableLoader onSubmit={this.addTable}/>
+        </Panel>
+      </div>
     );
   },
   render: function() {
