@@ -9,10 +9,10 @@ import org.allenai.dictionary._
 case class MatchesSampler() extends Sampler() with Logging {
 
   /** Returns a modified query expression whose capture groups are limited
-    * to matching entities in a dictionary.
+    * to matching entities in a table.
     */
-  def limitQueryToDictionary(qexpr: QExpr, table: Table): QExpr = {
-
+  def limitQueryToTable(qexpr: QExpr, table: Table): QExpr = {
+    require(table.cols.size == 1)
     val captureGroup = QueryLanguage.getCaptureGroups(qexpr).head
     val captureSize = QueryLanguage.getQueryLength(captureGroup)
     logger.debug(s"Query has capture size of $captureSize")
@@ -23,13 +23,13 @@ case class MatchesSampler() extends Sampler() with Logging {
     val limitedQuery =
       if (captureSize == -1) {
         logger.debug(s"Variable length capture group, using full " +
-          s"dictionary disjunction of size ${allWords.size}")
+          s"table disjunction of size ${allWords.size}")
         QAnd(QDisj(allWords.map(x => QSeq(x))), captureGroup.qexpr)
       } else {
         // We can remove all entries that are not of the right size
-        val filteredDictionary = allWords.filter(q => q.size == captureSize).map(x => QSeq(x))
-        logger.debug(s"Fixed length capture group, dictionary " +
-          s"Disjunction filtered to ${filteredDictionary.size}")
+        val filteredTable = allWords.filter(q => q.size == captureSize).map(x => QSeq(x))
+        logger.debug(s"Fixed length capture group, table " +
+          s"Disjunction filtered to ${filteredTable.size}")
 
         val captureSequence = QueryLanguage.getCaptureGroups(qexpr).head match {
           case QUnnamed(QSeq(seq)) => Some(seq)
@@ -37,23 +37,18 @@ case class MatchesSampler() extends Sampler() with Logging {
           case _ => None
         }
 
-        def isWild(qexpr: QExpr): Boolean = qexpr match {
-          case QWildcard() => true
-          case _ => false
-        }
-
         if (captureSequence.nonEmpty &&
           captureSequence.get.size == captureSize &&
-          captureSequence.get.forall(isWild)) {
-          // All wildcards, just match dictionary elements of the right size
-          QDisj(filteredDictionary)
+          captureSequence.get.forall(_.isInstanceOf[QWildcard])) {
+          // All wildcards, just match table elements of the right size
+          QDisj(filteredTable)
         } else {
-          QAnd(QDisj(filteredDictionary), captureGroup.qexpr)
+          QAnd(QDisj(filteredTable), captureGroup.qexpr)
         }
       }
 
     def recurse(qexpr: QExpr): QExpr = qexpr match {
-      case l: QLeaf => qexpr
+      case _: QLeaf => qexpr
       case QSeq(children) => QSeq(children.map(recurse))
       case QDisj(children) => QDisj(children.map(recurse))
       case QNamed(expr, name) => QNamed(limitedQuery, name)
@@ -70,7 +65,7 @@ case class MatchesSampler() extends Sampler() with Logging {
 
   override def getLabelledSample(qexpr: QExpr, searcher: Searcher, table: Table): Hits = {
     require(table.cols.size == 1)
-    val limitedQuery = limitQueryToDictionary(qexpr, table)
+    val limitedQuery = limitQueryToTable(qexpr, table)
     searcher.find(BlackLabSemantics.blackLabQuery(limitedQuery))
   }
 }

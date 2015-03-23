@@ -31,7 +31,7 @@ class TestMatchesSampler extends UnitSpec with ScratchDirectory {
       QSeq(Seq(QWord("a"), QWord("c")))
     )))))
     assertResult(expectedResults)(
-      MatchesSampler().limitQueryToDictionary(startingQuery, table)
+      MatchesSampler().limitQueryToTable(startingQuery, table)
     )
   }
 
