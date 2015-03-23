@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml
 
 import nl.inl.blacklab.search._
-import org.allenai.common.Logging
+import org.allenai.common.{ Logging, Timing }
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml.compoundops._
 import org.allenai.dictionary.ml.primitveops._
@@ -285,47 +285,43 @@ object QuerySuggester extends Logging {
       FuzzySequenceSampler(1, config.depth)
     }
 
-    val labelled = {
-      logger.debug(s"Retrieving labelled documents...")
-      val startTime = System.nanoTime()
+    logger.debug(s"Retrieving labelled documents...")
+    val (labelledHitAnalysis, labelledRetrieveTime) = Timing.time {
       val hits = hitGatherer.getLabelledSample(startingQuery, searcher, targetDictionary).
           window(0, config.maxSampleSize)
       val analysis = parseHits(hits.window(
         0,
         config.maxSampleSize - (config.maxSampleSize * numUnlabelled).toInt
       ))
-      val retrieveTime = System.nanoTime()
-      logger.debug(s"Document retrieval took ${(retrieveTime - startTime) / 1000000000.0} seconds")
       Some(analysis)
     }
+    logger.debug(s"Document retrieval took ${labelledRetrieveTime / 1000000000.0} seconds")
 
-    var hitAnalysis = {
-      logger.debug(s"Retrieving unlabelled documents...")
-      val startTime = System.nanoTime()
+    logger.debug(s"Retrieving unlabelled documents...")
+    val (unprunnedHitAnalysis, unlabelledRetrieveTime) = Timing.time {
       val hits = hitGatherer.getSample(startingQuery, searcher)
       val window = hits.window(0, (config.maxSampleSize * numUnlabelled).toInt)
       val analysis = parseHits(window)
-      val retrieveTime = System.nanoTime()
-      logger.debug(s"Retrieval took ${(retrieveTime - startTime) / 1000000000.0} seconds")
-      if (labelled.isEmpty) analysis else labelled.get ++ analysis
+      if (labelledHitAnalysis.isEmpty) analysis else labelledHitAnalysis.get ++ analysis
     }
+    logger.debug(s"Retrieval took ${unlabelledRetrieveTime / 1000000000.0} seconds")
 
-    val beforePruning = hitAnalysis.operatorHits.size
-    hitAnalysis = hitAnalysis.copy(operatorHits = hitAnalysis.operatorHits.filter {
-      case (token, matches) => matches.size > 1
-    })
-
+    val beforePruning = unprunnedHitAnalysis.operatorHits.size
+    val hitAnalysis = unprunnedHitAnalysis.copy(
+      operatorHits = unprunnedHitAnalysis.operatorHits.filter {
+        case (token, matches) => matches.size > 1
+      }
+    )
     logger.debug(s"Pruned ${beforePruning - hitAnalysis.operatorHits.size} operators")
 
     val totalPositiveHits = hitAnalysis.examples.count(x => x.label == Positive)
     val totalNegativeHits = hitAnalysis.examples.count(x => x.label == Negative)
-
     logger.debug(s"Done parsing ${hitAnalysis.size} hits")
     logger.debug(s"Found $totalPositiveHits positive " +
         s"and $totalNegativeHits negative with ${hitAnalysis.operatorHits.size} possible operators")
 
     if (totalPositiveHits == 0) {
-      logger.debug("Not enough postiive hits found")
+      logger.debug("Not enough positive hits found")
       return Seq()
     }
 
@@ -350,16 +346,17 @@ object QuerySuggester extends Logging {
       }
 
     logger.debug("Selecting query...")
-    val startTime = System.nanoTime()
-    val operators = QuerySuggester.selectOperator(
-      hitAnalysis,
-      evalFunction,
-      opCombiner,
-      config.beamSize, config.depth,
-      10
-    )
+    val (operators, searchTime) = Timing.time {
+      QuerySuggester.selectOperator(
+        hitAnalysis,
+        evalFunction,
+        opCombiner,
+        config.beamSize, config.depth,
+        10
+      )
+    }
+    logger.debug(s"Done selecting in ${searchTime / 1000000000.0}")
 
-    logger.debug(s"Done selecting in ${(System.nanoTime() - startTime) / 1000000000.0}")
     val suggestedQueries = operators.map { scoredOp =>
       ScoredQuery(scoredOp.ops.applyOps(tokenizedQuery).getQuery, scoredOp.score, scoredOp.msg)
     }
