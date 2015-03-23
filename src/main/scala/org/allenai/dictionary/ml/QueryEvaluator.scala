@@ -51,11 +51,11 @@ abstract class QueryEvaluator(examples: IndexedSeq[Example]) {
   /** Counts the number of positive, negative, and unlabelled examples a mapping
     * from (sentence_id -> # of edits made to that sentence) would match
     */
-  protected def countOccurances(map: IntMap[Int]): (Int, Int, Int) = {
+  protected def countOccurrences(sentenceId2EditCount: IntMap[Int]): (Int, Int, Int) = {
     var positive = 0
     var negative = 0
     var unlabelled = 0
-    map.foreach {
+    sentenceId2EditCount.foreach {
       case (key, numEdits) =>
         val example = examples(key)
         if (numEdits >= example.requiredEdits) {
@@ -83,7 +83,7 @@ case class PositiveMinusNegative(
   val usesUnlabelledData = false
 
   override def evaluate(ops: CompoundQueryOp, depth: Int = 0): Double = {
-    val (positive, negative, _) = countOccurances(ops.numEdits)
+    val (positive, negative, _) = countOccurrences(ops.numEdits)
     positive - negative * negativeWeight
   }
 }
@@ -105,7 +105,7 @@ case class PRCoverageSum(
       if (denom == 0) 0 else num / denom
     }
 
-    val (positiveHits, negativeHits, unlabelledHits) = countOccurances(matches)
+    val (positiveHits, negativeHits, unlabelledHits) = countOccurrences(matches)
 
     (
       safeDivide(positiveHits, positiveSize),
@@ -126,7 +126,7 @@ case class PRCoverageSum(
 
   override def evaluationMsg(ops: CompoundQueryOp, depth: Int): String = {
     val matches = ops.numEdits
-    val (positiveHits, negativeHits, unlabelledHits) = countOccurances(matches)
+    val (positiveHits, negativeHits, unlabelledHits) = countOccurrences(matches)
     "P: %d/%1.0f, N: %d/%1.0f, U: %d/%1.0f".format(
       positiveHits, positiveSize,
       negativeHits, negativeSize,
@@ -201,7 +201,7 @@ case class PRCoverageSumPartial(
 
   override def evaluationMsg(ops: CompoundQueryOp, depth: Int): String = {
     val matches = ops.numEdits
-    val (positiveHits, negativeHits, unlabelledHits) = countOccurances(matches)
+    val (positiveHits, negativeHits, unlabelledHits) = countOccurrences(matches)
     "P: %d/%1.0f, N: %d/%1.0f, U: %d/%1.0f".format(
       positiveHits, positiveSize,
       negativeHits, negativeSize,
