@@ -76,15 +76,15 @@ object QuerySuggester extends Logging {
                        generators: Seq[TokenQueryOpGenerator],
                        positiveTerms: Set[TableRow],
                        negativeTerms: Set[TableRow]): HitAnalysis = {
-    val positiveStrings = positiveTerms.map(x => x.values.head.qwords.
-        map(x => x.value).mkString(" "))
-    val negativeStrings = negativeTerms.map(x => x.values.head.qwords.
-        map(x => x.value).mkString(" "))
+    val positiveStrings = positiveTerms.map(_.values.head.qwords.
+        map(_.value).mkString(" "))
+    val negativeStrings = negativeTerms.map(_.values.head.qwords.
+        map(_.value).mkString(" "))
     val operatorMap = scala.collection.mutable.Map[TokenQueryOp, List[(Int, Int)]]()
     var examples = List[Example]()
     hits.setContextSize(generators.map(_.requiredContextSize).max)
     hits.setContextField((generators.flatMap(_.requiredProperties).toSet + "word").toSeq.asJava)
-    hits.asScala.zipWithIndex.foreach({
+    hits.asScala.zipWithIndex.foreach {
       case (hit, index) =>
         val kwic = hits.getKwic(hit)
         val captureGroups = hits.getCapturedGroups(hit)
@@ -118,7 +118,7 @@ object QuerySuggester extends Logging {
           val requiredEdits = captureGroups.drop(1).count(_ != null)
           examples = Example(label, requiredEdits, str) :: examples
         }
-    })
+    }
     HitAnalysis(
       operatorMap.map { case (k, v) => (k, IntMap(v: _*)) }.toMap,
       examples.reverse.toIndexedSeq
