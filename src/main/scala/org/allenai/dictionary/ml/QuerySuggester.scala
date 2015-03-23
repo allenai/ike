@@ -30,6 +30,9 @@ case class Example(label: Label, requiredEdits: Int, str: String)
 
 object QuerySuggester extends Logging {
 
+  /** Percent of examples we will use when evaluating queries that should be unlabelled */
+  val numUnlabelled = 0.3
+
   /** Some cache analysis for a subsample of hits, in particular records the labels for each
     * sentence in the subsample and which sentences each primitive operation applies to.
     *
@@ -221,8 +224,6 @@ object QuerySuggester extends Logging {
     priorityQueue.dequeueAll.reverse.take(maxReturn).map(x => ScoredOps(x._1, x._2,
       evaluationFunction.evaluationMsg(x._1, depth))).toSeq
   }
-
-  val numUnlabelled = 0.3
 
   /** Return a set of suggested queries given a starting query and a Table
     *
