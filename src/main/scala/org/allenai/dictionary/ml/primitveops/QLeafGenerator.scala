@@ -5,14 +5,18 @@ import org.allenai.dictionary._
 
 object QLeafGenerator {
 
-  val blacklistWords = Set(".", ",", "{", "}", "(", ")", "+", "*")
   def validWord(word: String): Boolean = {
-    !(blacklistWords contains word)
+    QExprParser.parse(word) match {
+      case QWord(word) => true
+      case _ => false
+    }
   }
 
-  val blackListPos = Set(".", ",", ")", "(", ":")
   def validPos(pos: String): Boolean = {
-    !(blackListPos contains pos)
+    QExprParser.parse(pos) match {
+      case QPos(pos) => true
+      case _ => false
+    }
   }
 
   def propertyValueToLeaf(property: String, value: String): Option[QLeaf] = {
