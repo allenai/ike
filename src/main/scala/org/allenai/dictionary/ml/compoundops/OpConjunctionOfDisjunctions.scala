@@ -4,8 +4,8 @@ import org.allenai.dictionary.ml.primitveops.{ Slot, TokenQueryOp }
 
 import scala.collection.immutable.IntMap
 
-/** CompoundOp that combines all SetToken and AddToken TokenQueryOps that
-  * apply to the same slot as a disjunction.
+/** CompoundOp that combines all SetToken and AddToken TokenQueryOps that apply to the same slot
+  * within a query as a disjunction
   */
 object OpConjunctionOfDisjunctions {
   def apply(evaluatedOp: EvaluatedOp): OpConjunctionOfDisjunctions =

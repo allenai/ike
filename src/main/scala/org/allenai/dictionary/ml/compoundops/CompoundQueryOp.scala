@@ -14,8 +14,7 @@ object CompoundQueryOp {
     if (ops.size == 0) {
       Seq()
     } else {
-      val maxSlot = ops.keys.max + 1
-      (1 until maxSlot).map(ops.getOrElse(_, QWildcard()))
+      (1 until ops.keys.max + 1).map(ops.getOrElse(_, QWildcard()))
     }
   }
 
@@ -27,21 +26,18 @@ object CompoundQueryOp {
     original: Option[QExpr]
   ): QExpr = {
     require(tokenOps.size > 0)
-    var allExpressions = tokenOps.map {
+    val allExpressions = tokenOps.map {
       case SetToken(_, q) => q
       case AddToken(_, q) => q
     }.toList
-    val noSetTokens = !tokenOps.forall {
-      case SetToken(_, _) => true
-      case _ => false
-    }
-    if (noSetTokens) {
+    if (!tokenOps.forall(_.isInstanceOf[SetToken])) {
       assert(original.isDefined)
-      allExpressions = original.get :: allExpressions
-    }
-    allExpressions match {
-      case x :: Nil => x
-      case _ => QDisj(allExpressions)
+      QDisj(original.get :: allExpressions)
+    } else {
+      allExpressions match {
+        case x :: Nil => x
+        case _ => QDisj(allExpressions)
+      }
     }
   }
 

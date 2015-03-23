@@ -9,8 +9,8 @@ object OpConjunction {
     new OpConjunction(Set(op.op), op.matches)
 }
 
-/** Class that combines operations by applying a single operation for each token in
-  * for a given query
+/** Class that combines operations that affect a single slot within a query by applying up to a
+  * single operation per a slot within the query
   */
 case class OpConjunction private (
   override val ops: Set[TokenQueryOp],
