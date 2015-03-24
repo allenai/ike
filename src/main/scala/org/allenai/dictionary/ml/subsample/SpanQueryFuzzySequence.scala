@@ -1,7 +1,5 @@
 package org.allenai.dictionary.ml.subsample
 
-import java.util
-
 import nl.inl.blacklab.search.lucene._
 import org.apache.lucene.index.{ AtomicReaderContext, IndexReader, Term, TermContext }
 import org.apache.lucene.search.Query
@@ -78,7 +76,7 @@ class SpanQueryFuzzySequence(
           // Sorry about this, SpanQueryNot does not implement equals as expected,
           // nor does it expose the number of clauses it contains so
           // so we are left with this hack to check if s matches all tokens
-          matchAll.toString.equals(s.toString)
+          matchAll.toString.equals(s.toString())
         case _ => false
       }
     }
@@ -94,15 +92,18 @@ class SpanQueryFuzzySequence(
         } else {
           Left(rewritten)
         }
-      case r: Right => r
+      case r: Right[SpanQuery, Int] => r
     }
 
     new SpanQueryFuzzySequence(rewrittenClauses, minMatches, maxMatches, captureMisses,
       ignoreLastToken, sequencesToCapture)
   }
 
-  override def getSpans(atomicReaderContext: AtomicReaderContext, bits: Bits,
-    map: util.Map[Term, TermContext]): Spans = {
+  override def getSpans(
+    atomicReaderContext: AtomicReaderContext,
+    bits: Bits,
+    map: java.util.Map[Term, TermContext]
+  ): Spans = {
     val baseSpans: Seq[Either[BLSpans, Int]] = mixedClauses map {
       case Left(spans: SpanQuery) => Left(BLSpansWrapper.optWrap(
         spans.getSpans(atomicReaderContext, bits, map)
