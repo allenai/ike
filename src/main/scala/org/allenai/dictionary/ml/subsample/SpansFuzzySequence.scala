@@ -43,13 +43,13 @@ case class CaptureSpan(name: String, start: Int, end: Int) {
   * finds as a capture group.
   *
   * @param clauses Clauses to of the fuzzy sequence, should be fixed length
-  * @param documentLengthGetter Getter to find the lenghts of documents
-  * @param minMatches minum number of claues to participate in each match
+  * @param documentLengthGetter Getter to find the lengths of documents
+  * @param minMatches minimum number of clauses to participate in each match
   * @param maxMatches maximum number of clauses to participate in each match
   * @param ignoreLastToken whether the the last token of sentences should be skipped
-  * @param sequencesToCapture Subsequence of return as capture groups
+  * @param sequencesToCapture Subsequences to return as capture groups
   * @param registerMisses Whether to return clauses that missed a match as spans
-  *                     indicating where the missed clause 'should' have been places
+  *                     indicating where the missed clause 'should' have been placed
   */
 class SpansFuzzySequence(
     private val clauses: Seq[Either[BLSpans, Int]],
@@ -86,7 +86,7 @@ class SpansFuzzySequence(
   }
 
   // Until isInitialized() is called we cannot reliable know the length
-  // of child clauses, so the rest of our validation is differed until then.
+  // of child clauses, so the rest of our validation is deferred until then.
   require(minMatches > 0)
 
   /* Length of the sequence we will match to */
@@ -99,10 +99,7 @@ class SpansFuzzySequence(
   }
 
   /* Number of matches that implicitly match everything */
-  private val implicitMatches = clauses.map {
-    case Right(n: Int) => 1
-    case _ => 0
-  }.sum
+  private val implicitMatches = clauses.count(_.isInstanceOf[Right[_, _]])
 
   /* Clauses that are candidates for participating in a fuzzy sequence match. Never
    * contains clauses that are empty. */
@@ -273,15 +270,13 @@ class SpansFuzzySequence(
     val pad = if (ignoreLastToken) 1 else 0
     if (currentMatch.start < 0 ||
       ((documentLengthGetter.getFieldLength(currentMatch.doc) - pad) <= end)) {
-      return false
+      false
+    } else {
+      val numMatches = aliveClauses.count {
+        case sc => sc.clause.doc == doc && sc.matchStart == currentMatch.start
+      } + implicitMatches
+      numMatches >= minMatches && numMatches <= maxMatches
     }
-
-    val numMatches = aliveClauses.map {
-      case sc =>
-        if (sc.clause.doc == doc && sc.matchStart == currentMatch.start) 1 else 0
-    }.sum + implicitMatches
-
-    numMatches >= minMatches && numMatches <= maxMatches
   }
 
   override def passHitQueryContextToClauses(context: HitQueryContext): Unit = {

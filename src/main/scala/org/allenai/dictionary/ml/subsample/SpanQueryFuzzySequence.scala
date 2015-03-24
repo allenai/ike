@@ -12,7 +12,33 @@ import org.apache.lucene.util.Bits
   * <code>minMatches</code> to <code>maxMatches</code> inclusive edit distance of the input
   * sequence of clauses, where an edit is changing a single token within the sequence
   * (removing or adding tokens is not allowed currently). Input clauses must be fixed length.
-  * See SpansFuzzySequence.
+  * Input clauses can Integers, in which case they are treated as a sequence of WildCards with the
+  * given size.
+  * See [[org.allenai.dictionary.ml.subsample.SpansFuzzySequence]]
+  *
+  * For example, if our clause matches "a", "cat", and "ran" with minMatches=2 maxMatches=3
+  * this matches sentences like:
+  * "the cat ran"
+  * "a dog ran"
+  * "a cat walked"
+  * but not:
+  * "the dog ran"
+  *
+  * If minMatches=2 maxMatches=2 this matches:
+  * "a cat walked"
+  * "the dog ran"
+  * but not:
+  * "a cat ran"
+  * "the dog walked"
+  *
+  * @param mixedClauses Sequence of Queries or integers to use as subclauses
+  * @param minMatches Minimum number of clauses that must match a sequence for us to return that
+  *                   sequence
+  * @param maxMatches Maximum number of clauses that must match a sequence we return
+  * @param captureMisses Whether to return, the clauses that did not participate in a match, the
+  *                      spans of where they should have matched
+  * @param ignoreLastToken Whether to ignore the last token of each document
+  * @param sequencesToCapture Subsequences of each match to return as capture groups
   */
 class SpanQueryFuzzySequence(
   mixedClauses: Seq[Either[SpanQuery, Int]],
@@ -23,10 +49,10 @@ class SpanQueryFuzzySequence(
   sequencesToCapture: Seq[CaptureSpan]
 )
     extends SpanQueryBase(
-      (mixedClauses.flatMap(x => x match {
+      mixedClauses.flatMap {
       case Left(query) => Some(query)
       case _ => None
-    })).toArray
+    }.toArray
     ) {
 
   def this(
@@ -47,19 +73,18 @@ class SpanQueryFuzzySequence(
 
     def isWildCard(query: Query): Boolean = {
       query match {
-        case s: SpanQueryNot => {
+        case s: SpanQueryNot =>
           val matchAll = SpanQueryNot.matchAllTokens(ignoreLastToken, s.getField)
           // Sorry about this, SpanQueryNot does not implement equals as expected,
           // nor does it expose the number of clauses it contains so
           // so we are left with this hack to check if s matches all tokens
-          matchAll.toString().equals(s.toString())
-        }
+          matchAll.toString.equals(s.toString)
         case _ => false
       }
     }
 
-    val rewritten = mixedClauses.map(x => x match {
-      case Left(q: Query) => {
+    val rewrittenClauses = mixedClauses.map {
+      case Left(q: Query) =>
         val rewritten = q.rewrite(reader) match {
           case sq: SpanQuery => sq
           case _ => throw new RuntimeException("SpanQuery should always rewrite as a SpanQuery")
@@ -69,29 +94,28 @@ class SpanQueryFuzzySequence(
         } else {
           Left(rewritten)
         }
-      }
-      case Right(_) => x
-    })
+      case r: Right => r
+    }
 
-    new SpanQueryFuzzySequence(rewritten, minMatches, maxMatches, captureMisses,
+    new SpanQueryFuzzySequence(rewrittenClauses, minMatches, maxMatches, captureMisses,
       ignoreLastToken, sequencesToCapture)
   }
 
   override def getSpans(atomicReaderContext: AtomicReaderContext, bits: Bits,
     map: util.Map[Term, TermContext]): Spans = {
-    val baseSpans: Seq[Either[BLSpans, Int]] = mixedClauses map (x => x match {
+    val baseSpans: Seq[Either[BLSpans, Int]] = mixedClauses map {
       case Left(spans: SpanQuery) => Left(BLSpansWrapper.optWrap(
         spans.getSpans(atomicReaderContext, bits, map)
       ))
       case Right(n: Int) => Right(n)
-    })
+    }
     val lengthGetter = new DocFieldLengthGetter(atomicReaderContext.reader(), getField)
 
-    return new SpansFuzzySequence(baseSpans, lengthGetter,
+    new SpansFuzzySequence(baseSpans, lengthGetter,
       minMatches, maxMatches, ignoreLastToken, sequencesToCapture, captureMisses)
   }
 
   override def toString(s: String): String = {
-    s"<${clauses.map(_.toString()).mkString(",")}>~{$minMatches-$maxMatches}"
+    s"<${clauses.map(_.toString).mkString(",")}>~{$minMatches-$maxMatches}"
   }
 }
