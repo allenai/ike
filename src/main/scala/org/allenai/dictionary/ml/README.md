@@ -50,17 +50,59 @@ was 'cat', we record which sentences from our subsample includes the full phrase
 that combine several primitive operations we can then take the intersection of the sentences each
  primitive operation matches to find out what sentences the combined operation would match.
  
-In addition to which sentences a primitive operation would allow the initial query to match, we also mark which 
-sentences a primitive operation is 'required' for. These sentences are ones that the initial query will
-not match unless the primitive operation is applied to it. For example, if the initial query is 'the cat' and our
-primitive operation is replaces 'the' with 'DT' the primitive operation is required 
-for the sentence
-'a cat' and not required for the sentence 'the cat'. When making 'broadening' query suggestion we
-keep track of 
-number of edits would be needed to make made to the user's query to match each sentences, and then track the number
-of 'required' operators that were applied to each sentence to determine if the query would match the starting
-sentence.
+An additional concept we need when dealing with 'broadening' queries is that of the edit distance
+ between a query and a sentence. The edit distance is defined to be the number of operators
+ required to make a particular query match a particular sentence. For example, if our query is 
+ "a fast horse", to make the query match the phrase "a slow horse" we will need to edit at least
+  one of the symbols in that query, (for example, replace the word "slow" in the query with the 
+  word "fast"). The distance from the same query to the sentence "a slow cow" would be 2. During 
+  subsampling we record the edit distance from our query of each sentence in our subsample.
+  
+In addition, we keep track of which operators are capable of reducing the edit 
+distance from our query to each sentence. We say an operator that reduces the edit
+ distance of our staring query to a given sentence is 'required' for that sentence, otherwise it 
+ is not required. To give a more detailed example consider the following scenario:
+
+Our starting query is "a cat"
+
+Our query operation replaces "a" with "DT" (so our new query would "DT cat") 
+
+We have three sentences:
+1. "a cat"
+2. "the cat"
+3. "the dog"
+4. "dog dog"
+
+Now the distance from our query to each sentence is:
+* 0 for sentence 1
+* 1 for sentence 2
+* 2 for sentence 3
+* 2 for sentence 4
+   
+And our operator
+* matches but is not required for sentence 1
+* matches and fills a requirement for sentence 2
+* matches and fills a requirement for sentence 3
+* does not match sentence 4
+
+It is left to the compound operators to calculate the number of required operators for each 
+sentences will be made by applying all their primitive operators, and in particular to avoid 
+"double counting" requirements if multiple operators would, for example, edit the same word 
+within a query.
  
+Implementation-wise we record this information using an map of integers to integers, where the keys 
+are integers corresponding to particular sentences and the values are 0, if the given operation 
+does not fulfill a requirement for a particular sentence, 1 if it fulfills one requirement, 2 if
+ it fulfills 2 and so on. By comparing the number of requirement a operator has fulfilled for a
+particular sentence to the edit distance from the starting query to that sentence we can quickly 
+deduce whether the starting query would match then sentence if that set of operators were applied
+. In the above example this means the operator would be associated with:
+
+IntMap(1 -> 0, 2 -> 1, 3 -> 1)
+
+We use IntMap rather then Seq\[(Int, Int)\] or Map\[Int, Int\] because:
+1. It will have a sparse representation, and we expect many of the rules we examine to be sparse
+2. It is optimized for merges (unions and intersections), operation we do frequently.
 
 ## Code
 1. subsample package handles the subsampling phase.
@@ -69,7 +111,3 @@ sentence.
 4. QueryEvaluator.scala defines the evaluation functions to use.
 5. TokenizedQuery.scala breaks queries into sequences of smaller queries as a preprocessing step.
 6. QuerySuggester.scala 'glues' these pieces together and implements the actual beam search.
-
-Throughout the codebase we make heavy use of Scala's IntMap to keep track of which sentences a primitive operation would allow the starting query to match. In general, if a primitive or compound operation, when applied to the starting query, would then not prevent that query from matching a particular sentence, it will be one of the keys of the IntMap. The values of the IntMap will count the number of required edits made to that sentence. We use IntMap because:
-1. It will have a sparse representation, and we expect many of the rules we examine to be sparse
-2. It it optimized for merges (unions and intersections), operation we do frequently.
