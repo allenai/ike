@@ -2,19 +2,14 @@ package org.allenai.dictionary.ml.primitveops
 
 import org.allenai.dictionary._
 
-/** Indicates a 'slot' relative to a particular query.
+/** Indicates a 'slot' relative to a particular query. A Slot indicates a token within the
+  * existing query, or an 'empty' token that occurs before of after the existing query
   */
-sealed abstract class Slot()
+sealed abstract class Slot(token: Int) { require(token >= 1) }
 
-case class Prefix(token: Int) extends Slot {
-  require(token >= 1)
-}
-case class Match(token: Int) extends Slot {
-  require(token >= 1)
-}
-case class Suffix(token: Int) extends Slot {
-  require(token >= 1)
-}
+case class Prefix(token: Int) extends Slot(token)
+case class Match(token: Int) extends Slot(token)
+case class Suffix(token: Int) extends Slot(token)
 
 /** Operation that changes a single token within a fixed length query
   */
