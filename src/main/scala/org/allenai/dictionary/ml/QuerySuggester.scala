@@ -302,7 +302,7 @@ object QuerySuggester extends Logging {
       ))
       Some(analysis)
     }
-    logger.debug(s"Document retrieval took ${labelledRetrieveTime / 1000000000.0} seconds")
+    logger.debug(s"Document retrieval took ${labelledRetrieveTime.toMillis / 1000.0} seconds")
 
     logger.debug(s"Retrieving unlabelled documents...")
     val (unprunnedHitAnalysis, unlabelledRetrieveTime) = Timing.time {
@@ -311,7 +311,7 @@ object QuerySuggester extends Logging {
       val analysis = parseHits(window)
       if (labelledHitAnalysis.isEmpty) analysis else labelledHitAnalysis.get ++ analysis
     }
-    logger.debug(s"Retrieval took ${unlabelledRetrieveTime / 1000000000.0} seconds")
+    logger.debug(s"Retrieval took ${unlabelledRetrieveTime.toMillis / 1000.0} seconds")
 
     val beforePruning = unprunnedHitAnalysis.operatorHits.size
     val hitAnalysis = unprunnedHitAnalysis.copy(
@@ -362,7 +362,7 @@ object QuerySuggester extends Logging {
         10
       )
     }
-    logger.debug(s"Done selecting in ${searchTime / 1000000000.0}")
+    logger.debug(s"Done selecting in ${searchTime.toMillis / 1000.0}")
 
     val suggestedQueries = operators.map { scoredOp =>
       ScoredQuery(scoredOp.ops.applyOps(tokenizedQuery).getQuery, scoredOp.score, scoredOp.msg)
