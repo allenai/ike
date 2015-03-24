@@ -1,20 +1,22 @@
 package org.allenai.dictionary.ml.primitveops
 
+import scala.util.Success
+
 import nl.inl.blacklab.search.Kwic
 import org.allenai.dictionary._
 
 object QLeafGenerator {
 
   def validWord(word: String): Boolean = {
-    QExprParser.parse(word) match {
-      case QWord(word) => true
+    QueryLanguage.parse(word) match {
+      case Success(QWord(word)) => true
       case _ => false
     }
   }
 
   def validPos(pos: String): Boolean = {
-    QExprParser.parse(pos) match {
-      case QPos(pos) => true
+    QueryLanguage.parse(pos) match {
+      case Success(QPos(pos)) => true
       case _ => false
     }
   }
