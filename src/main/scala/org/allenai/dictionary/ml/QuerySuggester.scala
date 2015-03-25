@@ -244,9 +244,9 @@ object QuerySuggester extends Logging {
                    narrow: Boolean,
                    config: SuggestQueryConfig): Seq[ScoredQuery] = {
 
-    val targetDictionary = tables.get(target) match {
-      case Some(dict) => dict
-      case None => throw new IllegalArgumentException("Target dictionary not found")
+    val targetTable = tables.get(target) match {
+      case Some(table) => table
+      case None => throw new IllegalArgumentException("Target table not found")
     }
 
     val tokenizedQuery = TokenizedQuery.buildFromQuery(startingQuery)
@@ -255,8 +255,8 @@ object QuerySuggester extends Logging {
         s"suggestion for <${QueryLanguage.getQueryString(startingQuery)}> for $target")
     logger.debug(s"Config: $config")
 
-    val positiveTerms = targetDictionary.positive.toSet
-    val negativeTerms = targetDictionary.negative.toSet
+    val positiveTerms = targetTable.positive.toSet
+    val negativeTerms = targetTable.negative.toSet
 
     val tokenSeq = tokenizedQuery.getSeq
 
@@ -294,7 +294,7 @@ object QuerySuggester extends Logging {
 
     logger.debug(s"Retrieving labelled documents...")
     val (labelledHitAnalysis, labelledRetrieveTime) = Timing.time {
-      val hits = hitGatherer.getLabelledSample(startingQuery, searcher, targetDictionary).
+      val hits = hitGatherer.getLabelledSample(startingQuery, searcher, targetTable).
           window(0, config.maxSampleSize)
       val analysis = parseHits(hits.window(
         0,
