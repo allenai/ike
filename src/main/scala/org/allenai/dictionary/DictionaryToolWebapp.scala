@@ -125,6 +125,5 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
-  def receive: Actor.Receive =
-    runRoute(logRequest("FOO") { mainPageRoute ~ serviceRoutes })
+  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoutes)
 }
