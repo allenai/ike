@@ -21,6 +21,7 @@ import com.typesafe.config.ConfigFactory
 import scala.collection.JavaConverters._
 
 import scala.util.control.NonFatal
+import scala.xml.NodeSeq
 
 object DictionaryToolWebapp {
   lazy val config = ConfigFactory.load().getConfig("DictionaryToolWebapp")
@@ -81,6 +82,22 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
       }
   }.reduce(_ ~ _)
 
+  val linksToCorpora = NodeSeq.fromSeq(searchApps.keys.toList.map { name =>
+    <p><a href={ name }>{ name }</a></p>
+  })
+  val mainPageRoute = pathEndOrSingleSlash {
+    get {
+      complete {
+        <div>
+          <h1>OkCorpus</h1>
+          <div>
+            { linksToCorpora }
+          </div>
+        </div>
+      }
+    }
+  }
+
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
       case NonFatal(e) =>
@@ -92,5 +109,5 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
   def receive: Actor.Receive =
-    runRoute(logRequest("FOO") { serviceRoutes })
+    runRoute(logRequest("FOO") { mainPageRoute ~ serviceRoutes })
 }
