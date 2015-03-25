@@ -6,7 +6,6 @@ import nl.inl.blacklab.search.Kwic
 import org.allenai.dictionary._
 
 object QLeafGenerator {
-
   def validWord(word: String): Boolean = {
     QueryLanguage.parse(word) match {
       case Success(QWord(word)) => true
@@ -15,16 +14,19 @@ object QLeafGenerator {
   }
 
   def validPos(pos: String): Boolean = {
-    QueryLanguage.parse(pos) match {
-      case Success(QPos(pos)) => true
-      case _ => false
-    }
+    QExprParser.posTagSet contains pos
   }
 
   def propertyValueToLeaf(property: String, value: String): Option[QLeaf] = {
     property match {
-      case "word" if validWord(value) => Some(QWord(value))
-      case "word" => None
+      case "word" => {
+        val lower = value.toLowerCase
+        if (validWord(lower)) {
+          Some(QWord(lower))
+        } else {
+          None
+        }
+      }
       case "pos" if validPos(value) => Some(QPos(value))
       case "pos" => None
       case _ => throw new IllegalArgumentException(property + " is not a valid property")

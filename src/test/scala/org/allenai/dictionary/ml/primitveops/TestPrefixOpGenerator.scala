@@ -24,7 +24,7 @@ class TestPrefixOpGenerator extends UnitSpec with ScratchDirectory {
 
     val expectedOperators = Set(
       (1, QWord("those")),
-      (3, QWord("I")),
+      (3, QWord("i")),
       (1, QPos("DT")),
       (3, QPos("PRP")),
       (1, QWord("taste")),
