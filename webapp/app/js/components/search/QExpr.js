@@ -130,7 +130,7 @@ var QWord = React.createClass({
     };
     var requestData = {
       body: JSON.stringify(query),
-      uri: '/api/wordInfo',
+      uri: 'api/wordInfo',
       method: 'POST',
       headers: {'Content-Type': 'application/json'}
     };

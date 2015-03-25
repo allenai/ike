@@ -1,9 +1,8 @@
 package org.allenai.dictionary
 
+import org.allenai.common.Logging
 import spray.routing.HttpService
 import spray.httpx.SprayJsonSupport
-import spray.json._
-import DefaultJsonProtocol._
 import akka.actor.Actor
 import spray.util.LoggingContext
 import spray.routing.ExceptionHandler
@@ -17,9 +16,9 @@ import scala.concurrent.duration.DurationInt
 import akka.io.IO
 import spray.can.Http
 import akka.pattern.ask
-import JsonSerialization._
 import akka.actor.ActorContext
 import com.typesafe.config.ConfigFactory
+import scala.collection.JavaConverters._
 
 import scala.util.control.NonFatal
 
@@ -38,44 +37,49 @@ object DictionaryToolWebapp {
   }
 }
 
-trait BasicService extends HttpService {
-  val staticContentRoot = "public"
-  val basicRoute =
-    path("") {
-      get {
-        getFromFile(staticContentRoot + "/index.html")
-      }
-    } ~
-      get {
-        unmatchedPath { p => getFromFile(staticContentRoot + p) }
-      }
-}
-
-class DictionaryToolActor extends Actor with BasicService with SprayJsonSupport {
+class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport with Logging {
   import JsonSerialization._
+
+  logger.debug("Starting DictionaryToolActor") // this is just here to force logger initialization
+
   val config = ConfigFactory.load
-  val searchApp = SearchApp(config.getConfig("DictionaryToolWebapp.index"))
-  val serviceRoute = pathPrefix("api" / "groupedSearch") {
-    post {
-      entity(as[SearchRequest]) { req =>
-        complete(searchApp.groupedSearch(req))
-      }
-    }
-  } ~
-    pathPrefix("api" / "wordInfo") {
-      post {
-        entity(as[WordInfoRequest]) { req =>
-          complete(searchApp.wordInfo(req))
+  val searchApps = config.getConfigList("DictionaryToolWebapp.indices").asScala.par.map { config =>
+    config.getString("name") -> SearchApp(config)
+  }.toMap
+
+  val staticContentRoot = "public"
+  val serviceRoutes = searchApps.map {
+    case (name, searcher) =>
+      pathPrefix(name) {
+        pathSingleSlash {
+          get {
+            getFromFile(staticContentRoot + "/index.html")
+          }
+        } ~ pathEnd {
+          redirect(s"/$name/", StatusCodes.PermanentRedirect)
+        } ~ get {
+          unmatchedPath { p => getFromFile(staticContentRoot + p) }
+        }
+      } ~ pathPrefix(name / "api" / "groupedSearch") {
+        post {
+          entity(as[SearchRequest]) { req =>
+            complete(searcher.groupedSearch(req))
+          }
+        }
+      } ~ pathPrefix(name / "api" / "wordInfo") {
+        post {
+          entity(as[WordInfoRequest]) { req =>
+            complete(searcher.wordInfo(req))
+          }
+        }
+      } ~ pathPrefix(name / "api" / "suggestQuery") {
+        post {
+          entity(as[SuggestQueryRequest]) { req =>
+            complete(searcher.suggestQuery(req))
+          }
         }
       }
-    } ~
-    pathPrefix("api" / "suggestQuery") {
-      post {
-        entity(as[SuggestQueryRequest]) { req =>
-          complete(searchApp.suggestQuery(req))
-        }
-      }
-    }
+  }.reduce(_ ~ _)
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
@@ -87,5 +91,6 @@ class DictionaryToolActor extends Actor with BasicService with SprayJsonSupport 
     }
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
-  def receive: Actor.Receive = runRoute(basicRoute ~ serviceRoute)
+  def receive: Actor.Receive =
+    runRoute(logRequest("FOO") { serviceRoutes })
 }
