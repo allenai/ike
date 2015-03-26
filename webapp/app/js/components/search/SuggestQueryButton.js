@@ -2,10 +2,10 @@ var React = require('react');
 var bs = require('react-bootstrap');
 var TableManager = require('../../managers/TableManager.js');
 var DropdownButton = bs.DropdownButton
+var Button = bs.Button
 var MenuItem = bs.MenuItem
 var Input = bs.Input
-var SplitButton = bs.SplitButton
-var ButtonGroup = bs.ButtonGroup
+var ButtonToolbar = bs.ButtonToolbar
 var xhr = require('xhr');
 
 var SuggestQueryButton = React.createClass({
@@ -14,10 +14,12 @@ var SuggestQueryButton = React.createClass({
     return {
       suggestions: [],
       narrow: false,
+      waiting: false
     };
   },
 
   suggestQueryCallBack: function(err, resp, body) {
+    this.setState({waiting: false})
     if (resp.statusCode == 200) {
       var newSuggestions = JSON.parse(body).scoredQueries
       this.setState({suggestions: newSuggestions})
@@ -66,9 +68,9 @@ var SuggestQueryButton = React.createClass({
       headers: {'Content-Type': 'application/json'}
     };
     console.log('Requesting suggestions for ' + queryValue)
+    this.setState({waiting: true})
     var request = xhr(requestData, this.suggestQueryCallBack);
   },
-
   suggestedQuerySelect: function(eventKey, href, target) {
     this.props.query.requestChange(target)
   },
@@ -77,8 +79,7 @@ var SuggestQueryButton = React.createClass({
     return  (
             <MenuItem
               onSelect={this.suggestedQuerySelect}
-              target={scoredQuery.query}>
-              {scoredQuery.query}
+              target={scoredQuery.query}>{scoredQuery.query}
             </MenuItem>
    )
   },
@@ -87,19 +88,33 @@ var SuggestQueryButton = React.createClass({
     this.setState({narrow: !this.state.narrow})
   },
 
+  smallFont: function(string) {
+    return <div style={{fontSize: 'small'}}>{string}</div>
+  },
+
   render: function() {
     return (
     <div>
-      <ButtonGroup>
-        <SplitButton title='Suggest Query' onClick={this.suggestQuery} pullRight>
+      <label className="control-label">Suggestions</label>
+      <ButtonToolbar>
+        <DropdownButton
+          style={{fontSize: 'small'}}
+          title="Suggestions">
           {this.state.suggestions.map(this.createMenuItem)}
-        </SplitButton>
-      </ButtonGroup>
-      <Input
-        type='checkbox'
-        label='Narrow'
-        onChange={this.checkBoxChange}
-        defaultChecked={this.state.narrow}/>
+        </DropdownButton>
+        <Button
+          disabled={this.state.waiting}
+          style={{fontSize: 'small'}}
+          onClick={this.suggestQuery}
+          >Refresh
+        </Button>
+        <Input
+          type='checkbox'
+          style={{fontSize: 'small'}}
+          label='Narrow'
+          onChange={this.checkBoxChange}
+          defaultChecked={this.state.narrow}/>
+      </ButtonToolbar>
     </div>
     );
   }

@@ -32,8 +32,8 @@ var SearchForm = React.createClass({
       var queryForm =
           <Row>
             <Col xs={2}>{selector}</Col>
-            {this.getQueryTextInterface(8, query)}
-            <Col xs={2}>
+            {this.getQueryTextInterface(7, query)}
+            <Col xs={3}>
               <SuggestQueryButton
                 config={config}
                 target={target}
