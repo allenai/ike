@@ -95,26 +95,29 @@ var SuggestQueryButton = React.createClass({
   render: function() {
     return (
     <div>
-      <label className="control-label">Query Suggestions</label>
-      <ButtonGroup>
-        <DropdownButton
-          style={{fontSize: 'small'}}
-          title="Suggestions">
-          {this.state.suggestions.map(this.createMenuItem)}
-        </DropdownButton>
-        <Button
-          disabled={this.state.waiting}
-          style={{fontSize: 'small'}}
-          onClick={this.suggestQuery}
-          >Refresh
-        </Button>
+      <label className="control-label">Query</label>
+      <div>
+        <ButtonGroup>
+          <DropdownButton
+            style={{fontSize: 'small'}}
+            title="Suggestions">
+              {this.state.suggestions.map(this.createMenuItem)}
+          </DropdownButton>
+          <Button
+            disabled={this.state.waiting}
+            style={{fontSize: 'small'}}
+            onClick={this.suggestQuery}
+            >
+              Refresh
+          </Button>
+        </ButtonGroup>
         <Input
           type='checkbox'
           style={{fontSize: 'small'}}
           label='Narrow'
           onChange={this.checkBoxChange}
           defaultChecked={this.state.narrow}/>
-      </ButtonGroup>
+      </div>
     </div>
     );
   }
