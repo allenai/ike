@@ -5,7 +5,7 @@ var DropdownButton = bs.DropdownButton
 var Button = bs.Button
 var MenuItem = bs.MenuItem
 var Input = bs.Input
-var ButtonToolbar = bs.ButtonToolbar
+var ButtonGroup = bs.ButtonGroup
 var xhr = require('xhr');
 
 var SuggestQueryButton = React.createClass({
@@ -95,8 +95,8 @@ var SuggestQueryButton = React.createClass({
   render: function() {
     return (
     <div>
-      <label className="control-label">Suggestions</label>
-      <ButtonToolbar>
+      <label className="control-label">Query Suggestions</label>
+      <ButtonGroup>
         <DropdownButton
           style={{fontSize: 'small'}}
           title="Suggestions">
@@ -114,7 +114,7 @@ var SuggestQueryButton = React.createClass({
           label='Narrow'
           onChange={this.checkBoxChange}
           defaultChecked={this.state.narrow}/>
-      </ButtonToolbar>
+      </ButtonGroup>
     </div>
     );
   }
