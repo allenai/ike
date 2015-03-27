@@ -6,12 +6,8 @@ import org.allenai.dictionary._
 import org.allenai.dictionary.ml.TokenizedQuery
 import org.apache.lucene.search.spans.SpanQuery
 
-object FuzzySequenceSampler {
-  val captureGroupName = "capture"
-}
-
 /** Sampler that returns sentences that could be matched by a query that is
-  * within an edit distance of the given query. See SpansFuzzySequence.
+  * within an edit distance of the given query. See SpanQueryFuzzySequence.
   *
   * @param minEdits minimum edits a sentence can be from the query to be returned
   * @param maxEdits maximum edits a sentence can be from the query to be returned
@@ -26,34 +22,36 @@ case class FuzzySequenceSampler(minEdits: Int, maxEdits: Int)
     val asSpanQueries = tokenizedQuery.getSeq.map(
       q => searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(q))
     )
-    val captureGroup = CaptureSpan(FuzzySequenceSampler.captureGroupName, tokenizedQuery.left.size,
-      tokenizedQuery.left.size + tokenizedQuery.capture.size)
+
+    // Figure out what subsequence we should record as capture group.
+    var onIndex = 0
+    var captureList = List[CaptureSpan]()
+    tokenizedQuery.nonCaptures.zip(tokenizedQuery.captures).foreach {
+      case (leftNonCapture, capture) =>
+        onIndex += leftNonCapture.size
+        captureList = CaptureSpan(capture.columnName, onIndex,
+          onIndex + capture.seq.size) +: captureList
+        onIndex += capture.seq.size
+    }
     val querySize = tokenizedQuery.getSeq.size
     new SpanQueryFuzzySequence(asSpanQueries, querySize - maxEdits, querySize - minEdits, true,
-      searcher.getIndexStructure.alwaysHasClosingToken(),
-      Seq(captureGroup))
+      searcher.getIndexStructure.alwaysHasClosingToken(), captureList)
   }
 
-  override def getSample(qexpr: QExpr, searcher: Searcher): Hits = {
-    val tokenizedQuery = TokenizedQuery.buildFromQuery(qexpr)
+  override def getSample(qexpr: QExpr, searcher: Searcher, table: Table): Hits = {
+    val tokenizedQuery = TokenizedQuery.buildFromQuery(qexpr, table.cols)
     searcher.find(buildFuzzySequenceQuery(tokenizedQuery, searcher))
   }
 
   override def getLabelledSample(qexpr: QExpr, searcher: Searcher, table: Table): Hits = {
-    require(table.cols.size == 1)
-    val tokenizedQuery = TokenizedQuery.buildFromQuery(qexpr)
-    val query = buildFuzzySequenceQuery(tokenizedQuery, searcher)
-    val captureLength = QueryLanguage.getQueryLength(QSeq(tokenizedQuery.capture))
-    val precapture = QueryLanguage.getQueryLength(QSeq(tokenizedQuery.left))
-    val postcapture = QueryLanguage.getQueryLength(QSeq(tokenizedQuery.right))
-    val allRows = table.positive ++ table.negative
-    val allWords = allRows.map(x => x.values.head.qwords)
-    val patternsToUse = allWords.filter(x => x.size == captureLength).map(x => QSeq(x))
-    println(s"Limiting query to ${patternsToUse.size} dictionary patterns of size $captureLength")
-    val limitingQexpr = QSeq((List.tabulate(precapture)(_ =>
-      QWildcard()) :+ QDisj(patternsToUse)) ++ List.tabulate(postcapture)(_ => QWildcard()))
-    val limitingTextPattern = BlackLabSemantics.blackLabQuery(limitingQexpr)
-    val limitingQuery = searcher.createSpanQuery(limitingTextPattern)
-    searcher.find(new SpanQueryAnd(query, limitingQuery))
+    val tokenizedQuery = TokenizedQuery.buildFromQuery(QueryLanguage.nameCaptureGroups(qexpr,
+      table.cols))
+    val sequenceQuery = buildFuzzySequenceQuery(tokenizedQuery, searcher)
+    val labelledSpans = searcher.createSpanQuery(
+      BlackLabSemantics.blackLabQuery(
+        Sampler.getLabelledExampleQuery(qexpr, table)
+      )
+    )
+    searcher.find(new SpanQueryAnd(sequenceQuery, labelledSpans))
   }
 }

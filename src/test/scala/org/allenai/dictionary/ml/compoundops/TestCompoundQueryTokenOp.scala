@@ -23,7 +23,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
 
   "CompoundOp" should "Apply ops correctly" in {
     val ops = Seq(replace3, prefix22, prefix3, suffix1, suffix3)
-    val startingQuery = QueryLanguage.parse("one (c1 c2) two").get
+    val startingQuery = QueryLanguage.parse("one (?<capture> c1 c2) two").get
     val startingTokenQuery = TokenizedQuery.buildFromQuery(startingQuery)
     val qExpr = CompoundQueryOp.applyOps(startingTokenQuery, ops).getQuery match {
       case QSeq(seq) => seq
@@ -34,7 +34,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     assertResult(prefix22.qexpr)(qExpr(1))
     assertResult(QWildcard())(qExpr(2))
     assertResult(QWord("one"))(qExpr(3))
-    assertResult(QUnnamed(QSeq(Seq(QWord("c1"), replace3.qexpr))))(qExpr(4))
+    assertResult(QNamed(QSeq(Seq(QWord("c1"), replace3.qexpr)), "capture"))(qExpr(4))
     assertResult(QWord("two"))(qExpr(5))
     assertResult(suffix1.qexpr)(qExpr(6))
     assertResult(QWildcard())(qExpr(7))
@@ -43,7 +43,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
   }
 
   "CompoundOp" should "apply AddToken ops" in {
-    val startingQuery = QueryLanguage.parse("one (c1 c2)").get
+    val startingQuery = QueryLanguage.parse("one (?<capture> c1 c2)").get
     val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
     val ops = Seq(add22, add21)
     val modified = CompoundQueryOp.applyOps(tokenized, ops)
@@ -58,7 +58,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
   it should "apply disjunction of ops correctly" in {
     implicit def opToEvaluatedOp(x: TokenQueryOp): EvaluatedOp = EvaluatedOp(x, IntMap())
     val ops = Seq(suffix1, replace3, prefix21, prefix22, add3)
-    val start = QueryLanguage.parse("(c1 c2 c3) h").get
+    val start = QueryLanguage.parse("(?<capture> c1 c2 c3) h").get
     val tokenized = TokenizedQuery.buildFromQuery(start)
     val modified = CompoundQueryOp.applyOps(tokenized, ops).getSeq
     assertResult(Set(prefix21.qexpr, prefix22.qexpr)) {

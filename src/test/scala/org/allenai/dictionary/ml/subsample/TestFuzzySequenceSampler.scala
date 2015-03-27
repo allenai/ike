@@ -21,6 +21,12 @@ class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
     }).toSeq
   }
 
+  def hitsToStrings(hits: Hits): Seq[String] = {
+    hits.asScala.map( hit => {
+      hits.getKwic(hit).getMatch("word").asScala.mkString(" ")
+    }).toSeq
+  }
+
   def hitToAllCaptures(hits: Hits): Seq[Seq[String]] = {
     hits.asScala.map(hit => {
       val kwic = hits.getKwic(hit)
@@ -44,31 +50,39 @@ class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
       negative.map(x => TableRow(Seq(TableValue(x.split(" ").map(QWord.apply))))))
   }
 
-  "FuzzySequenceSampler" should "Limit queries correctly" in {
-    val testQuery = QSeq(Seq(QWord("I"), QCluster("10"), QUnnamed(QWord("???"))))
-    val table = buildTable(Seq("mango"), Seq())
-
-    assertResult(Seq("mango", "those")) {
-      val hits = FuzzySequenceSampler(1, 1).getSample(testQuery, searcher)
-      hitToCaptures(hits, FuzzySequenceSampler.captureGroupName)
-    }
-
-    assertResult(Seq("mango")) {
-      val hits = FuzzySequenceSampler(1, 1).getLabelledSample(testQuery, searcher, table)
-      hitToCaptures(hits, FuzzySequenceSampler.captureGroupName)
-    }
-  }
-
   "FuzzySequenceSampler" should "capture misses correctly" in {
     val testQuery = QSeq(Seq(
       QDisj(Seq(QWord("I"), QWord("taste"))),
       QDisj(Seq(QWord("like"), QWord("hate"))),
       QUnnamed(QDisj(Seq(QWord("those"), QWord("great"))))
     ))
-    val hits = FuzzySequenceSampler(0, 1).getSample(testQuery, searcher)
+    val hits = FuzzySequenceSampler(0, 1).getSample(testQuery, searcher,
+      Table("", Seq("c1"), Seq(), Seq()))
     val captures = hitToAllCaptures(hits)
     assertResult(Seq("mango", null, null, "mango"))(captures(0)) // Last word did not match
     assertResult(Seq("those", null, null, null))(captures(1)) // all words matched
     assertResult(Seq("great", null, "not", null))(captures(2)) // middle word did not match
+  }
+
+  "FuzzySequenceSampler" should "Limit queries correctly" in {
+    val startingQuery = QueryLanguage.parse("({I, hate}) those ({mango, bananas, great})").get
+    val table = Table(
+      "test",
+      Seq("col1", "col2"),
+      Seq(
+        TableRow(Seq(TableValue(Seq(QWord("I"))), TableValue(Seq(QWord("mango"))))),
+        TableRow(Seq(TableValue(Seq(QWord("hate"))), TableValue(Seq(QWord("those")))))
+      ),
+      Seq(
+        TableRow(Seq(TableValue(Seq(QWord("hate"))), TableValue(Seq(QWord("bananas")))))
+      )
+    )
+    val expectedResults = Seq(
+      "I like mango",
+      "hate those bananas"
+    )
+    assertResult(expectedResults)(hitsToStrings(FuzzySequenceSampler(0, 1).getLabelledSample(
+      startingQuery, searcher, table
+    )))
   }
 }
