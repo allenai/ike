@@ -132,6 +132,7 @@ var SearchInterface = React.createClass({
       <SearchForm
         handleSubmit={handleSubmit}
         target={target}
+        config={config}
         query={query}/>;
     var queryViewer =
       <QueryViewer

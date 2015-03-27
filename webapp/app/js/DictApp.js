@@ -25,7 +25,17 @@ var DictApp = React.createClass({
         limit: 1000,
         evidenceLimit: 10,
         hideAdded: false,
-        groupsPerPage: 25
+        groupsPerPage: 25,
+        ml: {
+           disable: true,
+           depth: 2,
+           beamSize: 30,
+           maxSampleSize: 15000,
+           pWeight: 1.0,
+           nWeight: -5.0,
+           uWeight: -1.0,
+           allowDisjunctions: false
+        }
       },
       results: {
         groups: [],
@@ -42,11 +52,11 @@ var DictApp = React.createClass({
     var target = this.linkState('target');
     var results = this.linkState('results');
     var config = this.linkState('config');
-    var searchInterface = 
+    var searchInterface =
       <SearchInterface config={config} results={results} target={target}/>;
     var tablesInterface = <TablesInterface target={target}/>;
     var configInterface = <ConfigInterface config={config}/>;
-    var helpInterface = <HelpInterface/>; 
+    var helpInterface = <HelpInterface/>;
     return (
       <div>
         <TabbedArea animation={false}>
