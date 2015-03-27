@@ -12,9 +12,21 @@ class TestMatchesSampler extends UnitSpec with ScratchDirectory {
   TestData.createTestIndex(scratchDir)
   val searcher = TestData.testSearcher(scratchDir)
 
-  def hitsToStrings(hits: Hits): Seq[String] = {
-    hits.iterator.asScala.map(hit =>
-      hits.getKwic(hit).getMatch("word").asScala.mkString(" ")).toSeq
+  def hitToAllCaptures(hits: Hits): Seq[Seq[String]] = {
+    hits.asScala.map(hit => {
+      val kwic = hits.getKwic(hit)
+      hits.getCapturedGroups(hit).map(span => {
+        if (span == null) {
+          null
+        } else {
+          val captureKwic = span.start - hit.start
+          kwic.getMatch("word").subList(
+            captureKwic,
+            captureKwic + span.end - span.start
+          ).asScala.mkString(" ")
+        }
+      }).toSeq
+    }).toSeq
   }
 
   def buildTable(positive: Seq[String], negative: Seq[String]): Table = {
@@ -23,25 +35,26 @@ class TestMatchesSampler extends UnitSpec with ScratchDirectory {
       negative.map(x => TableRow(Seq(TableValue(x.split(" ").map(QWord.apply))))))
   }
 
-  "LimitQuery" should "Convert wildcards captures into a disjunction" in {
-    val startingQuery = QSeq(Seq(QWord("the"), QUnnamed(QSeq(Seq(QWildcard(), QWildcard())))))
-    val table = buildTable(Seq("a b", "d"), Seq("c", "1 2 3", "a c"))
-    val expectedResults = QSeq(Seq(QWord("the"), QUnnamed(QDisj(Seq(
-      QSeq(Seq(QWord("a"), QWord("b"))),
-      QSeq(Seq(QWord("a"), QWord("c")))
-    )))))
-    assertResult(expectedResults)(
-      MatchesSampler().limitQueryToTable(startingQuery, table)
-    )
-  }
-
   "MatchesSampler" should "test correctly" in {
-    val startingQuery = QUnnamed(QDisj(Seq(QWord("I"), QWord("mango"),
-      QWord("not"), QWord("great"))))
-    val table = buildTable(Seq("like", "hate", ".*", "not"), Seq("mango", "I"))
-    val expectedResults = Seq("I", "mango", "I", "not")
+    val startingQuery = QueryLanguage.parse("({I, hate, it}) . ({great, mango, bananas})").get
+    val table = Table(
+      "test",
+      Seq("col1", "col2"),
+      Seq(
+        TableRow(Seq(TableValue(Seq(QWord("I"))), TableValue(Seq(QWord("mango"))))),
+        TableRow(Seq(TableValue(Seq(QWord("hate"))), TableValue(Seq(QWord("those")))))
+      ),
+      Seq(
+        TableRow(Seq(TableValue(Seq(QWord("it"))), TableValue(Seq(QWord("great"))))),
+        TableRow(Seq(TableValue(Seq(QWord("I"))), TableValue(Seq(QWord("bananas")))))
+      )
+    )
 
-    assertResult(expectedResults)(hitsToStrings(MatchesSampler().getLabelledSample(
+    val expectedResults = Seq(
+      Seq("I", "mango"),
+      Seq("It", "great")
+    )
+    assertResult(expectedResults)(hitToAllCaptures(MatchesSampler().getLabelledSample(
       startingQuery, searcher, table
     )))
   }
