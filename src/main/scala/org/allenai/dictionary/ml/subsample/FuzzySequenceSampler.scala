@@ -49,7 +49,7 @@ case class FuzzySequenceSampler(minEdits: Int, maxEdits: Int)
     val sequenceQuery = buildFuzzySequenceQuery(tokenizedQuery, searcher)
     val labelledSpans = searcher.createSpanQuery(
       BlackLabSemantics.blackLabQuery(
-        Sampler.getLabelledExampleQuery(qexpr, table)
+        Sampler.getLabelledExampleQuery(tokenizedQuery, table)
       )
     )
     searcher.find(new SpanQueryAnd(sequenceQuery, labelledSpans))

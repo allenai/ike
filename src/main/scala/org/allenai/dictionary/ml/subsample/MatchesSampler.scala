@@ -1,5 +1,7 @@
 package org.allenai.dictionary.ml.subsample
 
+import org.allenai.dictionary.ml.TokenizedQuery
+
 import nl.inl.blacklab.search.{ Hits, Searcher }
 import org.allenai.common.Logging
 import org.allenai.dictionary._
@@ -13,7 +15,7 @@ case class MatchesSampler() extends Sampler() with Logging {
   }
 
   override def getLabelledSample(qexpr: QExpr, searcher: Searcher, table: Table): Hits = {
-    val limitedQuery = Sampler.limitQueryToTable(qexpr, table)
+    val limitedQuery = Sampler.limitQueryToTable(TokenizedQuery.buildFromQuery(qexpr), table)
     searcher.find(BlackLabSemantics.blackLabQuery(limitedQuery))
   }
 }
