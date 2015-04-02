@@ -63,7 +63,7 @@ var SuggestQueryButton = React.createClass({
         narrow: this.state.narrow,
         config: requestConfig
       }),
-      uri: '/api/suggestQuery',
+      uri: 'api/suggestQuery',
       method: 'POST',
       headers: {'Content-Type': 'application/json'}
     };
@@ -100,6 +100,7 @@ var SuggestQueryButton = React.createClass({
         <ButtonGroup>
           <DropdownButton
             style={{fontSize: 'small'}}
+            pullRight
             title="Suggestions">
               {this.state.suggestions.map(this.createMenuItem)}
           </DropdownButton>
