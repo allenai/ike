@@ -1,6 +1,6 @@
 package org.allenai.dictionary.index
 
-import java.net.{ URI, URL }
+import java.net.URI
 import java.nio.file.{ Files, Paths }
 
 import nl.inl.blacklab.index.Indexer
@@ -57,14 +57,14 @@ object CreateIndex extends App {
     var numAdded = 0
     val idTexts = options.textSource.getScheme match {
       case "file" => {
-        val path = Paths.get(options.clusters)
+        val path = Paths.get(options.textSource)
         if (Files.isDirectory(path))
           IdText.fromDirectory(path.toFile)
         else
           IdText.fromFlatFile(path.toFile)
       }
       case "datastore" => {
-        val locator = Datastore.locatorFromUrl(options.clusters)
+        val locator = Datastore.locatorFromUrl(options.textSource)
         if (locator.directory)
           IdText.fromDirectory(locator.path.toFile)
         else
