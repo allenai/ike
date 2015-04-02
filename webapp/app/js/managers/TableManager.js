@@ -176,11 +176,13 @@ TableManager = {
       this.addRow(tableName, rowType, row);
     }
   },
+
   labeledRowStrings: function(table, rowType) {
     var appendLabelToRow = function(row) {
       var values = row.values;
       var strings = values.map(this.valueString);
       strings.push(rowType);
+      strings.push(JSON.stringify(row.provenance));
       return strings;
     }.bind(this);
     return table[rowType].map(appendLabelToRow);
@@ -194,10 +196,11 @@ TableManager = {
     // Add a header row with column names.
     var headerRow = table.cols.slice(0);
     headerRow.push('label');
+    headerRow.push('provenance');
     allRows.unshift(headerRow);
     // Return as a string.
     return allRows.map(function(row) {
-      return row.join(",");
+      return row.join("\t");
     }).join("\n");
   },
 };

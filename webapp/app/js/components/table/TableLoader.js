@@ -47,7 +47,7 @@ var TableLoader = React.createClass({
       var trimAll = function(strings) { return strings.map(function(s) { return s.trim(); }) };
       var nonemptyLine = function(line) { return line.trim().length != 0 };
       var lines = text.split('\n').filter(nonemptyLine).map(function(line) {
-        return trimAll(line.split(','));
+        return trimAll(line.split('\t'));
       });
 
       // read the headers
@@ -56,38 +56,65 @@ var TableLoader = React.createClass({
         return;
       };
       var headers = lines[0]
-      if(headers[headers.length - 1] != "label") {
+      if(headers[headers.length - 2] != "label") {
         self.setState({error: "Input file has no label column."});
         return;
       };
-      var newCols = headers.slice(0, headers.length - 1);
+      if(headers[headers.length - 1] != "provenance") {
+        self.setState({error: "Input file has no provenance column."});
+        return;
+      };
+      var newCols = headers.slice(0, headers.length - 2);
 
       // read the body
       var body = lines.slice(1);
-      var errorLines = body.filter(function(line) { return line.length != headers.length });
+      var errorLines = body.filter(function(line) { return line.length != headers.length; });
       if(errorLines.length != 0) {
         self.setState({error: "Input file has a line with an invalid number of columns: " + errorLines[0]});
         return;
       };
 
-      var newPositive = body.filter(function(line) {
-        return line[line.length - 1] == "positive";
-      }).map(function(line) {
-        return line.slice(0, line.length - 1);
-      });
+      // make strings into rows
+      var makeRow = function(line) {
+        var result = TableManager.stringsRow(line.slice(0, line.length - 2));
 
-      var newNegative = body.filter(function(line) {
-        return line[line.length - 1] == "negative";
-      }).map(function(line) {
-        return line.slice(0, line.length - 1);
-      });
+        var provenanceJson = line[line.length - 1];
+        result.provenance = {};
+        if(provenanceJson) {
+          try {
+            result.provenance = JSON.parse(provenanceJson);
+          } catch(e) {
+            throw {
+              "message": "JSON error",
+              "json": provenanceJson,
+              "inner": e
+            };
+          };
+        };
+        return result;
+      };
 
-      var makeQWords = function(ws) { return TableManager.stringsRow(ws); }
+      var filterLabel = function(label) {
+        return function(line) {
+          return line[line.length - 2] === label;
+        };
+      };
+      try {
+        var newPositive = body.filter(filterLabel("positive")).map(makeRow);
+        var newNegative = body.filter(filterLabel("negative")).map(makeRow);
+      } catch(e) {
+        if(e.message === "JSON error") {
+          self.setState({error: "JSON error on line '" + e.json + "'"});
+          return;
+        } else {
+          throw e;
+        }
+      };
 
       self.setState({
         cols: newCols,
-        positive: newPositive.map(makeQWords),
-        negative: newNegative.map(makeQWords),
+        positive: newPositive,
+        negative: newNegative,
         error: ''
       });
     }
