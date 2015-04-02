@@ -75,7 +75,7 @@ class SpanQueryFuzzySequence(
           val matchAll = SpanQueryNot.matchAllTokens(ignoreLastToken, s.getField)
           // Sorry about this, SpanQueryNot does not implement equals as expected,
           // nor does it expose the number of clauses it contains so
-          // so we are left with this hack to check if s matches all tokens
+          // so we are left with this hack to check if it matches all tokens
           matchAll.toString.equals(s.toString())
         case _ => false
       }
