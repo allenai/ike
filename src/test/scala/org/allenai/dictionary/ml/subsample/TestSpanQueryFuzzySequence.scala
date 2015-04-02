@@ -52,7 +52,7 @@ class TestSpanQueryFuzzySequence extends UnitSpec with ScratchDirectory {
     }
   }
 
-  def getNoisySeqQueryCaptures(searcher: Searcher, seq: Seq[QExpr],
+  def getFuzzySeqCaptureGroups(searcher: Searcher, seq: Seq[QExpr],
     min: Int, max: Int, captures: Seq[CaptureSpan],
     captureEdits: Boolean = false): Seq[Seq[String]] = {
     val spanQueries = seq.map(x => searcher.
@@ -76,7 +76,7 @@ class TestSpanQueryFuzzySequence extends UnitSpec with ScratchDirectory {
       Seq("I", "like mango", "I like mango"),
       Seq("I", "hate those", "I hate those")
     )) {
-      getNoisySeqQueryCaptures(searcher, Seq(QWord("I"), QWord("hate"), QWord("mango")),
+      getFuzzySeqCaptureGroups(searcher, Seq(QWord("I"), QWord("hate"), QWord("mango")),
         2, 2, Seq(CaptureSpan("1", 0, 1), CaptureSpan("2", 1, 3), CaptureSpan("3", 0, 3)))
     }
   }
@@ -86,7 +86,7 @@ class TestSpanQueryFuzzySequence extends UnitSpec with ScratchDirectory {
       Seq("I"), // No Misses
       Seq("I", "those") // Miss 'those'
     )) {
-      getNoisySeqQueryCaptures(
+      getFuzzySeqCaptureGroups(
         searcher,
         Seq(
           QWord("I"),

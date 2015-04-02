@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.compoundops
 
 import org.allenai.dictionary._
-import org.allenai.dictionary.ml.TokenizedQuery
+import org.allenai.dictionary.ml.{CaptureSequence, TokenizedQuery}
 import org.allenai.dictionary.ml.primitveops._
 
 import scala.collection.immutable.IntMap
@@ -82,20 +82,45 @@ object CompoundQueryOp {
           case _ => None
         }
     }
-    val newSeq =
+
+    var newSeq =
       // Build new capture group by taking new token if any exist
       // otherwise using the previous tokens
       query.getSeq.zipWithIndex.map {
         case (qexpr, i) => captureOps.getOrElse(i + 1, qexpr)
       }
 
-    val (newLeft, rest) = newSeq.splitAt(query.left.size)
-    val (replaceCapture, newRight) = rest.splitAt(query.capture.size)
-    TokenizedQuery(
-      prefixSeq ++ newLeft,
-      replaceCapture,
-      newRight ++ suffixSeq
-    )
+    // Split up our new token sequence into capture and non capture groups, this is
+    // done by consuming tokens from our sequence in the same sizes as the old query
+    var onCapture = false
+    var captures = List[CaptureSequence]()
+    var nonCaptures = List[Seq[QExpr]]()
+    var onIndex = 0
+    var done = false
+    while (!done) {
+      if (onCapture) {
+        val chunkSize = query.captures(onIndex).seq.size
+        val (newCaptureSeq, nextSeq) = newSeq.splitAt(chunkSize)
+        newSeq = nextSeq
+        val newCapture = CaptureSequence(newCaptureSeq, query.captures(onIndex).columnName)
+        captures = newCapture :: captures
+        onIndex += 1
+      } else {
+        val chunkSize = query.nonCaptures(onIndex).size
+        val (newPad, nextSeq) = newSeq.splitAt(chunkSize)
+        newSeq = nextSeq
+        nonCaptures = newPad :: nonCaptures
+        if (onIndex == query.nonCaptures.size - 1) {
+          done = true
+        }
+      }
+      onCapture = !onCapture
+    }
+    nonCaptures = nonCaptures.reverse
+    captures = captures.reverse
+    nonCaptures = nonCaptures.updated(0, prefixSeq ++ nonCaptures.head)
+    nonCaptures = nonCaptures.updated(nonCaptures.size - 1, nonCaptures.last ++ suffixSeq)
+    TokenizedQuery(captures, nonCaptures)
   }
 }
 
@@ -124,21 +149,25 @@ abstract class CompoundQueryOp(
   }
 
   override def toString: String = {
-    if (ops.size == 0) "<>" else {
+    if (ops.size == 0) {
+      "<>"
+    } else {
       val maxReplace = (1 +: ops.flatMap(op => op.slot match {
         case Match(token) => Some(token)
         case _ => None
       }).toSeq).max
-
-      val fakeQexpr = QSeq(Range(0, maxReplace).map(_ => QWildcard()))
-      val modified = applyOps(TokenizedQuery.buildFromQuery(QUnnamed(fakeQexpr)))
+      val fakeQExpr = QSeq(Range(0, maxReplace).map(_ => QWildcard()))
+      val modified = applyOps(TokenizedQuery.buildFromQuery(
+        QueryLanguage.nameCaptureGroups(
+          QUnnamed(fakeQExpr),
+          Seq("C")
+        )
+      ))
       "<" + QueryLanguage.getQueryString(modified.getQuery) + ">"
     }
   }
 
-  def toString(qexpr: QExpr): String = {
-    "<" + QueryLanguage.getQueryString(applyOps(
-      TokenizedQuery.buildFromQuery(qexpr)
-    ).getQuery) + ">"
+  def toString(query: TokenizedQuery): String = {
+    "<" + QueryLanguage.getQueryString(applyOps(query).getQuery) + ">"
   }
 }

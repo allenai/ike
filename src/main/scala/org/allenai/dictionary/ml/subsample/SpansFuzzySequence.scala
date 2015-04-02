@@ -85,7 +85,7 @@ class SpansFuzzySequence(
       ignoreLastToken, sequencesToCapture, false)
   }
 
-  // Until isInitialized() is called we cannot reliable know the length
+  // Until isInitialized() is called we cannot reliably know the length
   // of child clauses, so the rest of our validation is deferred until then.
   require(minMatches > 0)
 
@@ -167,8 +167,7 @@ class SpansFuzzySequence(
     more
   }
 
-  /*
-   * Initialize this by calling next() and assigning aliveClauses, deadClauses, currentMatch
+  /* Initialize this by calling next() and assigning aliveClauses, deadClauses, currentMatch
    * and hitLength to initial values. Does NOT make this is on a valid match.
    */
   private def initialize(): Boolean = {
@@ -252,8 +251,7 @@ class SpansFuzzySequence(
     } else { setCurrentMatch(); true }
   }
 
-  /*
-   * Ensures this is on a valid match, advancing clauses if needed.
+  /* Ensures this is on a valid match, advancing clauses if needed.
    * Returns true there are no more valid matches ot get.
    */
   private def moveToValidMatch(): Boolean = {

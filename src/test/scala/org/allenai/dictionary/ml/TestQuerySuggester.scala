@@ -51,7 +51,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val scoredQueries = QuerySuggester.selectOperator(
       data, PositiveMinusNegative(examples, 1),
       (x: EvaluatedOp) => OpConjunction.apply(x),
-      3, 2, 3
+      3, 2
     )
 
     // Best Results is ANDing op1 and op2
@@ -82,7 +82,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val scoredQueries = QuerySuggester.selectOperator(
       data, PositiveMinusNegative(examples, 2),
       (x: EvaluatedOp) => OpConjunctionOfDisjunctions(x),
-      20, 4, 2
+      20, 4
     )
 
     // Best answer is (op2 OR op3) AND op4
@@ -104,7 +104,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val negativeTerms = Set("mango").map(x => TableRow(Seq(TableValue(Seq(QWord(x))))))
     val generator = PrefixOpGenerator(QLeafGenerator(Set(), Set(2)), Seq(1))
     val hitAnalysis = QuerySuggester.buildHitAnalysis(
-      hits, Seq(generator), positiveTerms, negativeTerms
+      hits, Seq(generator), positiveTerms, negativeTerms, captureIndices = Seq(0)
     )
 
     assertResult(Example(Negative, 0, "mango"))(hitAnalysis.examples(0))
