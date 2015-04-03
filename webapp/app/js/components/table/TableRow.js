@@ -2,6 +2,7 @@ var React = require('react');
 var bs = require('react-bootstrap');
 var TableManager = require('../../managers/TableManager.js');
 var DeleteButton = require('../misc/DeleteButton.js');
+var ProvenanceButton = require('../misc/ProvenanceButton.js');
 var TableRow = React.createClass({
   valueCell: function(value, i) {
     var valueString = TableManager.valueString(value);
@@ -21,7 +22,8 @@ var TableRow = React.createClass({
     var rowData = this.props.row;
     var values = rowData.values;
     var cells = values.map(this.valueCell);
-    var row = <tr><td>{this.deleteButton()}</td>{cells}</tr>;
+    var provenance = <ProvenanceButton provenance={this.props.row.provenance}/>;
+    var row = <tr><td>{this.deleteButton()}</td>{cells}<td>{provenance}</td></tr>;
     return row;
   }
 });
