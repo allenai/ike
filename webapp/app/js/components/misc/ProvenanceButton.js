@@ -5,6 +5,7 @@ var Glyphicon = bs.Glyphicon;
 var Popover = bs.Popover;
 var OverlayTrigger = bs.OverlayTrigger;
 var ProvenanceButton = React.createClass({
+
   render: function() {
     var provenance = this.props.provenance;
 
@@ -29,7 +30,7 @@ var ProvenanceButton = React.createClass({
       </tr>
     </table></Popover>;
 
-    return <OverlayTrigger trigger='click' placement='left' overlay={overlay}>
+    return <OverlayTrigger trigger='focus' placement='left' overlay={overlay}>
         <Button bsSize="xsmall">
           <Glyphicon glyph="paperclip"/>
         </Button>
