@@ -14,10 +14,14 @@ var ProvenanceButton = React.createClass({
       query = provenance.query;
 
     var examples = [];
-    if (provenance && provenance.context)
-      examples = provenance.context.map(function(c, i) {
+    if (provenance && provenance.context) {
+      var firstFive = provenance.context.slice(0, 5);
+      examples = firstFive.map(function(c, i) {
         return <p key={i}>... {c.fragment} ...</p>;
       });
+      if(provenance.context.length > 5)
+        examples.push(<p key="-1"><em>To examine more examples, download the table.</em></p>);
+    }
 
     var cellStyle = { "padding": "5px", "verticalAlign": "top" };
     var overlay = <Popover title='Provenance'><table>
