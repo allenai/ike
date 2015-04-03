@@ -1,6 +1,10 @@
 dictionary-builder
 ==================
 
+## Resources
+* [Planning Document](https://docs.google.com/a/allenai.org/document/d/1DXx43Nrk-05ynk3KQm6_S6s3bQG15lf9dBEbTcKr24Y/edit#)
+* [Live Demo](http://okcorpus.dev.allenai.org/)
+
 ## Run Locally
 
 1. Run `sbt`
