@@ -14,3 +14,5 @@ script:
 after_script:
   - mkdir -p shippable/testresults
   - cp tools/*/target/test-reports/*.xml shippable/testresults
+after_success:
+  - sbt "deploy prod"
