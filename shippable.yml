@@ -1,0 +1,13 @@
+language: scala
+scala:
+- 2.11.5
+jdk:
+- openjdk7
+cache:
+  directories:
+  - $HOME/.ivy2/cache
+script:
+  - sbt -J-Xmx6G test
+after_script:
+  - mkdir -p shippable/testresults
+  - cp tools/*/target/test-reports/*.xml shippable/testresults
