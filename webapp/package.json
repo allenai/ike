@@ -5,29 +5,17 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 0",
-    "build": "gulp build"
+    "build": "gulp build",
+    "watch": "gulp watch"
   },
   "author": "tonyf",
   "license": "ISC",
   "devDependencies": {
-    "bootstrap": "^3.3.2",
-    "gulp": "^3.8.10",
-    "gulp-browserify": "^0.5.1",
-    "gulp-util": "^3.0.2",
-    "react": "^0.12.2",
-    "react-bootstrap": "^0.13.3",
-    "reactify": "^1.0.0",
-    "syrup": "0.0.16",
-    "xhr": "^2.0.1"
-  },
-  "browserify": {
-    "transform": [
-      [
-        "reactify",
-        {
-          "es6": true
-        }
-      ]
-    ]
+    "bootstrap": "3.3.2",
+    "gulp": "3.8.10",
+    "react": "0.12.2",
+    "react-bootstrap": "0.13.3",
+    "syrup": "0.1.4",
+    "xhr": "2.0.1"
   }
 }
