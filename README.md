@@ -12,8 +12,11 @@ OkCorpus
 
 The webapp will download several large files from the datastore upon first request.
 
-## Deploy 
-Work in progress
+## Deploy
+1. Get the OkCorpus deployment key. It's in the `ai2-secure` bucket in S3.
+2. Set the `AWS_PEM_FILE` variable to point at the private key file.
+3. If you want to create a new machine, run the script in [`set_up_instance.sh`](scripts/set_up_instance.sh). It will create a new instance in EC2 and set it up for deployment. If you want to deploy to the existing machine, skip this step.
+4. Run `sbt "deploy prod"`.
 
 ## Creating an index
 To create an index, you need the source text either as a directory of text files, or as one file with one document per line. Once you have that, run this in `sbt`:
