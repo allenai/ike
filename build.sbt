@@ -22,8 +22,10 @@ libraryDependencies ++= Seq(
     lucene("highlighter"),
     lucene("queries"),
     lucene("queryparser"),
-    "nl.inl" %% "blacklab" % "1.0-ALLENAI-2"
-)
+    "nl.inl" %% "blacklab" % "1.0-ALLENAI-2",
+    scopt)
+
+javaOptions in Revolver.reStart += "-Xmx6G"
 
 mainClass in Revolver.reStart := Some("org.allenai.dictionary.DictionaryToolWebapp")
 
