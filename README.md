@@ -14,3 +14,27 @@ The webapp will download several large files from the datastore upon first reque
 
 ## Deploy 
 Work in progress
+
+## Creating an index
+To create an index, you need the source text either as a directory of text files, or as one file with one document per line. Once you have that, run this in `sbt`:
+```
+runMain org.allenai.dictionary.index.CreateIndex --help
+```
+At the time of writing, this prints
+```
+Usage: CreateIndex [options]
+ -d <value> | --destination <value>
+       Directory to create the index in
+ -b <value> | --batchSize <value>
+       Batch size
+ -c <value> | --clusters <value>
+       URL of a file to load clusters from
+ -t <value> | --textSource <value>
+       URL of a file or directory to load the text from
+ --help
+```
+The URLs for both clusters and corpora can be either file URLs or datastore URLs. A datastore URL looks like this: `datastore://{public|private}/<group>/<name>-v<version>.<ext>` for files, and `datastore://{public|private}/<group>/<name>-d<version>` for directories.
+
+For clusters, I recommend using clusters from the private datastore, in any of the `org.allenai.brownclusters.*` groups. The most common one is `datastore://private/org.allenai.brownclusters.acl/c500-v1`.
+
+When you have created the index, you can use it by modifying [`application.conf`](src/main/resources/application.conf) and restarting.
