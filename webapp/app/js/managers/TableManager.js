@@ -1,7 +1,8 @@
 var tables = {};
 var listeners = [];
 var rowIndex = {};
-TableManager = {
+
+var TableManager = {
   hasTablesInLocalStorage: function() {
     return ('tables' in localStorage);
   },
