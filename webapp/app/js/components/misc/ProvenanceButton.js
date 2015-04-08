@@ -2,43 +2,50 @@ var React = require('react/addons');
 var bs = require('react-bootstrap');
 var Button = bs.Button;
 var Glyphicon = bs.Glyphicon;
-var Popover = bs.Popover;
-var OverlayTrigger = bs.OverlayTrigger;
+var Modal = bs.Modal;
+var ModalTrigger = bs.ModalTrigger;
+var TableManager = require('../../managers/TableManager.js');
+
 var ProvenanceButton = React.createClass({
-
   render: function() {
+    var rowvalues = this.props.rowvalues.map(TableManager.valueString)
+
+    var title = "Provenance for (" + rowvalues.join(", ") + ")"
+
     var provenance = this.props.provenance;
+    if(provenance) {
+      var query = query = provenance.query;
 
-    var query = "";
-    if (provenance)
-      query = provenance.query;
+      var examples = [];
+      if (provenance.context) {
+        examples = provenance.context.map(function(c, i) {
+          return <p key={i}>... {c.fragment} ...</p>;
+        });
+      }
 
-    var examples = [];
-    if (provenance && provenance.context) {
-      var firstFive = provenance.context.slice(0, 5);
-      examples = firstFive.map(function(c, i) {
-        return <p key={i}>... {c.fragment} ...</p>;
-      });
-      if(provenance.context.length > 5)
-        examples.push(<p key="-1"><em>To examine more examples, download the table.</em></p>);
-    }
+      var cellStyle = { "padding": "5px", "verticalAlign": "top" };
+      var overlay = <Modal title={title}>
+        <div className='modal-body'><table>
+        <tr>
+          <th style={cellStyle}>Query:</th>
+          <td style={cellStyle}>{query}</td>
+        </tr><tr>
+          <th style={cellStyle}>Examples:</th>
+          <td style={cellStyle}>{examples}</td>
+        </tr>
+        </table></div>
+      </Modal>;
 
-    var cellStyle = { "padding": "5px", "verticalAlign": "top" };
-    var overlay = <Popover title='Provenance'><table>
-      <tr>
-        <th style={cellStyle}>Query:</th>
-        <td style={cellStyle}>{query}</td>
-      </tr><tr>
-        <th style={cellStyle}>Examples:</th>
-        <td style={cellStyle}>{examples}</td>
-      </tr>
-    </table></Popover>;
-
-    return <OverlayTrigger trigger='focus' placement='left' overlay={overlay}>
+      return <ModalTrigger trigger='click' modal={overlay}>
         <Button bsSize="xsmall">
           <Glyphicon glyph="paperclip"/>
         </Button>
-      </OverlayTrigger>;
+      </ModalTrigger>;
+    } else {
+      return <Button bsSize="xsmall" disabled>
+        <Glyphicon glyph="paperclip"/>
+      </Button>
+    }
   }
 });
 module.exports = ProvenanceButton;

@@ -22,7 +22,7 @@ var TableRow = React.createClass({
     var rowData = this.props.row;
     var values = rowData.values;
     var cells = values.map(this.valueCell);
-    var provenance = <ProvenanceButton provenance={this.props.row.provenance}/>;
+    var provenance = <ProvenanceButton provenance={this.props.row.provenance} rowvalues={values}/>;
     var row = <tr><td>{this.deleteButton()}</td>{cells}<td>{provenance}</td></tr>;
     return row;
   }
