@@ -10,7 +10,11 @@ var ProvenanceButton = React.createClass({
   render: function() {
     var rowvalues = this.props.rowvalues.map(TableManager.valueString)
 
-    var title = "Provenance for (" + rowvalues.join(", ") + ")"
+    var title;
+    if (rowvalues.length == 1)
+      title = "Provenance for " + rowvalues[0]
+    else
+      title = "Provenance for (" + rowvalues.join(", ") + ")"
 
     var provenance = this.props.provenance;
     if(provenance) {
