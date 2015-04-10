@@ -23,7 +23,14 @@ var ProvenanceButton = React.createClass({
       var examples = [];
       if (provenance.context) {
         examples = provenance.context.map(function(c, i) {
-          return <p key={i}>... {c.fragment} ...</p>;
+          var tags = c.words.map(function(word, j) {
+            if(rowvalues.indexOf(word.word) >= 0) {
+              return <strong key={j} title={word.attributes.pos}>{word.word} </strong>
+            } else {
+              return <span key={j} title={word.attributes.pos}>{word.word} </span>
+            }
+          });
+          return <p key={i}>{tags}</p>;
         });
       }
 
