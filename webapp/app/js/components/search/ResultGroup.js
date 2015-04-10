@@ -6,10 +6,11 @@ var ResultGroup = React.createClass({
   addCol: function() {
     var target = this.props.target;
     var group = this.props.group;
+    var query = this.props.query;
     if (target.value == null) { 
       return null
     } else {
-      return <td><AddResultButton group={group} target={target}/></td>;
+      return <td><AddResultButton group={group} target={target} query={query}/></td>;
     }
   },
   keyCols: function() {

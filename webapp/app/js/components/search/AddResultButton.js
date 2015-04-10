@@ -8,7 +8,19 @@ var AddResultButton = React.createClass({
   row: function() {
     var group = this.props.group;
     var values = group.keys;
-    return TableManager.stringsRow(values);
+
+    var provenance = {
+      "query": this.props.query.value,
+      "context": group.results.map(function(resultObject) {
+        var words = resultObject.result.wordData;
+        var fragment = words.map(function(word) { return word.word; }).join(" ");
+        return {"fragment": fragment, "words": words};
+      })
+    };
+
+    var row = TableManager.stringsRow(values);
+    row.provenance = provenance
+    return row
   },
   isType: function(type) {
     var target = this.props.target.value;
