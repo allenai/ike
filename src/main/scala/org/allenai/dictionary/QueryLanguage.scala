@@ -148,7 +148,7 @@ object QueryLanguage {
 
   /** @param qexpr query to evaluate
     * @return number of tokens the query will match, or -1 if the query
-    *        can match a variable number of tokens'
+    *       can match a variable number of tokens'
     */
   def getQueryLength(qexpr: QExpr): Int = qexpr match {
     case QDict(_) => -1
@@ -173,12 +173,12 @@ object QueryLanguage {
     *
     * @param qexpr Query expression to name capture groups within
     * @param tableCols Sequence of the columns in a table to be used to name unnamed capture
-    *                  groups
+    *                 groups
     * @throws IllegalArgumentException if QExpr contains a mix of named and unnamed capture groups,
-    *                                  if the name capture group do not have names corresponding
-    *                                  to the columns in tableCols, or if the query has the wrong
-    *                                  number of capture groups.
-   */
+    *                                 if the name capture group do not have names corresponding
+    *                                 to the columns in tableCols, or if the query has the wrong
+    *                                 number of capture groups.
+    */
   def nameCaptureGroups(qexpr: QExpr, tableCols: Seq[String]): QExpr = {
     var unnamedCounts = 0
     def recurse(qexpr: QExpr): QExpr = qexpr match {

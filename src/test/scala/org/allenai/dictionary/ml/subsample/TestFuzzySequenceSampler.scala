@@ -1,6 +1,6 @@
 package org.allenai.dictionary.ml.subsample
 
-import org.allenai.common.testkit.{ScratchDirectory, UnitSpec}
+import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary._
 import org.allenai.dictionary.index.TestData
 import nl.inl.blacklab.search.Hits
@@ -22,7 +22,7 @@ class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
   }
 
   def hitsToStrings(hits: Hits): Seq[String] = {
-    hits.asScala.map( hit => {
+    hits.asScala.map(hit => {
       hits.getKwic(hit).getMatch("word").asScala.mkString(" ")
     }).toSeq
   }

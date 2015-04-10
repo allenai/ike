@@ -9,7 +9,7 @@ import nl.inl.blacklab.search.{ Hits, Hit }
   * @param setToken used to generate SetToken ops
   * @param addToken used to generate AddToken ops
   * @param captureIndices the indices to find the capture groups where the
-  *                     required edits have been (see FuzzySequenceQuery)
+  *                    required edits have been (see FuzzySequenceQuery)
   */
 case class RequiredEditsGenerator(
   setToken: QLeafGenerator,

@@ -37,7 +37,7 @@ class TestMatchesSampler extends UnitSpec with ScratchDirectory {
 
   "MatchesSampler" should "test correctly" in {
     val startingQuery = QueryLanguage.parse("(?<col1> {I, hate, it}) . " +
-        "(?<col2> {great, mango, bananas}) .").get
+      "(?<col2> {great, mango, bananas}) .").get
     val table = Table(
       "test",
       Seq("col1", "col2"),

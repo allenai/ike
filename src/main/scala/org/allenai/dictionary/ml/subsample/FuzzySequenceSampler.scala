@@ -44,8 +44,10 @@ case class FuzzySequenceSampler(minEdits: Int, maxEdits: Int)
   }
 
   override def getLabelledSample(qexpr: QExpr, searcher: Searcher, table: Table): Hits = {
-    val tokenizedQuery = TokenizedQuery.buildFromQuery(QueryLanguage.nameCaptureGroups(qexpr,
-      table.cols))
+    val tokenizedQuery = TokenizedQuery.buildFromQuery(QueryLanguage.nameCaptureGroups(
+      qexpr,
+      table.cols
+    ))
     val sequenceQuery = buildFuzzySequenceQuery(tokenizedQuery, searcher)
     val labelledSpans = searcher.createSpanQuery(
       BlackLabSemantics.blackLabQuery(
