@@ -35,7 +35,7 @@ object ReplaceTokenGenerator {
 /** Generates SetToken operations for tokens within a hit.
   *
   * @param targets list of indices inside the hit to generate
-  *              operators for, paired with the QLeafGenerator to use.
+  *             operators for, paired with the QLeafGenerator to use.
   */
 case class ReplaceTokenGenerator(targets: Seq[(Int, QLeafGenerator)])
     extends TokenQueryOpGenerator {

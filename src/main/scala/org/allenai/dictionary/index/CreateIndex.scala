@@ -14,7 +14,7 @@ object CreateIndex extends App {
   def addTo(indexer: Indexer)(text: IndexableText): Unit = {
     val xml = XmlSerialization.xml(text)
     val id = text.idText.id
-    indexer.index(id, new StringReader(xml.toString))
+    indexer.index(id, new StringReader(xml.toString()))
   }
 
   case class Options(
@@ -56,20 +56,20 @@ object CreateIndex extends App {
     val clusters = Clusters.fromFile(clusterFile)
     var numAdded = 0
     val idTexts = options.textSource.getScheme match {
-      case "file" => {
+      case "file" =>
         val path = Paths.get(options.textSource)
-        if (Files.isDirectory(path))
+        if (Files.isDirectory(path)) {
           IdText.fromDirectory(path.toFile)
-        else
+        } else {
           IdText.fromFlatFile(path.toFile)
-      }
-      case "datastore" => {
+        }
+      case "datastore" =>
         val locator = Datastore.locatorFromUrl(options.textSource)
-        if (locator.directory)
+        if (locator.directory) {
           IdText.fromDirectory(locator.path.toFile)
-        else
+        } else {
           IdText.fromFlatFile(locator.path.toFile)
-      }
+        }
       case otherAuthority =>
         throw new RuntimeException(s"URL scheme not supported: $otherAuthority")
     }

@@ -6,9 +6,9 @@ import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
 
 /** Stub Spans class for testing
- */
+  */
 case class SpansStub(
-  private val docs: IndexedSeq[Int],
+    private val docs: IndexedSeq[Int],
     private val starts: IndexedSeq[Int],
     private val ends: IndexedSeq[Int]
 ) extends BLSpans {

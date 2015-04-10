@@ -25,7 +25,7 @@ class TestRequiredOpsGenerator extends UnitSpec with ScratchDirectory {
     hits.get(0) // Ensure Hits loads up the captureGroupNames by requesting the first hit
     val captureGroups = hits.getCapturedGroupNames
     val captureIndices = SpansFuzzySequence.getMissesCaptureGroupNames(3).
-        map(x => captureGroups.indexOf(x))
+      map(x => captureGroups.indexOf(x))
     val generator = RequiredEditsGenerator(
       QLeafGenerator(Set("pos")),
       QLeafGenerator(Set()),

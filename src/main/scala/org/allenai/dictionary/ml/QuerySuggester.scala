@@ -22,8 +22,8 @@ import Label._
   *
   * @param label Label of the sentence
   * @param requiredEdits The 'edit distance' from our current query to a query that would match this
-  *                    example. Hence the number of operators we will need to apply to the
-  *                    starting query if we want it to match this sentence
+  *                   example. Hence the number of operators we will need to apply to the
+  *                   starting query if we want it to match this sentence
   * @param str The sentence, stored for logging / debugging purposes
   */
 case class Example(label: Label, requiredEdits: Int, str: String)
@@ -37,14 +37,14 @@ object QuerySuggester extends Logging {
     * sentence in the subsample and which sentences each primitive operation applies to.
     *
     * @param operatorHits Maps primitive operations to map for (sentence index with in examples ->
-    *                   number of required 'edit' that operator completes for that sentence
-    *                   (can be 0))
+    *                  number of required 'edit' that operator completes for that sentence
+    *                  (can be 0))
     * @param examples List of examples, one for each sentence
     */
   case class HitAnalysis(
-                            operatorHits: Map[TokenQueryOp, IntMap[Int]],
-                            examples: IndexedSeq[Example]
-                            ) {
+      operatorHits: Map[TokenQueryOp, IntMap[Int]],
+      examples: IndexedSeq[Example]
+  ) {
 
     def size: Int = examples.size
 
@@ -57,10 +57,10 @@ object QuerySuggester extends Logging {
       val allOperator = operatorHits.keys.toSet ++ other.operatorHits.keys
       HitAnalysis(
         allOperator.map(x => {
-          val otherHits = other.operatorHits.getOrElse(x, IntMap[Int]())
-          val myHits = operatorHits.getOrElse(x, IntMap[Int]())
-          (x, appendMaps(myHits, otherHits))
-        }).toMap,
+        val otherHits = other.operatorHits.getOrElse(x, IntMap[Int]())
+        val myHits = operatorHits.getOrElse(x, IntMap[Int]())
+        (x, appendMaps(myHits, otherHits))
+      }).toMap,
         examples ++ other.examples
       )
     }
@@ -69,17 +69,19 @@ object QuerySuggester extends Logging {
   /** Builds a HitAnalysis object from a sequence a series of Hits
     *
     * @param hits Hits to build the HitAnalysis object from, it will contain one Example
-    *            for each hit in Hits
+    *           for each hit in Hits
     * @param generators generators to generate primitive operations from
     * @param positiveTerms Positive examples
     * @param negativeTerms Negative examples
     * @return HitAnalysis object for the given Hits object.
     */
-  def buildHitAnalysis(hits: Hits,
-                       generators: Seq[TokenQueryOpGenerator],
-                       positiveTerms: Set[TableRow],
-                       negativeTerms: Set[TableRow],
-                       captureIndices: Seq[Int]): HitAnalysis = {
+  def buildHitAnalysis(
+    hits: Hits,
+    generators: Seq[TokenQueryOpGenerator],
+    positiveTerms: Set[TableRow],
+    negativeTerms: Set[TableRow],
+    captureIndices: Seq[Int]
+  ): HitAnalysis = {
     val positiveStrings = positiveTerms.map(_.values.map(_.qwords.map(_.value)))
     val negativeStrings = negativeTerms.map(_.values.map(_.qwords.map(_.value)))
     val operatorMap = scala.collection.mutable.Map[TokenQueryOp, List[(Int, Int)]]()
@@ -106,10 +108,11 @@ object QuerySuggester extends Logging {
 
           val shift = hit.start - kwic.getHitStart
           val capturedStrings = captureSpans.map {
-            captureSpan => kwic.getTokens("word").subList(
-              captureSpan.start - shift,
-              captureSpan.end - shift
-            ).asScala.map(_.toLowerCase)
+            captureSpan =>
+              kwic.getTokens("word").subList(
+                captureSpan.start - shift,
+                captureSpan.end - shift
+              ).asScala.map(_.toLowerCase)
           }
           val label = if (positiveStrings contains capturedStrings) {
             Positive
@@ -139,15 +142,17 @@ object QuerySuggester extends Logging {
     * @param opBuilder Builder function for CompoundQueryOps
     * @param beamSize Size of the beam to use in the search
     * @param depth Depth to run the search to, corresponds the to maximum size
-    *            of a CompoundQueryOp that can be proposed
+    *           of a CompoundQueryOp that can be proposed
     * @return Sequence of CompoundQueryOps, together with their score and a string
-    *       message about some statistics about that op of at most beamSize size
+    *      message about some statistics about that op of at most beamSize size
     */
-  def selectOperator(hitAnalysis: HitAnalysis,
-                     evaluationFunction: QueryEvaluator,
-                     opBuilder: EvaluatedOp => CompoundQueryOp,
-                     beamSize: Int,
-                     depth: Int): Seq[ScoredOps] = {
+  def selectOperator(
+    hitAnalysis: HitAnalysis,
+    evaluationFunction: QueryEvaluator,
+    opBuilder: EvaluatedOp => CompoundQueryOp,
+    beamSize: Int,
+    depth: Int
+  ): Seq[ScoredOps] = {
 
     // Reverse ordering so the smallest scoring operators are at the head
     val priorityQueue = scala.collection.mutable.PriorityQueue()(
@@ -202,25 +207,25 @@ object QuerySuggester extends Logging {
       }.to[Seq].foreach { // iterate over a copy so we do not re-expand nodes
         case (operator, score) =>
           hitAnalysis.operatorHits.
-              // Filter our unusable operators
-              filter { case (newOp, opMatches) => operator.canAdd(newOp) }.
-              // Map the remaining operators to new compound rules
-              foreach {
-            case (newOp, opMatches) =>
-              val newOperator = operator.add(EvaluatedOp(newOp, opMatches))
-              if (!alreadyFound.contains(newOperator)) {
-                val newScore = evaluationFunction.evaluate(newOperator, 1 + i)
-                if (priorityQueue.size < beamSize) {
-                  priorityQueue.enqueue((newOperator, newScore))
-                } else if (newScore > priorityQueue.head._2) {
-                  priorityQueue.dequeue()
-                  priorityQueue.enqueue((newOperator, newScore))
+            // Filter our unusable operators
+            filter { case (newOp, opMatches) => operator.canAdd(newOp) }.
+            // Map the remaining operators to new compound rules
+            foreach {
+              case (newOp, opMatches) =>
+                val newOperator = operator.add(EvaluatedOp(newOp, opMatches))
+                if (!alreadyFound.contains(newOperator)) {
+                  val newScore = evaluationFunction.evaluate(newOperator, 1 + i)
+                  if (priorityQueue.size < beamSize) {
+                    priorityQueue.enqueue((newOperator, newScore))
+                  } else if (newScore > priorityQueue.head._2) {
+                    priorityQueue.dequeue()
+                    priorityQueue.enqueue((newOperator, newScore))
+                  }
+                  alreadyFound.add(newOperator)
                 }
-                alreadyFound.add(newOperator)
-              }
-          }
-        }
+            }
       }
+    }
 
     logger.debug("******* DONE ************")
     printQueue(depth)
@@ -235,17 +240,19 @@ object QuerySuggester extends Logging {
     * @param tables Tables to use when building the query
     * @param target Name of the table to optimize the suggested queries for
     * @param narrow Whether the suggestions should narrow or broaden the starting
-    *             query
+    *            query
     * @param config Configuration details to use when suggesting the new queries
     * @return Suggested queries, along with their scores and a String msg details some
-    *       statistics about each query
+    *      statistics about each query
     */
-  def suggestQuery(searcher: Searcher,
-                   startingQuery: QExpr,
-                   tables: Map[String, Table],
-                   target: String,
-                   narrow: Boolean,
-                   config: SuggestQueryConfig): Seq[ScoredQuery] = {
+  def suggestQuery(
+    searcher: Searcher,
+    startingQuery: QExpr,
+    tables: Map[String, Table],
+    target: String,
+    narrow: Boolean,
+    config: SuggestQueryConfig
+  ): Seq[ScoredQuery] = {
 
     val targetTable = tables.get(target) match {
       case Some(table) => table
@@ -256,7 +263,7 @@ object QuerySuggester extends Logging {
     val tokenizedQuery = TokenizedQuery.buildFromQuery(queryWithNamedCaptures)
 
     logger.info(s"Making ${if (narrow) "narrowing" else "broadening"} " +
-        s"suggestion for <${QueryLanguage.getQueryString(queryWithNamedCaptures)}> for $target")
+      s"suggestion for <${QueryLanguage.getQueryString(queryWithNamedCaptures)}> for $target")
     logger.debug(s"Config: $config")
 
     val positiveTerms = targetTable.positive.toSet
@@ -302,7 +309,7 @@ object QuerySuggester extends Logging {
     logger.debug(s"Retrieving labelled documents...")
     val (labelledHitAnalysis, labelledRetrieveTime) = Timing.time {
       val hits = hitGatherer.getLabelledSample(queryWithNamedCaptures, searcher, targetTable).
-          window(0, config.maxSampleSize)
+        window(0, config.maxSampleSize)
       val analysis = parseHits(hits.window(
         0,
         config.maxSampleSize - (config.maxSampleSize * numUnlabelled).toInt
@@ -332,7 +339,7 @@ object QuerySuggester extends Logging {
     val totalNegativeHits = hitAnalysis.examples.count(x => x.label == Negative)
     logger.debug(s"Done parsing ${hitAnalysis.size} hits")
     logger.debug(s"Found $totalPositiveHits positive " +
-        s"and $totalNegativeHits negative with ${hitAnalysis.operatorHits.size} possible operators")
+      s"and $totalNegativeHits negative with ${hitAnalysis.operatorHits.size} possible operators")
 
     if (totalPositiveHits == 0) {
       logger.debug("Not enough positive hits found")

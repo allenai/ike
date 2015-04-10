@@ -19,33 +19,33 @@ abstract class QueryEvaluator(examples: IndexedSeq[Example]) {
   val unlabelledSize: Double = examples count (_.label == Unlabelled)
 
   /** @return Whether this evaluator makes use of unlabelled examples
-    *       to compute its scoring function
+    *      to compute its scoring function
     */
   def usesUnlabelledData(): Boolean
 
   /** @return Whether this evaluator accounts for the current search depth when computing
-    *       its scoring function.
+    *      its scoring function.
     */
   def usesDepth(): Boolean
 
   /** Returns a score determining the general 'goodness' of a query operation
     *
     * @param op The operation to score, op.numEdits should specify the number of edits that
-    *           operation will make to each sentence in this.examples
+    *          operation will make to each sentence in this.examples
     * @param depth Depth of the current search
     * @return score of the query
     */
   def evaluate(op: CompoundQueryOp, depth: Int): Double
 
   /** @return Returns a message describing how they score for the given operation was
-    *       arrived at. This message might be displayed on the frontend to users.
+    *      arrived at. This message might be displayed on the frontend to users.
     */
   def evaluationMsg(op: CompoundQueryOp, depth: Int): String = {
     evaluate(op, depth).toString
   }
 
   /** @return As evaluationMsg, but may return a more detailed message. This message
-    *       will only be used for debugging
+    *      will only be used for debugging
     */
   def evaluationMsgLong(op: CompoundQueryOp, depth: Int): String = {
     evaluate(op, depth).toString
