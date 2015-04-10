@@ -38,7 +38,7 @@ var SearchInterface = React.createClass({
     var query = this.makeQuery(queryValue);
     return {
       body: JSON.stringify(query),
-      uri: '/api/groupedSearch',
+      uri: 'api/groupedSearch',
       method: 'POST',
       headers: {'Content-Type': 'application/json'}
     };
@@ -132,6 +132,7 @@ var SearchInterface = React.createClass({
       <SearchForm
         handleSubmit={handleSubmit}
         target={target}
+        config={config}
         query={query}/>;
     var queryViewer =
       <QueryViewer

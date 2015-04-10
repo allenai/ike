@@ -3,6 +3,7 @@ package org.allenai.dictionary
 import nl.inl.blacklab.search.Searcher
 import com.typesafe.config.Config
 import nl.inl.blacklab.search.TextPattern
+import org.allenai.common.Logging
 import org.allenai.dictionary.ml.QuerySuggester
 import scala.util.Try
 import nl.inl.blacklab.search.HitsWindow
@@ -21,7 +22,8 @@ case class SearchRequest(query: Either[String, QExpr], target: Option[String],
   tables: Map[String, Table], config: SearchConfig)
 case class SearchResponse(qexpr: QExpr, groups: Seq[GroupedBlackLabResult])
 
-case class SearchApp(config: Config) {
+case class SearchApp(config: Config) extends Logging {
+  logger.debug(s"Building SearchApp for ${config.getString("name")}")
   val indexDir = DataFile.fromConfig(config)
   val searcher = Searcher.open(indexDir)
   def blackLabHits(textPattern: TextPattern, limit: Int): Try[HitsWindow] = Try {
