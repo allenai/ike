@@ -11,7 +11,7 @@ var SubTable = React.createClass({
   thead: function() {
     var cols = this.props.table.cols;
     var cells = cols.map(this.headerCell);
-    return <thead><th></th>{cells}</thead>;
+    return <thead><th></th>{cells}<th></th></thead>;
   },
   row: function(row, i) {
     var rowType = this.props.rowType;

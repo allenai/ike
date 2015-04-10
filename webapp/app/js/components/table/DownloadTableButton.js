@@ -9,12 +9,12 @@ var DownloadTableButton = React.createClass({
     var table = this.props.table;
     var downloadDict = function(e) {
       e.stopPropagation();
-      var csv = TableManager.table2csv(table);
-      var encodedCsv = encodeURIComponent(csv);
+      var tsv = TableManager.table2csv(table);
+      var encodedTsv = encodeURIComponent(tsv);
       var pom = document.createElement('a');
-      pom.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodedCsv);
+      pom.setAttribute('href', 'data:text/tsv;charset=utf-8,' + encodedTsv);
       pom.setAttribute('target', '_blank');
-      pom.setAttribute('download', table.name + ".dict.csv");
+      pom.setAttribute('download', table.name + ".dict.tsv");
       document.body.appendChild(pom);
       setTimeout(function() {
         pom.click();

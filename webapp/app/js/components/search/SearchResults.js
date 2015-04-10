@@ -90,6 +90,7 @@ var SearchResults = React.createClass({
   pageGroupComponents: function() {
     var target = this.props.target;
     var cols = this.cols();
+    var query = this.props.query
     return this.pageGroups().map(function(group) {
       var key = group.keys.join(",");
       return (
@@ -97,7 +98,8 @@ var SearchResults = React.createClass({
           key={key}
           group={group}
           cols={cols}
-          target={target}/>
+          target={target}
+          query={query}/>
         );
     });
   },
