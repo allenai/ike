@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Regular stuff below
-JVM_ARGS="-Xmx6g"
+JVM_ARGS="-Xmx10G"
 CLASS_NAME="org.allenai.dictionary.DictionaryToolWebapp"
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 SHORT_NAME=webapp
