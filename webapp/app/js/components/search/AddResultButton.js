@@ -14,8 +14,9 @@ var AddResultButton = React.createClass({
       "context": group.results.map(function(resultObject) {
         var words = resultObject.result.wordData;
         var fragment = words.map(function(word) { return word.word; }).join(" ");
-        return {"fragment": fragment, "words": words};
-      })
+        var matchOffset = resultObject.result.matchOffset;
+        return {"fragment": fragment, "words": words, "matchOffset": matchOffset};
+      }),
     };
 
     var row = TableManager.stringsRow(values);
