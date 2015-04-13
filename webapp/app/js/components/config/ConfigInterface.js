@@ -40,7 +40,11 @@ var ConfigInterface = React.createClass({
     var pWeightChange = this.onChange('pWeight', parseFloat, 'ml')
     var nWeightChange = this.onChange('nWeight', parseFloat, 'ml')
     var uWeightChange = this.onChange('uWeight', parseFloat, 'ml')
+    var pWeightChangeNarrow = this.onChange('pWeightNarrow', parseFloat, 'ml')
+    var nWeightChangeNarrow = this.onChange('nWeightNarrow', parseFloat, 'ml')
+    var uWeightChangeNarrow = this.onChange('uWeightNarrow', parseFloat, 'ml')
     var allowDisjunctionChange = this.toggleCheckbox('allowDisjunctions', 'ml')
+    var changeAllowClusters = this.toggleCheckbox('allowClusters', 'ml')
     var disable = this.toggleCheckbox('disable', 'ml')
     return (
       <div>
@@ -88,6 +92,12 @@ var ConfigInterface = React.createClass({
                 onChange={allowDisjunctionChange}>
               </Input>
               <Input
+                type='checkbox'
+                label='Suggest Brown Clusters'
+                checked={config.ml.allowClusters}
+                onChange={changeAllowClusters}>
+              </Input>
+              <Input
                   type='select'
                   value={config.ml.depth}
                   onChange={depthChange}
@@ -113,6 +123,8 @@ var ConfigInterface = React.createClass({
                   value={config.ml.maxSampleSize}
                   min='1'>
                 </Input>
+                <PanelGroup accordion>
+                <Panel header='Broaden Scoring' collapsed='True'>
                 <Input
                     type='range'
                     label={'Positive Weight ' + config.ml.pWeight.toFixed(2)}
@@ -140,6 +152,37 @@ var ConfigInterface = React.createClass({
                     min='-20'
                     max='20'>
                 </Input>
+                </Panel>
+                <Panel header='Narrow Scoring' collapsed='True'>
+                <Input
+                    type='range'
+                    label={'Positive Weight ' + config.ml.pWeightNarrow.toFixed(2)}
+                    value={config.ml.pWeightNarrow}
+                    onChange={pWeightChangeNarrow}
+                    step='0.5'
+                    min='-20'
+                    max='20'>
+                </Input>
+                <Input
+                    type='range'
+                    label={'Negative Weight ' + config.ml.nWeightNarrow.toFixed(2)}
+                    value={config.ml.nWeightNarrow}
+                    onChange={nWeightChangeNarrow}
+                    step='0.5'
+                    min='-20'
+                    max='20'>
+                </Input>
+                <Input
+                    type='range'
+                    label={'Unlabelled Weight ' + config.ml.uWeightNarrow.toFixed(2)}
+                    value={config.ml.uWeightNarrow}
+                    onChange={uWeightChangeNarrow}
+                    step='0.5'
+                    min='-20'
+                    max='20'>
+                </Input>
+                </Panel>
+                </PanelGroup>
             </Panel>
         </PanelGroup>
       </div>

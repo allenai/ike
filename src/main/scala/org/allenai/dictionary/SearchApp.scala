@@ -11,7 +11,7 @@ import scala.util.{ Success, Try }
 case class SuggestQueryRequest(query: String, tables: Map[String, Table],
   target: String, narrow: Boolean, config: SuggestQueryConfig)
 case class SuggestQueryConfig(beamSize: Int, depth: Int, maxSampleSize: Int, pWeight: Double,
-  nWeight: Double, uWeight: Double, allowDisjunctions: Boolean)
+  nWeight: Double, uWeight: Double, allowDisjunctions: Boolean, allowClusters: Boolean = true)
 case class ScoredStringQuery(query: String, score: Double, positiveScore: Double,
   negativeScore: Double, unlabelledScore: Double)
 case class SuggestQueryResponse(scoredQueries: Seq[ScoredStringQuery])

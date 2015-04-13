@@ -79,10 +79,13 @@
 .hit {
     text-align: center;
 }
+
 .highlighted {
     color: blue;
     font-weight: bold;
 }
+
+
 @import 'tree.less';
 @import '../../node_modules/bootstrap/less/alerts.less';
 @import '../../node_modules/bootstrap/less/badges.less';
@@ -155,3 +158,37 @@
 @import '../../node_modules/bootstrap/less/mixins/text-overflow.less';
 @import '../../node_modules/bootstrap/less/mixins/vendor-prefixes.less';
 @icon-font-path: "/assets/";
+
+#suggestion-menu .dropdown-menu {
+    flex-wrap: wrap;
+    role: none;
+}
+
+#suggestion-menu .labelStrength {
+    margin-left: auto;
+}
+
+#suggestion-table {
+  font-size: small;
+  border-collapse: collapse;
+}
+
+
+.queryCell {
+    white-space: nowrap;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    cursor: default;
+}
+
+.queryHeader {
+   cursor: default;
+}
+
+.queryStat {
+  text-align: center;
+}
