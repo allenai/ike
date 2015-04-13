@@ -214,15 +214,6 @@ var QWord = React.createClass({
     };
     var request = xhr(requestData, xhrCallback);
   },
-  replaceWithClusterFromWord: function(wordInfo) {
-    var replacement = {
-      type: 'QClusterFromWord',
-      value: wordInfo.clusterId.length + 1,
-      wordValue: wordInfo.word,
-      clusterId: wordInfo.clusterId
-    };
-    this.updateSelf(replacement);
-  },
   replaceWithPosFromWord: function(wordInfo) {
     var replacement = {
       type: 'QPosFromWord',
@@ -246,10 +237,6 @@ var QWord = React.createClass({
     var phrase = this.props.qexpr.value;
     similarPhrases(phrase, replace);
   },
-  toClusterFromWord: function() {
-    var replace = this.replaceWithClusterFromWord;
-    this.getWordInfo(replace);
-  },
   toPosFromWord: function() {
     var replace = this.replaceWithPosFromWord;
     this.getWordInfo(replace);
@@ -259,7 +246,6 @@ var QWord = React.createClass({
     var button = (
       <div>
       <DropdownButton bsStyle="link" title={value}>
-        <MenuItem eventKey={1} onClick={this.toClusterFromWord}>Generalize to similar words...</MenuItem>
         <MenuItem eventKey={1} onClick={this.toPosFromWord}>Generalize by POS tag...</MenuItem>
         <MenuItem eventKey={1} onClick={this.toSimilarPhrases}>Generalize to similar phrases...</MenuItem>
       </DropdownButton>
@@ -275,12 +261,6 @@ var QDict = React.createClass({
     var dollarized = '$' + value;
     var menu = <DropdownButton bsStyle="link" title={dollarized}></DropdownButton>;
     return menu;
-  }
-});
-var QCluster = React.createClass({
-  mixins: [QExprMixin],
-  render: function() {
-    return <div>Cluster<Tree><Node>{this.props.qexpr.value}</Node></Tree></div>;
   }
 });
 var QWildcard = React.createClass({
@@ -389,59 +369,6 @@ var QPosFromWord = React.createClass({
     );
   }
 });
-var QClusterFromWord = React.createClass({
-  mixins: [QExprMixin],
-  handleChange: function(e) {
-    var qexpr = this.props.qexpr;
-    var value = this.refs.slider.getDOMNode().value;
-    qexpr.value = parseInt(value);
-    this.updateSelf(qexpr);
-  },
-  convertToWord: function() {
-    var word = this.props.qexpr.wordValue;
-    var replacement = {
-      value: word,
-      type: "QWord"
-    };
-    this.updateSelf(replacement);
-  },
-  render: function() {
-    var qexpr = this.props.qexpr;
-    var value = qexpr.value;
-    var wordValue = qexpr.wordValue;
-    var clusterId = qexpr.clusterId;
-    var button = (
-      <Button
-        onClick={this.convertToWord}
-        bsSize="xsmall"
-        className="pull-right"
-        bsStyle="danger">
-        <Glyphicon glyph="remove"/>
-      </Button>
-    );
-    var slider =
-      <input
-        ref="slider"
-        type="range"
-        className="vslider"
-        min={1}
-        max={clusterId.length + 1}
-        step={1}
-        value={value}
-        onChange={this.handleChange}/>;
-    var header = 'Words similar to "' + wordValue + '"'
-    var headerValue = <div style={{fontSize: 'small'}}>{header}</div>;
-    return (
-      <Panel header={headerValue}>
-        <div>
-          More Similar
-          {slider}
-          Less Similar
-        </div>
-      </Panel>
-    );
-  }
-});
 var QExpr = React.createClass({
   mixins: [QExprMixin],
   getDefaultProps: function() {
@@ -455,7 +382,6 @@ var QExpr = React.createClass({
     QPos: QPos,
     QSeq: QSeq,
     QDict: QDict,
-    QCluster: QCluster,
     QWildcard: QWildcard,
     QNamed: QNamed,
     QUnnamed: QUnnamed,
@@ -463,7 +389,6 @@ var QExpr = React.createClass({
     QStar: QStar,
     QPlus: QPlus,
     QDisj: QDisj,
-    QClusterFromWord: QClusterFromWord,
     QPosFromWord: QPosFromWord
   },
   render: function() {
