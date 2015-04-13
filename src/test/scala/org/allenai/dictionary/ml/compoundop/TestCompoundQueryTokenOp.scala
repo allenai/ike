@@ -1,9 +1,9 @@
-package org.allenai.dictionary.ml.compoundops
+package org.allenai.dictionary.ml.compoundop
 
 import org.allenai.common.testkit.UnitSpec
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml._
-import org.allenai.dictionary.ml.primitveops._
+import org.allenai.dictionary.ml.queryop._
 
 import scala.collection.immutable.IntMap
 import scala.language.implicitConversions
@@ -17,6 +17,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
   val suffix1 = SetToken(Suffix(1), QWord("s1"))
   val suffix3 = SetToken(Suffix(3), QWord("s3"))
   val replace3 = SetToken(QueryToken(3), QCluster("11"))
+  val add1 = AddToken(1, QWord("a3"))
   val add21 = AddToken(2, QWord("a21"))
   val add22 = AddToken(2, QWord("a22"))
   val add3 = AddToken(3, QWord("a3"))
@@ -42,18 +43,47 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     assertResult(9)(qExpr.size)
   }
 
-  "CompoundOp" should "apply AddToken ops" in {
-    val startingQuery = QueryLanguage.parse("one (?<capture> c1 c2)").get
+  it should "apply AddToken ops" in {
+    val startingQuery = QueryLanguage.parse("{one, two} (?<capture> c1 c2)").get
     val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
-    val ops = Seq(add22, add21)
-    val modified = CompoundQueryOp.applyOps(tokenized, ops)
-    assertResult(Set(add22.qexpr, add21.qexpr, tokenized.getSeq(1))) {
-      modified.getSeq(1) match {
-        case QDisj(seq) => seq.toSet
-        case _ => throw new RuntimeException()
-      }
+    val ops = Seq(add22, add21, add1)
+    val modified = CompoundQueryOp.applyOps(tokenized, ops).getSeq
+    val expected = QueryLanguage.parse("{one, two, a3} (?<capture> {c1, a21, a22} c2)").get
+    assertResult(Set(QWord("one"), QWord("two"), add1.qexpr))(
+      modified(0).asInstanceOf[QDisj].qexprs.toSet)
+    assertResult(Set(QWord("c1"), add21.qexpr, add22.qexpr))(
+      modified(1).asInstanceOf[QDisj].qexprs.toSet)
+  }
+
+  "CompoundOp" should "apply remove ops" in {
+    val startingQuery = QueryLanguage.parse("p1 p2 (?<capture> c1) s1 s2").get
+    val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
+    assertResult(QSeq(Seq(QNamed(QWord("c1"), "capture"), QWord("s1")))) {
+      CompoundQueryOp.applyOps(tokenized, Set(RemoveToken(1),
+        RemoveToken(2), RemoveToken(5))).getQuery
     }
   }
+
+  "CompoundOp" should "apply modify parent ops" in {
+    val startingQuery = QueryLanguage.parse("NN* (?<capture> c1)").get
+    val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
+    val remove = RemoveStar(1)
+    val set = SetToken(QueryToken(1), QPos("VB"))
+    val startToPlus = StarToPlus(1)
+    assertResult(QueryLanguage.parse("NN (?<capture> c1)").get) {
+      CompoundQueryOp.applyOps(tokenized, Set(remove)).getQuery
+    }
+    assertResult(QueryLanguage.parse("VB* (?<capture> c1)").get) {
+      CompoundQueryOp.applyOps(tokenized, Set(set)).getQuery
+    }
+    assertResult(QueryLanguage.parse("VB (?<capture> c1)").get) {
+      CompoundQueryOp.applyOps(tokenized, Set(remove, set)).getQuery
+    }
+    assertResult(QueryLanguage.parse("VB+ (?<capture> c1)").get) {
+      CompoundQueryOp.applyOps(tokenized, Set(startToPlus, set)).getQuery
+    }
+  }
+
 
   it should "apply disjunction of ops correctly" in {
     implicit def opToEvaluatedOp(x: TokenQueryOp): EvaluatedOp = EvaluatedOp(x, IntMap())

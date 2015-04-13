@@ -13,7 +13,7 @@ import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
   *                    filter spans should contain these capture groups
   * @param startFromDoc document to start from
   */
-class SpansFilterByCaptureGroup(
+class SpansFilterByCaptureGroups(
     query: BLSpans,
     filter: BLSpans,
     captureGroups: Seq[String],

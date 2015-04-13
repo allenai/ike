@@ -1,19 +1,16 @@
 package org.allenai.dictionary.ml
 
-import org.allenai.dictionary.ml.compoundops._
+import org.allenai.dictionary.ml.compoundop.{OpConjunctionOfDisjunctions, OpConjunction, EvaluatedOp}
+import org.allenai.dictionary.ml.queryop.{QueryOp, SetToken}
 
-import scala.collection.JavaConverters._
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary.index.TestData
-import org.allenai.dictionary.ml.QuerySuggester.HitAnalysis
-import org.allenai.dictionary.ml.primitveops._
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml.Label._
 
 import scala.collection.immutable.IntMap
 
 class TestQuerySuggester extends UnitSpec with ScratchDirectory {
-
   TestData.createTestIndex(scratchDir)
   val searcher = TestData.testSearcher(scratchDir)
 
@@ -23,7 +20,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
 
   "SelectOperator" should "Select correct AND query" in {
 
-    def buildExample(k: Int): Example = {
+    def buildExample(k: Int): WeightedExample = {
       val label = if (k == 1) {
         Positive
       } else if (k == -1) {
@@ -31,7 +28,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       } else {
         Unlabelled
       }
-      Example(label, 0, "")
+      WeightedExample(label, 0, 1.0, 0)
     }
 
     val examples = List(1, 1, 1, 1, 1, -1, -1, -1, -1, -1, 0).
@@ -41,7 +38,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val op2 = SetToken(Prefix(2), QWord("p2"))
     val op3 = SetToken(Prefix(3), QWord("p3"))
 
-    val operatorHits = Map[TokenQueryOp, IntMap[Int]](
+    val operatorHits = Map[QueryOp, IntMap[Int]](
       (op1, buildMap(List(1, 2, 3, 4, 5, 6, 7))),
       (op2, buildMap(List(1, 2, 3, 4, 5, 7, 8, 9))),
       (op3, buildMap(List(6, 7, 8, 9, 10)))
@@ -59,20 +56,20 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       Set(op1, op2),
       Set(op1),
       Set(op2)
-    )) { scoredQueries.map(_.ops.ops).toSet }
+    )) { scoredQueries.map(_._1.ops).toSet }
   }
 
   it should "Select correct OR queries" in {
     val examples = (Seq(Unlabelled) ++ Seq.fill(5)(Positive) ++
       Seq.fill(5)(Negative) ++ Seq(Unlabelled)).
-      map(x => Example(x, 0, "")).toIndexedSeq
+      map(x => WeightedExample(x, 0, 1.0, 0)).toIndexedSeq
 
     val op1 = SetToken(Prefix(1), QWord("p1"))
     val op2 = SetToken(Prefix(2), QWord("p2"))
     val op3 = SetToken(Prefix(2), QWord("p3"))
     val op4 = SetToken(Prefix(3), QWord("p4"))
 
-    val operatorHits = Map[TokenQueryOp, IntMap[Int]](
+    val operatorHits = Map[QueryOp, IntMap[Int]](
       op1 -> buildMap(List(1, 2, 3)),
       op2 -> buildMap(List(3, 4, 7, 6, 8)),
       op3 -> buildMap(List(1, 2, 7, 6, 9)),
@@ -86,37 +83,87 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     )
 
     // Best answer is (op2 OR op3) AND op4
-    assertResult(Set(op2, op3, op4))(scoredQueries.head.ops.ops)
-    assertResult(4)(scoredQueries.head.score)
+    assertResult(Set(op2, op3, op4))(scoredQueries.head._1.ops)
+    assertResult(4)(scoredQueries.head._2)
   }
 
-  "BuildHitAnalysis" should "build correctly" in {
-    val query = QUnnamed(QDisj(Seq(QWord("mango"), QWord("bananas"), QWord("those"))))
-    val hits = searcher.find(BlackLabSemantics.blackLabQuery(query))
-
-    // Double check to make sure things are ordered as we expect
-    val hitsFounds = hits.asScala.map(hits.getKwic(_).getMatch("word").get(0))
-    assertResult(Seq("mango", "those", "bananas"))(hitsFounds)
-
-    // Get this hits
-    val positiveTerms = Set("qwerty", "bananas").
-      map(x => TableRow(Seq(TableValue(Seq(QWord(x))))))
-    val negativeTerms = Set("mango").map(x => TableRow(Seq(TableValue(Seq(QWord(x))))))
-    val generator = PrefixOpGenerator(QLeafGenerator(Set(), Set(2)), Seq(1))
-    val hitAnalysis = QuerySuggester.buildHitAnalysis(
-      hits, Seq(generator), positiveTerms, negativeTerms, captureIndices = Seq(0)
+  "SuggestQuery" should "suggest removing tokens" in {
+    val table = Table("test", Seq("c1"),
+      Seq(Seq("i"), Seq("like")).map { x =>
+        TableRow(x.map(y => TableValue(Seq(QWord(y)))))
+      },
+      Seq()
     )
+    val startingQuery = QueryLanguage.parse("blarg (PRP)").get
+    val suggestions =
+      QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
+      "test",  false, SuggestQueryConfig(5, 2, 100, 1, 0, 0, false))
+    assertResult(suggestions(0).query)(QNamed(QPos("PRP"), "c1"))
+  }
 
-    assertResult(Example(Negative, 0, "mango"))(hitAnalysis.examples(0))
-    assertResult(Example(Unlabelled, 0, "those"))(hitAnalysis.examples(1))
-    assertResult(Example(Positive, 0, "bananas"))(hitAnalysis.examples(2))
-    assertResult(3)(hitAnalysis.examples.size)
+  it should "suggest removing plus operators" in {
+    val table = Table("test", Seq("c1"),
+      Seq(Seq("I"), Seq("it")).map { x =>
+        TableRow(x.map(y => TableValue(Seq(QWord(y)))))
+      },
+      Seq()
+    )
+    val startingQuery = QueryLanguage.parse("(?<c1> {I, like, hate, it}+)").get
+    val suggestions =
+      QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
+        "test",  true, SuggestQueryConfig(5, 2, 100, 1, -5, 0, false))
+    assertResult(QueryLanguage.parse("(?<c1> {I, like, hate, it})").get)(suggestions(0).query)
+  }
 
-    val op10 = SetToken(Prefix(1), QCluster("10"))
-    val op11 = SetToken(Prefix(1), QCluster("11"))
+  it should "suggest changing a plus operator" in {
+    val table = Table("test", Seq("c1"),
+      Seq(Seq("not")).map { x =>
+        TableRow(x.map(y => TableValue(Seq(QWord(y)))))
+      },
+      Seq(Seq("like"), Seq("hate")).map { x =>
+        TableRow(x.map(y => TableValue(Seq(QWord(y)))))
+      }
+    )
+    val startingQuery = QueryLanguage.parse("(?<c1> .+) {mango, those, great}").get
+    val suggestions =
+      QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
+        "test",  true, SuggestQueryConfig(5, 1, 100, 1, -5, -5, false))
+    assert(suggestions.map(_.query).toSet contains
+        QueryLanguage.parse("(?<c1> RB+) {mango, those, great}").get)
+  }
 
-    assertResult(Set(op10, op11))(hitAnalysis.operatorHits.keySet)
-    assertResult(Set(0, 1))(hitAnalysis.operatorHits.get(op10).get.keySet)
-    assertResult(Set(2))(hitAnalysis.operatorHits.get(op11).get.keySet)
+  it should "suggest adding to a disjunction" in {
+    val table = Table("test", Seq("c1"),
+      Seq(Seq("like"), Seq("tastes"), Seq("taste")).map { x =>
+        TableRow(x.map(y => TableValue(Seq(QWord(y)))))
+      },
+      Seq()
+    )
+    val startingQuery = QueryLanguage.parse("^01 ({like, hate})").get
+    val suggestions =
+      QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
+        "test",  false, SuggestQueryConfig(5, 2, 100, 1, -5, 0, true))
+    val seq = suggestions(0).query.asInstanceOf[QSeq].qexprs
+    assertResult(QCluster("01"))(seq(0))
+    assertResult(Set("like", "hate", "taste", "tastes").map(QWord(_)))(
+      seq(1).asInstanceOf[QNamed].qexpr.asInstanceOf[QDisj].qexprs.toSet)
+    assertResult(2)(seq.size)
+  }
+
+  it should "suggest removing multiple tokens" in {
+    val table = Table("test", Seq("c1"),
+      Seq(Seq("I"), Seq("like")).map { x =>
+        TableRow(x.map(y => TableValue(Seq(QWord(y)))))
+      },
+      Seq()
+    )
+    val startingQuery = QueryLanguage.parse("blah blah ({I, like})").get
+    val suggestions =
+      QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
+        "test",  false, SuggestQueryConfig(5, 2, 100, 1, -5, 0, true))
+    println(suggestions(0).query)
+    val q = suggestions(0).query.asInstanceOf[QNamed]
+    assertResult(q.name)("c1")
+    assertResult(q.qexpr.asInstanceOf[QDisj].qexprs.toSet)(Set(QWord("I"), QWord("like")))
   }
 }

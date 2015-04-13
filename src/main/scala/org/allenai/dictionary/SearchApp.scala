@@ -10,9 +10,10 @@ import scala.util.{ Success, Try }
 
 case class SuggestQueryRequest(query: String, tables: Map[String, Table],
   target: String, narrow: Boolean, config: SuggestQueryConfig)
-case class SuggestQueryConfig(beamSize: Int, depth: Int, maxSampleSize: Int,
-  pWeight: Double, nWeight: Double, uWeight: Double, allowDisjunctions: Boolean)
-case class ScoredStringQuery(query: String, score: Double, msg: String)
+case class SuggestQueryConfig(beamSize: Int, depth: Int, maxSampleSize: Int, pWeight: Double,
+  nWeight: Double, uWeight: Double, allowDisjunctions: Boolean)
+case class ScoredStringQuery(query: String, score: Double, positiveScore: Double,
+  negativeScore: Double, unlabelledScore: Double)
 case class SuggestQueryResponse(scoredQueries: Seq[ScoredStringQuery])
 case class WordInfoRequest(word: String, config: SearchConfig)
 case class WordInfoResponse(word: String, clusterId: Option[String], posTags: Map[String, Int])
@@ -41,7 +42,8 @@ case class SearchApp(config: Config) extends Logging {
     )
     stringQueries <- Try(
       suggestion.map(x => {
-        ScoredStringQuery(QueryLanguage.getQueryString(x.query), x.score, x.msg)
+        ScoredStringQuery(QueryLanguage.getQueryString(x.query), x.score, x.positiveScore,
+          x.negativeScore, x.unlabelledScore)
       })
     )
     response = SuggestQueryResponse(stringQueries)

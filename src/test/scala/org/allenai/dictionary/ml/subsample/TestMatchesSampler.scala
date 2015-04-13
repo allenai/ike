@@ -1,5 +1,7 @@
 package org.allenai.dictionary.ml.subsample
 
+import org.allenai.dictionary.ml.TokenizedQuery
+
 import nl.inl.blacklab.search.Hits
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary._
@@ -12,10 +14,11 @@ class TestMatchesSampler extends UnitSpec with ScratchDirectory {
   TestData.createTestIndex(scratchDir)
   val searcher = TestData.testSearcher(scratchDir)
 
-  def hitToAllCaptures(hits: Hits): Seq[Seq[String]] = {
+  def hitToAllCaptures(hits: Hits, groups: Seq[String]): Seq[Seq[String]] = {
     hits.asScala.map(hit => {
       val kwic = hits.getKwic(hit)
-      hits.getCapturedGroups(hit).map(span => {
+      val captures = groups.map(hits.getCapturedGroupMap(hit).get(_))
+      captures.map(span => {
         if (span == null) {
           null
         } else {
@@ -50,13 +53,17 @@ class TestMatchesSampler extends UnitSpec with ScratchDirectory {
         TableRow(Seq(TableValue(Seq(QWord("I"))), TableValue(Seq(QWord("bananas")))))
       )
     )
+    val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
 
     val expectedResults = Seq(
       Seq("I", "mango"),
       Seq("It", "great")
     )
     assertResult(expectedResults)(hitToAllCaptures(MatchesSampler().getLabelledSample(
-      startingQuery, searcher, table
-    )))
+      tokenized, searcher, table, 0
+    ), table.cols))
+    assertResult(expectedResults.drop(1))(hitToAllCaptures(MatchesSampler().getLabelledSample(
+      tokenized, searcher, table, 1
+    ), table.cols))
   }
 }

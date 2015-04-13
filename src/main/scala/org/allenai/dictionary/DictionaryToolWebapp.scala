@@ -10,7 +10,7 @@ import org.allenai.dictionary.persistence.Tablestore
 import spray.can.Http
 import spray.http.{ HttpMethods, CacheDirectives, HttpHeaders, StatusCodes }
 import spray.httpx.SprayJsonSupport
-import spray.routing.{ ExceptionHandler, HttpService }
+import spray.routing.{ Route, ExceptionHandler, HttpService }
 import spray.util.LoggingContext
 
 import scala.collection.JavaConverters._

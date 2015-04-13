@@ -9,12 +9,17 @@ class TestTokenizedQuery extends UnitSpec with ScratchDirectory {
     {
       val captureSeq = Seq(QWord(""), QDisj(Seq(QCluster(""), QPos(""))))
       val query = QSeq(Seq(QWord("1"), QWord("2"), QNamed(QSeq(captureSeq), "col1"), QCluster("3")))
+
       val tokenized = TokenizedQuery.buildFromQuery(query)
 
       assertResult(Seq(QWord("1"), QWord("2")))(tokenized.nonCaptures(0))
       assertResult(Seq(QCluster("3")))(tokenized.nonCaptures(1))
       assertResult(CaptureSequence(captureSeq, "col1"))(tokenized.captures(0))
       assertResult(query)(tokenized.getQuery)
+    }
+    {
+      val query = QueryLanguage.parse("a NN+ (?<x> c) d*").get
+      assertResult(TokenizedQuery.buildFromQuery(query).getQuery)(query)
     }
     {
       val query = QueryLanguage.parse("a (?<y> {b, c} d) e f (?<x> g) (?<z> h)").get
@@ -49,22 +54,36 @@ class TestTokenizedQuery extends UnitSpec with ScratchDirectory {
         case (expected, actual) => assertResult(expected)(actual)
       }
     }
+
   }
 
-  it should "test exception" in {
-    intercept[UnconvertibleQuery] {
-      // QStar so variable length
-      val q = QSeq(Seq(QStar(QWildcard()), QNamed(QPos(""), "c1")))
-      TokenizedQuery.buildFromQuery(q)
-    }
-    intercept[UnconvertibleQuery] {
-      // Disjunction with different sized clauses
-      val nontokenizableSeq = QDisj(Seq(QSeq(Seq(
-        QPos(""),
-        QPos("")
-      )), QWord("")))
-      val q = QNamed(nontokenizableSeq, "c1")
-      TokenizedQuery.buildFromQuery(q)
-    }
+  it should "get data corretly" in {
+    val query = QueryLanguage.parse("a (?<c1> b c) d e (?<c2> f)").get
+    val tokenized = TokenizedQuery.buildFromQuery(query)
+    val expectedResults = Seq(
+      QuerySlotData(Some(QWord("a")), QueryToken(1), false, true, false),
+      QuerySlotData(Some(QWord("b")), QueryToken(2), true, false, false),
+      QuerySlotData(Some(QWord("c")), QueryToken(3), true, false, false),
+      QuerySlotData(Some(QWord("d")), QueryToken(4), false, false, false),
+      QuerySlotData(Some(QWord("e")), QueryToken(5), false, false, false),
+      QuerySlotData(Some(QWord("f")), QueryToken(6), true, false, false)
+    )
+    assertResult(expectedResults)(tokenized.getAnnotatedSeq)
+  }
+
+  it should "get named query correctly" in {
+    val query = QueryLanguage.parse("(?<c1> a+) b (?<c2> c d) e*").get
+    val tokenized = TokenizedQuery.buildFromQuery(query)
+    val names = tokenized.getNames
+    val expectedNamedQuery = QSeq(Seq(
+      QNamed(QNamed(QPlus(QWord("a")), names(0)), "c1"),
+      QWord("b"),
+      QNamed(QSeq(Seq(
+        QWord("c"),
+        QWord("d")
+      )), "c2"),
+      QNamed(QStar(QWord("e")), names(4))
+    ))
+    assertResult(expectedNamedQuery)(tokenized.getNamedQuery)
   }
 }

@@ -1,6 +1,5 @@
 package org.allenai.dictionary.ml.subsample
 
-import nl.inl.blacklab.search.lucene.SpanQueryAnd
 import nl.inl.blacklab.search.{ Hits, Searcher }
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml.TokenizedQuery
@@ -33,27 +32,25 @@ case class FuzzySequenceSampler(minEdits: Int, maxEdits: Int)
           onIndex + capture.seq.size) +: captureList
         onIndex += capture.seq.size
     }
-    val querySize = tokenizedQuery.getSeq.size
+    val querySize = tokenizedQuery.size
     new SpanQueryFuzzySequence(asSpanQueries, querySize - maxEdits, querySize - minEdits, true,
       searcher.getIndexStructure.alwaysHasClosingToken(), captureList)
   }
 
-  override def getSample(qexpr: QExpr, searcher: Searcher, table: Table): Hits = {
-    val tokenizedQuery = TokenizedQuery.buildFromQuery(qexpr, table.cols)
-    searcher.find(buildFuzzySequenceQuery(tokenizedQuery, searcher))
+  override def getSample(qexpr: TokenizedQuery, searcher: Searcher, table: Table): Hits = {
+    searcher.find(buildFuzzySequenceQuery(qexpr, searcher))
   }
 
-  override def getLabelledSample(qexpr: QExpr, searcher: Searcher, table: Table): Hits = {
-    val tokenizedQuery = TokenizedQuery.buildFromQuery(QueryLanguage.nameCaptureGroups(
-      qexpr,
-      table.cols
-    ))
-    val sequenceQuery = buildFuzzySequenceQuery(tokenizedQuery, searcher)
-    val labelledSpans = searcher.createSpanQuery(
-      BlackLabSemantics.blackLabQuery(
-        Sampler.getLabelledExampleQuery(tokenizedQuery, table)
-      )
-    )
-    searcher.find(new SpanQueryAnd(sequenceQuery, labelledSpans))
+  override def getLabelledSample(
+    qexpr: TokenizedQuery,
+    searcher: Searcher,
+    table: Table,
+    startFromDoc: Int
+  ): Hits = {
+    val rowQuery = Sampler.buildLabelledQuery(qexpr, table)
+    val sequenceQuery = buildFuzzySequenceQuery(qexpr, searcher)
+    val rowSpanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(rowQuery))
+    searcher.find(new SpanQueryFilterByCaptureGroups(sequenceQuery, rowSpanQuery,
+      table.cols, startFromDoc))
   }
 }

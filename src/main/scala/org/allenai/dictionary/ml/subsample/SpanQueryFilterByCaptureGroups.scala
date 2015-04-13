@@ -31,7 +31,7 @@ class SpanQueryFilterByCaptureGroups(
     termContexts: util.Map[Term, TermContext]): Spans = {
     val leftSpans = query.getSpans(context, acceptDocs, termContexts)
     val filterSpans = filter.getSpans(context, acceptDocs, termContexts)
-    return new SpansFilterByCaptureGroup(
+    return new SpansFilterByCaptureGroups(
       BLSpansWrapper.optWrap(leftSpans),
       BLSpansWrapper.optWrap(filterSpans),
       captureGroups,

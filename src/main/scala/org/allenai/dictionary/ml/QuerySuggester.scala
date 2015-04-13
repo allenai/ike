@@ -1,139 +1,83 @@
 package org.allenai.dictionary.ml
 
+import org.allenai.dictionary.ml.HitAnalyzer._
+import org.allenai.dictionary.ml.Label._
+import org.allenai.dictionary.ml.compoundop._
+import org.allenai.dictionary.ml.queryop._
+
 import nl.inl.blacklab.search._
 import org.allenai.common.{ Logging, Timing }
 import org.allenai.dictionary._
-import org.allenai.dictionary.ml.compoundops._
-import org.allenai.dictionary.ml.primitveops._
 import org.allenai.dictionary.ml.subsample._
+import com.typesafe.config.ConfigFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.IntMap
 
-case class ScoredOps(ops: CompoundQueryOp, score: Double, msg: String)
-case class ScoredQuery(query: QExpr, score: Double, msg: String)
+case class ScoredOps(ops: CompoundQueryOp, score: Double, positiveScore: Double,
+  negativeScore: Double, unlabelledScore: Double)
+case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
+  negativeScore: Double, unlabelledScore: Double)
 
-object Label extends Enumeration {
-  type Label = Value
-  val Positive, Negative, Unlabelled = Value
-}
-import org.allenai.dictionary.ml.Label._
-
-/** A particular sentence from the corpus we will evaluate queries on.
+/** 'Hit' in the corpus we will evaluate candidate queries on
   *
-  * @param label Label of the sentence
-  * @param requiredEdits The 'edit distance' from our current query to a query that would match this
-  *                  example. Hence the number of operators we will need to apply to the
-  *                  starting query if we want it to match this sentence
-  * @param str The sentence, stored for logging / debugging purposes
+  * @param label label of the hit
+  * @param requiredEdits number of query-tokens we need to edit for the starting query to match
+  *                   this hit (see the ml/README.md)
+  * @param captureStrings the string we captured, as a Sequence of capture groups of sequences of
+  *                    words
+  * @param doc the document number this Example came from
+  * @param str String of hit, we only need this for debugging purposes
   */
-case class Example(label: Label, requiredEdits: Int, str: String)
+case class Example(label: Label, requiredEdits: Int,
+  captureStrings: Seq[Seq[String]], doc: Int, str: String = "")
+
+/** Example, but with an associated weight indicating how important it is to get this example
+  * correct.
+  */
+case class WeightedExample(label: Label, requiredEdits: Int,
+  weight: Double, doc: Int, str: String = "")
 
 object QuerySuggester extends Logging {
 
-  /** Percent of examples we will use when evaluating queries that should be unlabelled */
-  val numUnlabelled = 0.3
+  lazy val querySuggestionConf = ConfigFactory.load().getConfig("QuerySuggester")
 
-  /** Some cache analysis for a subsample of hits, in particular records the labels for each
-    * sentence in the subsample and which sentences each primitive operation applies to.
-    *
-    * @param operatorHits Maps primitive operations to map for (sentence index with in examples ->
-    *                 number of required 'edit' that operator completes for that sentence
-    *                 (can be 0))
-    * @param examples List of examples, one for each sentence
+  /** @return the average weight of the positive, negative, and unlabelled hits the edits made in
+    * <code>sentenceId2EditCount</code> would yield per a document
     */
-  case class HitAnalysis(
-      operatorHits: Map[TokenQueryOp, IntMap[Int]],
-      examples: IndexedSeq[Example]
-  ) {
+  def getPerDocumentScores(
+    sentenceId2EditCount: IntMap[Int],
+    lastUnlabelledDoc: Int,
+    lastDoc: Int,
+    examples: Seq[WeightedExample]
+  ): (Double, Double, Double) = {
+    var positive = 0.0
+    var negative = 0.0
+    var unlabelled = 0.0
+    var numUnlabelled = 0
 
-    def size: Int = examples.size
-
-    def ++(other: HitAnalysis): HitAnalysis = {
-      val s = size
-      def appendMaps(m1: IntMap[Int], m2: IntMap[Int]): IntMap[Int] = {
-        m1 ++ (m2 map { case (a, b) => (a + s, b) })
-      }
-
-      val allOperator = operatorHits.keys.toSet ++ other.operatorHits.keys
-      HitAnalysis(
-        allOperator.map(x => {
-        val otherHits = other.operatorHits.getOrElse(x, IntMap[Int]())
-        val myHits = operatorHits.getOrElse(x, IntMap[Int]())
-        (x, appendMaps(myHits, otherHits))
-      }).toMap,
-        examples ++ other.examples
-      )
-    }
-  }
-
-  /** Builds a HitAnalysis object from a sequence a series of Hits
-    *
-    * @param hits Hits to build the HitAnalysis object from, it will contain one Example
-    *          for each hit in Hits
-    * @param generators generators to generate primitive operations from
-    * @param positiveTerms Positive examples
-    * @param negativeTerms Negative examples
-    * @return HitAnalysis object for the given Hits object.
-    */
-  def buildHitAnalysis(
-    hits: Hits,
-    generators: Seq[TokenQueryOpGenerator],
-    positiveTerms: Set[TableRow],
-    negativeTerms: Set[TableRow],
-    captureIndices: Seq[Int]
-  ): HitAnalysis = {
-    val positiveStrings = positiveTerms.map(_.values.map(_.qwords.map(_.value)))
-    val negativeStrings = negativeTerms.map(_.values.map(_.qwords.map(_.value)))
-    val operatorMap = scala.collection.mutable.Map[TokenQueryOp, List[(Int, Int)]]()
-    var examples = List[Example]()
-    hits.setContextSize(generators.map(_.requiredContextSize).max)
-    hits.setContextField((generators.flatMap(_.requiredProperties).toSet + "word").toSeq.asJava)
-    hits.asScala.zipWithIndex.foreach {
-      case (hit, index) =>
-        val kwic = hits.getKwic(hit)
-        val captureGroups = hits.getCapturedGroups(hit)
-        val captureSpans = captureIndices.map(captureGroups(_))
-        if (!captureSpans.forall(_ != null)) {
-          // Should not occur, but (due to a bug in BlackLab?) sometimes it happens anyway
-          logger.warn("Got an empty capture group hit, skipping")
-        } else {
-          generators.foreach(
-            _.generateOperations(hit, hits).foreach(
-              op => {
-                val currentList = operatorMap.getOrElse(op.op, List[(Int, Int)]())
-                operatorMap.put(op.op, (index, if (op.required) 1 else 0) :: currentList)
-              }
-            )
-          )
-
-          val shift = hit.start - kwic.getHitStart
-          val capturedStrings = captureSpans.map {
-            captureSpan =>
-              kwic.getTokens("word").subList(
-                captureSpan.start - shift,
-                captureSpan.end - shift
-              ).asScala.map(_.toLowerCase)
+    sentenceId2EditCount.foreach {
+      case (key, numEdits) =>
+        val example = examples(key)
+        if (numEdits >= example.requiredEdits) {
+          val label = example.label match {
+            case Positive => positive += example.weight
+            case Negative => negative += example.weight
+            case Unlabelled =>
+              numUnlabelled += 1
+              unlabelled += example.weight
           }
-          val label = if (positiveStrings contains capturedStrings) {
-            Positive
-          } else if (negativeStrings contains capturedStrings) {
-            Negative
-          } else {
-            Unlabelled
-          }
-          val str = kwic.getMatch("word").asScala.mkString(" ")
-          val requiredEdits = captureGroups.zipWithIndex.count {
-            case (captureSpan, captureIndex) =>
-              captureSpan != null && !captureIndices.contains(captureIndex)
-          }
-          examples = Example(label, requiredEdits, str) :: examples
+          label
         }
     }
-    HitAnalysis(
-      operatorMap.map { case (k, v) => (k, IntMap(v: _*)) }.toMap,
-      examples.reverse.toIndexedSeq
-    )
+    val unlabelledPerDoc = numUnlabelled / (lastUnlabelledDoc.toDouble + 1)
+    val unlabelledWeightPerDoc = unlabelled / (lastUnlabelledDoc.toDouble + 1)
+    // How much unlabelled weight expected if we had continued to match unlabelled docs as the
+    // same rate in the unlabelled docs, note at the moment this glosses over the fact that in
+    // reality we would expect diminishing returns due to how we weight examples
+    val unlabelledWeightExtrapolated = unlabelledWeightPerDoc * (lastDoc + 1)
+    val total = unlabelledWeightExtrapolated + positive + negative
+    (positive / lastDoc, negative / lastDoc, unlabelledPerDoc)
   }
 
   /** Uses a beam search to select the best CompoundQueryOp
@@ -143,17 +87,19 @@ object QuerySuggester extends Logging {
     * @param opBuilder Builder function for CompoundQueryOps
     * @param beamSize Size of the beam to use in the search
     * @param depth Depth to run the search to, corresponds the to maximum size
-    *          of a CompoundQueryOp that can be proposed
+    *        of a CompoundQueryOp that can be proposed
+    * @param query optional query, only used when printing query ops
     * @return Sequence of CompoundQueryOps, together with their score and a string
-    *     message about some statistics about that op of at most beamSize size
+    *   message about some statistics about that op of at most beamSize size
     */
   def selectOperator(
     hitAnalysis: HitAnalysis,
     evaluationFunction: QueryEvaluator,
-    opBuilder: EvaluatedOp => CompoundQueryOp,
+    opBuilder: EvaluatedOp => Option[CompoundQueryOp],
     beamSize: Int,
-    depth: Int
-  ): Seq[ScoredOps] = {
+    depth: Int,
+    query: Option[TokenizedQuery] = None
+  ): Seq[(CompoundQueryOp, Double)] = {
 
     // Reverse ordering so the smallest scoring operators are at the head
     val priorityQueue = scala.collection.mutable.PriorityQueue()(
@@ -164,31 +110,32 @@ object QuerySuggester extends Logging {
     hitAnalysis.operatorHits.foreach {
       case (operator, matches) =>
         val op = opBuilder(EvaluatedOp(operator, matches))
-        val score = evaluationFunction.evaluate(op, 1)
-        if (priorityQueue.size < beamSize) {
-          priorityQueue.enqueue((op, score))
-        } else if (priorityQueue.head._2 < score) {
-          priorityQueue.dequeue()
-          priorityQueue.enqueue((op, score))
+        if (op.isDefined) {
+          val score = evaluationFunction.evaluate(op.get, 1)
+          if (priorityQueue.size < beamSize) {
+            priorityQueue.enqueue((op.get, score))
+          } else if (priorityQueue.head._2 < score) {
+            priorityQueue.dequeue()
+            priorityQueue.enqueue((op.get, score))
+          }
         }
     }
 
     def printQueue(depth: Int): Unit = {
       priorityQueue.foreach {
-        case (op, score) => logger.debug(
-          s"${op.toString}::(${evaluationFunction.evaluationMsgLong(op, depth)})"
-        )
+        case (op, score) =>
+          val opStr = if (query.isEmpty) op.toString() else op.toString(query.get)
+          logger.debug(s"$opStr\n${evaluationFunction.evaluationMsgLong(op, depth)}")
       }
     }
 
-    val alreadyFound = scala.collection.mutable.Set[CompoundQueryOp]()
+    val alreadyFound = scala.collection.mutable.Set[Set[TokenQueryOp]]()
 
     // Start the beam search, note this search follows a breadth-first pattern where we keep a fixed
     // number of nodes at each depth rather then the more typical depth-first style of beam search.
     for (i <- 1 until depth) {
       logger.debug(s"********* Depth $i *********")
       printQueue(i + 1)
-      logger.debug(s"********* Starting Depth ${i + 1} *********")
 
       if (evaluationFunction.usesDepth()) {
         // Now the depth has changes, rescore the old queries so their scores are up-to-date
@@ -203,8 +150,8 @@ object QuerySuggester extends Logging {
       priorityQueue.filter {
         // Filter out ops that are from a lower depth iteration since we have already tried
         // expanding them. Note this assumes that the children of this node, when re-evaluated at
-        // a lower depth, will not have a higher scores then they did before.
-        case (operator, score) => operator.ops.size == i
+        // a lower depth, will not have a higher scores then they did previously.
+        case (operator, score) => operator.size == i
       }.to[Seq].foreach { // iterate over a copy so we do not re-expand nodes
         case (operator, score) =>
           hitAnalysis.operatorHits.
@@ -214,7 +161,7 @@ object QuerySuggester extends Logging {
             foreach {
               case (newOp, opMatches) =>
                 val newOperator = operator.add(EvaluatedOp(newOp, opMatches))
-                if (!alreadyFound.contains(newOperator)) {
+                if (!alreadyFound.contains(newOperator.ops)) {
                   val newScore = evaluationFunction.evaluate(newOperator, 1 + i)
                   if (priorityQueue.size < beamSize) {
                     priorityQueue.enqueue((newOperator, newScore))
@@ -222,7 +169,7 @@ object QuerySuggester extends Logging {
                     priorityQueue.dequeue()
                     priorityQueue.enqueue((newOperator, newScore))
                   }
-                  alreadyFound.add(newOperator)
+                  alreadyFound.add(newOperator.ops)
                 }
             }
       }
@@ -230,8 +177,7 @@ object QuerySuggester extends Logging {
 
     logger.debug("******* DONE ************")
     printQueue(depth)
-    priorityQueue.dequeueAll.reverse.take(beamSize).map(x => ScoredOps(x._1, x._2,
-      evaluationFunction.evaluationMsg(x._1, depth))).toSeq
+    priorityQueue.dequeueAll.reverse.toSeq
   }
 
   /** Return a set of suggested queries given a starting query and a Table
@@ -241,10 +187,10 @@ object QuerySuggester extends Logging {
     * @param tables Tables to use when building the query
     * @param target Name of the table to optimize the suggested queries for
     * @param narrow Whether the suggestions should narrow or broaden the starting
-    *           query
+    *         query
     * @param config Configuration details to use when suggesting the new queries
     * @return Suggested queries, along with their scores and a String msg details some
-    *     statistics about each query
+    *   statistics about each query
     */
   def suggestQuery(
     searcher: Searcher,
@@ -254,104 +200,116 @@ object QuerySuggester extends Logging {
     narrow: Boolean,
     config: SuggestQueryConfig
   ): Seq[ScoredQuery] = {
-
+    val percentUnlabelled = querySuggestionConf.getDouble("percentUnlabelled")
     val targetTable = tables.get(target) match {
       case Some(table) => table
       case None => throw new IllegalArgumentException("Target table not found")
     }
+    require(QueryLanguage.getCaptureGroups(startingQuery).size == targetTable.cols.size)
 
     val queryWithNamedCaptures = QueryLanguage.nameCaptureGroups(startingQuery, targetTable.cols)
     val tokenizedQuery = TokenizedQuery.buildFromQuery(queryWithNamedCaptures)
 
     logger.info(s"Making ${if (narrow) "narrowing" else "broadening"} " +
       s"suggestion for <${QueryLanguage.getQueryString(queryWithNamedCaptures)}> for $target")
-    logger.debug(s"Config: $config")
-
-    val positiveTerms = targetTable.positive.toSet
-    val negativeTerms = targetTable.negative.toSet
-
-    val tokenSeq = tokenizedQuery.getSeq
-
-    def parseHits(hits: HitsWindow): HitAnalysis = {
-      hits.get(0) // Ensure hits has loaded the captureGroupNames
-      val generators =
-        if (narrow) {
-          Seq(
-            PrefixOpGenerator(QLeafGenerator(Set("word", "pos")), Seq(1, 2, 3)),
-            SuffixOpGenerator(QLeafGenerator(Set("word", "pos")), Seq(1, 2, 3)),
-            ReplaceTokenGenerator.specifyTokens(
-              tokenizedQuery.getSeq,
-              Range(1, tokenSeq.size + 1),
-              Seq("pos"), Seq(2, 4, 6)
-            )
-          )
-        } else {
-          val captureNames = hits.getCapturedGroupNames
-          val targetCaptureNames = SpansFuzzySequence.getMissesCaptureGroupNames(tokenSeq.size)
-          val targetIndices = targetCaptureNames.map(x => captureNames.indexOf(x))
-          Seq(RequiredEditsGenerator(
-            QLeafGenerator(Set("pos"), Set(4)),
-            QLeafGenerator(Set("pos")),
-            targetIndices
-          ))
-        }
-      val captureNames = hits.getCapturedGroupNames
-      val captureIndices = targetTable.cols.map(captureNames.indexOf(_))
-      QuerySuggester.buildHitAnalysis(hits, generators, positiveTerms,
-        negativeTerms, captureIndices)
-    }
+    logger.info(s"Configuration: $config")
 
     val hitGatherer = if (narrow) {
       MatchesSampler()
     } else {
-      FuzzySequenceSampler(1, config.depth)
+      FuzzySequenceSampler(1, Math.min(tokenizedQuery.size - 1, config.depth))
     }
 
-    logger.debug(s"Retrieving labelled documents...")
-    val (labelledHitAnalysis, labelledRetrieveTime) = Timing.time {
-      val hits = hitGatherer.getLabelledSample(queryWithNamedCaptures, searcher, targetTable).
-        window(0, config.maxSampleSize)
-      val analysis = parseHits(hits.window(
-        0,
-        config.maxSampleSize - (config.maxSampleSize * numUnlabelled).toInt
-      ))
-      Some(analysis)
+    logger.debug("Reading unlabelled hits")
+    val ((unlabelledHits, unlabelledSize), unlabelledReadTime) = Timing.time {
+      val hits = hitGatherer.getSample(tokenizedQuery, searcher, targetTable).
+        window(0, (config.maxSampleSize * percentUnlabelled).toInt)
+      (hits, hits.size())
     }
-    logger.debug(s"Document retrieval took ${labelledRetrieveTime.toMillis / 1000.0} seconds")
+    logger.debug(s"Read $unlabelledSize unlabelled hits " +
+      s"in ${unlabelledReadTime.toMillis / 1000.0} seconds")
 
-    logger.debug(s"Retrieving unlabelled documents...")
-    val (unprunnedHitAnalysis, unlabelledRetrieveTime) = Timing.time {
-      val hits = hitGatherer.getSample(queryWithNamedCaptures, searcher, targetTable)
-      val window = hits.window(0, (config.maxSampleSize * numUnlabelled).toInt)
-      val analysis = parseHits(window)
-      if (labelledHitAnalysis.isEmpty) analysis else labelledHitAnalysis.get ++ analysis
+    val lastUnlabelledDoc = unlabelledHits.get(unlabelledSize - 1).doc
+    logger.debug(s"Reading labelled hits, starting from doc $lastUnlabelledDoc")
+    val ((labelledHits, labelledSize), labelledReadTime) = Timing.time {
+      val hits = hitGatherer.getLabelledSample(tokenizedQuery, searcher, targetTable,
+        lastUnlabelledDoc).window(0, (config.maxSampleSize * (1 - percentUnlabelled)).toInt)
+      (hits, hits.size)
     }
-    logger.debug(s"Retrieval took ${unlabelledRetrieveTime.toMillis / 1000.0} seconds")
+    logger.debug(s"Read $labelledSize labelled hits in" +
+      s" ${labelledReadTime.toMillis / 1000.0} seconds")
+
+    val maxRemoves = if (narrow) {
+      Int.MaxValue
+    } else {
+      querySuggestionConf.getConfig("broaden").getInt("maxRemoves")
+    }
+
+    logger.debug("Analyzing hits")
+    val (unprunnedHitAnalysis, analysisTime) = Timing.time {
+      val generator = if (narrow) {
+        val selectConf = querySuggestionConf.getConfig("narrow")
+        SpecifyingOpGenerator(
+          selectConf.getBoolean("suggestPos"),
+          selectConf.getBoolean("suggestWord"),
+          selectConf.getIntList("clusterSizes").asScala.map(_.toInt)
+        )
+      } else {
+        val selectConf = querySuggestionConf.getConfig("broaden")
+        GeneralizingOpGenerator(
+          selectConf.getBoolean("suggestPos"),
+          selectConf.getBoolean("suggestWord"),
+          selectConf.getIntList("clusterSizes").asScala.map(_.toInt),
+          selectConf.getBoolean("suggestAddWords"),
+          tokenizedQuery.size,
+          selectConf.getBoolean("generalizationPruning"),
+          maxRemoves
+        )
+      }
+      val (prefixCounts, suffixCounts) = if (narrow) {
+        (
+          querySuggestionConf.getConfig("narrow").getInt("prefixSize"),
+          querySuggestionConf.getConfig("narrow").getInt("suffixSize")
+        )
+      } else {
+        (0, 0)
+      }
+      buildHitAnalysis(Seq(labelledHits, unlabelledHits), tokenizedQuery,
+        prefixCounts, suffixCounts, generator, targetTable)
+    }
+    logger.debug(s"Done Analyzing hits in ${analysisTime.toMillis / 1000.0} seconds")
 
     val beforePruning = unprunnedHitAnalysis.operatorHits.size
-    val hitAnalysis = unprunnedHitAnalysis.copy(
-      operatorHits = unprunnedHitAnalysis.operatorHits.filter {
-        case (token, matches) => matches.size > 1
+    val hitAnalysis =
+      if ((unlabelledSize + labelledSize) >
+        querySuggestionConf.getInt("pruneOperatorsIfMoreMatchesThan")) {
+        val pruneLessThan = querySuggestionConf.getInt("pruneOperatorsIfLessThan")
+        unprunnedHitAnalysis.copy(
+          operatorHits = unprunnedHitAnalysis.operatorHits.filter {
+            case (token, matches) => matches.size > pruneLessThan
+          }
+        )
+      } else {
+        unprunnedHitAnalysis
       }
-    )
-    logger.debug(s"Pruned ${beforePruning - hitAnalysis.operatorHits.size} operators")
 
+    logger.info(s"Pruned ${beforePruning - hitAnalysis.operatorHits.size} " +
+      s"(operators ${hitAnalysis.operatorHits.size} left)")
     val totalPositiveHits = hitAnalysis.examples.count(x => x.label == Positive)
     val totalNegativeHits = hitAnalysis.examples.count(x => x.label == Negative)
-    logger.debug(s"Done parsing ${hitAnalysis.size} hits")
-    logger.debug(s"Found $totalPositiveHits positive " +
+    logger.info(s"Found $totalPositiveHits positive " +
       s"and $totalNegativeHits negative with ${hitAnalysis.operatorHits.size} possible operators")
 
     if (totalPositiveHits == 0) {
-      logger.debug("Not enough positive hits found")
+      logger.info("Not enough data found")
       return Seq()
     }
 
     val opCombiner =
       if (config.allowDisjunctions) {
-        (x: EvaluatedOp) => OpConjunctionOfDisjunctions.apply(x)
+        (x: EvaluatedOp) => OpConjunctionOfDisjunctions.apply(x, maxRemoves)
       } else {
-        (x: EvaluatedOp) => OpConjunction.apply(x)
+        (x: EvaluatedOp) => OpConjunction.apply(x, maxRemoves)
       }
 
     val evalFunction =
@@ -374,13 +332,31 @@ object QuerySuggester extends Logging {
         evalFunction,
         opCombiner,
         config.beamSize,
-        config.depth
+        config.depth,
+        Some(tokenizedQuery)
       )
     }
     logger.debug(s"Done selecting in ${searchTime.toMillis / 1000.0}")
-
-    operators.take(10).map { scoredOp =>
-      ScoredQuery(scoredOp.ops.applyOps(tokenizedQuery).getQuery, scoredOp.score, scoredOp.msg)
+    val lastDoc = if (labelledSize > 0) {
+      labelledHits.get(labelledSize - 1).doc
+    } else {
+      lastUnlabelledDoc
     }
+    val scoredOps = operators.flatMap {
+      case (op, score) =>
+        val query = op.applyOps(tokenizedQuery).getQuery
+        val (p, n, u) = getPerDocumentScores(
+          op.numEdits,
+          lastUnlabelledDoc, lastDoc, evalFunction.examples
+        )
+        // NaNs will break the client, so it pays to be careful here. Otherwise we will be
+        // conservative and return queries as long as they were not given the lowest possible score
+        if (score > Double.NegativeInfinity && Seq(score, p, n, u).forall(!_.isNaN)) {
+          Some(ScoredQuery(query, score, p, n, u))
+        } else {
+          None
+        }
+    }.take(querySuggestionConf.getInt("numToReturn"))
+    scoredOps
   }
 }

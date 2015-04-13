@@ -31,10 +31,10 @@ import org.apache.lucene.util.Bits
   *
   * @param mixedClauses Sequence of Queries or integers to use as subclauses
   * @param minMatches Minimum number of clauses that must match a sequence for us to return that
-  *                 sequence
+  *                sequence
   * @param maxMatches Maximum number of clauses that must match a sequence we return
   * @param captureMisses Whether to return, the clauses that did not participate in a match, the
-  *                    spans of where they should have matched
+  *                   spans of where they should have matched
   * @param ignoreLastToken Whether to ignore the last token of each document
   * @param sequencesToCapture Subsequences of each match to return as capture groups
   */
@@ -45,13 +45,12 @@ class SpanQueryFuzzySequence(
   captureMisses: Boolean,
   ignoreLastToken: Boolean,
   sequencesToCapture: Seq[CaptureSpan]
-)
-    extends SpanQueryBase(
-      mixedClauses.flatMap {
-      case Left(query) => Some(query)
-      case _ => None
-    }.toArray
-    ) {
+) extends SpanQueryBase(
+  mixedClauses.flatMap {
+  case Left(query) => Some(query)
+  case _ => None
+}.toArray
+) {
 
   def this(
     mixedClauses: => Seq[SpanQuery], // use "=>" to avoid conflicting w/previous constructor
@@ -94,7 +93,6 @@ class SpanQueryFuzzySequence(
         }
       case r: Right[SpanQuery, Int] => r
     }
-
     new SpanQueryFuzzySequence(rewrittenClauses, minMatches, maxMatches, captureMisses,
       ignoreLastToken, sequencesToCapture)
   }
@@ -112,8 +110,11 @@ class SpanQueryFuzzySequence(
     }
     val lengthGetter = new DocFieldLengthGetter(atomicReaderContext.reader(), getField)
 
+    // We need to always ensure at least one explicit clause matches, otherwise we
+    // will match everything
+    val adjustedMinMatches = Math.max(1, minMatches)
     new SpansFuzzySequence(baseSpans, lengthGetter,
-      minMatches, maxMatches, ignoreLastToken, sequencesToCapture, captureMisses)
+      adjustedMinMatches, maxMatches, true, ignoreLastToken, sequencesToCapture, captureMisses)
   }
 
   override def toString(s: String): String = {

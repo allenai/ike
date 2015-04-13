@@ -3,7 +3,8 @@ package org.allenai.dictionary.ml.subsample
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary._
 import org.allenai.dictionary.index.TestData
-import nl.inl.blacklab.search.Hits
+import org.allenai.dictionary.ml.TokenizedQuery
+import nl.inl.blacklab.search.{Span, Hits}
 
 import scala.collection.JavaConverters._
 
@@ -27,22 +28,8 @@ class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
     }).toSeq
   }
 
-  def hitToAllCaptures(hits: Hits): Seq[Seq[String]] = {
-    hits.asScala.map(hit => {
-      val kwic = hits.getKwic(hit)
-      hits.getCapturedGroups(hit).map(span => {
-        if (span == null) {
-          null
-        } else {
-          val captureKwic = span.start - hit.start
-          kwic.getMatch("word").subList(
-            captureKwic,
-            captureKwic + span.end - span.start
-          ).asScala.mkString(" ")
-        }
-      }).toSeq
-    }).toSeq
-  }
+  def span2tuple(span : Span) : (Int, Int)= (span.start, span.end)
+
 
   def buildTable(positive: Seq[String], negative: Seq[String]): Table = {
     Table("testTable", Seq("testCol"),
@@ -56,12 +43,18 @@ class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
       QDisj(Seq(QWord("like"), QWord("hate"))),
       QUnnamed(QDisj(Seq(QWord("those"), QWord("great"))))
     ))
-    val hits = FuzzySequenceSampler(0, 1).getSample(testQuery, searcher,
+    val tokenized = TokenizedQuery.buildFromQuery(testQuery, Seq("c1"))
+    val hits = FuzzySequenceSampler(0, 1).getSample(tokenized, searcher,
       Table("", Seq("c1"), Seq(), Seq()))
-    val captures = hitToAllCaptures(hits)
-    assertResult(Seq("mango", null, null, "mango"))(captures(0)) // Last word did not match
-    assertResult(Seq("those", null, null, null))(captures(1)) // all words matched
-    assertResult(Seq("great", null, "not", null))(captures(2)) // middle word did not match
+    // Match I like mango
+    assertResult(Seq((2,3), (0,1), (1,2), (-2,-3)))(
+      hits.getCapturedGroups(hits.get(0)).map(span2tuple))
+    // Match I hate those
+    assertResult(Seq((2,3), (0,1), (1,2), (2,3)))(
+      hits.getCapturedGroups(hits.get(1)).map(span2tuple))
+    // Match taste not great
+    assertResult(Seq((3,4), (1,2), (-2,-3), (3,4)))(
+      hits.getCapturedGroups(hits.get(2)).map(span2tuple))
   }
 
   "FuzzySequenceSampler" should "Limit queries correctly" in {
@@ -77,12 +70,13 @@ class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
         TableRow(Seq(TableValue(Seq(QWord("hate"))), TableValue(Seq(QWord("bananas")))))
       )
     )
+    val tokenized = TokenizedQuery.buildFromQuery(startingQuery, table.cols)
     val expectedResults = Seq(
       "I like mango",
       "hate those bananas"
     )
     assertResult(expectedResults)(hitsToStrings(FuzzySequenceSampler(0, 1).getLabelledSample(
-      startingQuery, searcher, table
+      tokenized, searcher, table, 0
     )))
   }
 }
