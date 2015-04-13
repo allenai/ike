@@ -1,5 +1,7 @@
 package org.allenai.dictionary.ml.primitveops
 
+import org.allenai.dictionary.ml.Suffix
+
 import nl.inl.blacklab.search._
 
 /** Generates Suffix operators that could be applied to a given hit

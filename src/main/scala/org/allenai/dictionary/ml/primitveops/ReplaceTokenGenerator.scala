@@ -1,6 +1,8 @@
 package org.allenai.dictionary.ml.primitveops
 
-import nl.inl.blacklab.search.{ Hit, Hits }
+import org.allenai.dictionary.ml.QueryToken
+
+import nl.inl.blacklab.search.{ Hits, Hit }
 import org.allenai.dictionary._
 
 object ReplaceTokenGenerator {
@@ -46,7 +48,7 @@ case class ReplaceTokenGenerator(targets: Seq[(Int, QLeafGenerator)])
     val kwic = source.getKwic(hit)
     targets.flatMap {
       case (index, leafs) =>
-        val slot = Match(index)
+        val slot = QueryToken(index)
         val kwicIndex = kwic.getHitStart + index - 1
         leafs.generate(kwic, kwicIndex).
           map(leaf => MarkedOp(SetToken(slot, leaf), required = false))

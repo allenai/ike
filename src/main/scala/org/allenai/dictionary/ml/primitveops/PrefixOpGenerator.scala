@@ -1,6 +1,8 @@
 package org.allenai.dictionary.ml.primitveops
 
-import nl.inl.blacklab.search.{ Hit, Hits }
+import org.allenai.dictionary.ml.Prefix
+
+import nl.inl.blacklab.search.{ Hits, Hit }
 
 /** Generates applicable Prefix operators for a given hit.
   *

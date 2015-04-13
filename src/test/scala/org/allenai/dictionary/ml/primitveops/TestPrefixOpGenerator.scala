@@ -3,6 +3,7 @@ package org.allenai.dictionary.ml.primitveops
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary._
 import org.allenai.dictionary.index.TestData
+import org.allenai.dictionary.ml.Prefix
 import scala.collection.JavaConverters._
 
 class TestPrefixOpGenerator extends UnitSpec with ScratchDirectory {

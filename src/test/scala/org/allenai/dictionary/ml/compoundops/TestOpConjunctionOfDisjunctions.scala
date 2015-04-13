@@ -2,6 +2,7 @@ package org.allenai.dictionary.ml.compoundops
 
 import org.allenai.common.testkit.UnitSpec
 import org.allenai.dictionary._
+import org.allenai.dictionary.ml.{QueryToken, Prefix, Suffix}
 import org.allenai.dictionary.ml.primitveops._
 
 class TestOpConjunctionOfDisjunctions extends UnitSpec {
@@ -19,7 +20,7 @@ class TestOpConjunctionOfDisjunctions extends UnitSpec {
     List((1, 1), (3, 0), (4, 1), (9, 1))
   )
   val replace3 = EvaluatedOp.fromList(
-    SetToken(Match(3), QCluster("r3")),
+    SetToken(QueryToken(3), QCluster("r3")),
     List(1, 2, 3, 4, 5, 6, 7)
   )
   val add3 = EvaluatedOp.fromPairs(

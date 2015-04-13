@@ -1,6 +1,8 @@
 package org.allenai.dictionary.ml.primitveops
 
-import nl.inl.blacklab.search.{ Hit, Hits }
+import org.allenai.dictionary.ml.QueryToken
+
+import nl.inl.blacklab.search.{ Hits, Hit }
 
 /** Generates MarkedOps for all tokens in a hit. Uses the capture groups
   * stored by FuzzySequenceQuery to determine which of the proposed operators
@@ -30,7 +32,7 @@ case class RequiredEditsGenerator(
       val kwicIndex = kwic.getHitStart + i
       val required = indicesToSet contains i
       val setTokens = setToken.generate(kwic, kwicIndex).
-        map(leaf => MarkedOp(SetToken(Match(i + 1), leaf), required))
+        map(leaf => MarkedOp(SetToken(QueryToken(i + 1), leaf), required))
       val addTokens = addToken.generate(kwic, kwicIndex).
         map(leaf => MarkedOp(AddToken(i + 1, leaf), required))
       setTokens ++ addTokens

@@ -1,6 +1,7 @@
 package org.allenai.dictionary.ml.compoundops
 
 import org.allenai.dictionary._
+import org.allenai.dictionary.ml._
 import org.allenai.dictionary.ml.primitveops._
 import org.allenai.dictionary.ml.{ CaptureSequence, TokenizedQuery }
 
@@ -75,7 +76,7 @@ object CompoundQueryOp {
     val captureOps = grouped.flatMap {
       case (slot, qexprs) =>
         slot match {
-          case Match(token) => Some((
+          case QueryToken(token) => Some((
             token,
             buildNewToken(qexprs, Some(query.getSeq(token - 1)))
           ))
@@ -153,7 +154,7 @@ abstract class CompoundQueryOp(
       "<>"
     } else {
       val maxReplace = (1 +: ops.flatMap(op => op.slot match {
-        case Match(token) => Some(token)
+        case QueryToken(token) => Some(token)
         case _ => None
       }).toSeq).max
       val fakeQExpr = QSeq(Range(0, maxReplace).map(_ => QWildcard()))

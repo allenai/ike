@@ -2,7 +2,7 @@ package org.allenai.dictionary.ml.compoundops
 
 import org.allenai.common.testkit.UnitSpec
 import org.allenai.dictionary._
-import org.allenai.dictionary.ml.TokenizedQuery
+import org.allenai.dictionary.ml._
 import org.allenai.dictionary.ml.primitveops._
 
 import scala.collection.immutable.IntMap
@@ -16,7 +16,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
   val prefix3 = SetToken(Prefix(3), QPos("NN"))
   val suffix1 = SetToken(Suffix(1), QWord("s1"))
   val suffix3 = SetToken(Suffix(3), QWord("s3"))
-  val replace3 = SetToken(Match(3), QCluster("11"))
+  val replace3 = SetToken(QueryToken(3), QCluster("11"))
   val add21 = AddToken(2, QWord("a21"))
   val add22 = AddToken(2, QWord("a22"))
   val add3 = AddToken(3, QWord("a3"))

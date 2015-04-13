@@ -3,6 +3,7 @@ package org.allenai.dictionary.ml.primitveops
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary._
 import org.allenai.dictionary.index.TestData
+import org.allenai.dictionary.ml.QueryToken
 import scala.collection.JavaConverters._
 
 class TestReplaceTokenGenerator extends UnitSpec with ScratchDirectory {
@@ -10,7 +11,7 @@ class TestReplaceTokenGenerator extends UnitSpec with ScratchDirectory {
   val searcher = TestData.testSearcher(scratchDir)
 
   def makeMarkedOpMatch(i: Int, leaf: QLeaf): MarkedOp = {
-    MarkedOp(SetToken(Match(i), leaf), required = false)
+    MarkedOp(SetToken(QueryToken(i), leaf), required = false)
   }
 
   "SpecifyQuery" should "build from query correctly" in {

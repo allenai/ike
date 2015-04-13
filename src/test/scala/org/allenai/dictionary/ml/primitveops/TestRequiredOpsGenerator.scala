@@ -2,6 +2,7 @@ package org.allenai.dictionary.ml.primitveops
 
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary.index.TestData
+import org.allenai.dictionary.ml.QueryToken
 import org.allenai.dictionary.ml.subsample.{ SpansFuzzySequence, FuzzySequenceSampler }
 import org.allenai.dictionary._
 import scala.collection.JavaConverters._
@@ -11,7 +12,7 @@ class TestRequiredOpsGenerator extends UnitSpec with ScratchDirectory {
   val searcher = TestData.testSearcher(scratchDir)
 
   def makeMarkedOpMatch(i: Int, leaf: QLeaf, required: Boolean = false): MarkedOp = {
-    MarkedOp(SetToken(Match(i), leaf), required)
+    MarkedOp(SetToken(QueryToken(i), leaf), required)
   }
 
   "SetCaptureToken" should "create correct operators" in {

@@ -1,6 +1,7 @@
 package org.allenai.dictionary.ml.compoundops
 
-import org.allenai.dictionary.ml.primitveops.{ Slot, TokenQueryOp }
+import org.allenai.dictionary.ml.Slot
+import org.allenai.dictionary.ml.primitveops.{ TokenQueryOp }
 
 import scala.collection.immutable.IntMap
 
