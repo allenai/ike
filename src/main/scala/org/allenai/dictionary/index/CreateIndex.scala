@@ -18,7 +18,6 @@ object CreateIndex extends App {
   case class Options(
     destinationDir: File = null,
     batchSize: Int = 1000,
-    clusters: URI = null,
     textSource: URI = null
   )
 
@@ -31,10 +30,6 @@ object CreateIndex extends App {
       o.copy(batchSize = b)
     } text "Batch size"
 
-    opt[URI]('c', "clusters") required () action { (c, o) =>
-      o.copy(clusters = c)
-    } text "URL of a file to load clusters from"
-
     opt[URI]('t', "textSource") required () action { (t, o) =>
       o.copy(textSource = t)
     } text "URL of a file or directory to load the text from"
@@ -45,13 +40,6 @@ object CreateIndex extends App {
   parser.parse(args, Options()) foreach { options =>
     val indexDir = options.destinationDir
     val batchSize = options.batchSize
-    val clusterFile = options.clusters.getScheme match {
-      case "file" => Paths.get(options.clusters).toFile
-      case "datastore" => Datastore.locatorFromUrl(options.clusters).path.toFile
-      case otherAuthority =>
-        throw new RuntimeException(s"URL scheme not supported: $otherAuthority")
-    }
-    val clusters = Clusters.fromFile(clusterFile)
     var numAdded = 0
     val idTexts = options.textSource.getScheme match {
       case "file" =>
@@ -77,8 +65,7 @@ object CreateIndex extends App {
       val wordLc = word.toLowerCase
       val pos = lemmatized.token.postag
       val lemma = lemmatized.lemma
-      val cluster = clusters.getOrElse(wordLc, "")
-      IndexableToken(word, pos, lemma, cluster)
+      IndexableToken(word, pos, lemma)
     }
 
     def process(idText: IdText): IndexableText = {
