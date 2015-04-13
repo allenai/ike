@@ -51,7 +51,8 @@ object QExprParser extends RegexParsers {
   val posTagRegex = posTagSet.map(Pattern.quote).mkString("|").r
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
-  def word = """[^|\]\[\^$(){}\s*+,]+""".r ^^ QWord
+  def wordRegex = """[^|\]\[\^$(){}\s*+,]+""".r
+  def word = wordRegex ^^ QWord
   def cluster = """\^[01]+""".r ^^ { s => QCluster(s.tail) }
   def pos = posTagRegex ^^ QPos
   def dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
@@ -187,7 +188,7 @@ object QueryLanguage {
       -1
     }
     case q: QAtom => getQueryLength(q.qexpr)
-    case QAnd(q1, q2) => math.min(getQueryLength(q1), getQueryLength(q2))
+    case QAnd(q1, q2) => math.max(getQueryLength(q1), getQueryLength(q2))
   }
 
   /** Ensures that all capture groups in QExpr are named capture groups with names corresponding
