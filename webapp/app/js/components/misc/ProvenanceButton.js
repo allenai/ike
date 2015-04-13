@@ -10,7 +10,11 @@ var ProvenanceButton = React.createClass({
   render: function() {
     var rowvalues = this.props.rowvalues.map(TableManager.valueString)
 
-    var title = "Provenance for (" + rowvalues.join(", ") + ")"
+    var title;
+    if (rowvalues.length == 1)
+      title = "Provenance for " + rowvalues[0]
+    else
+      title = "Provenance for (" + rowvalues.join(", ") + ")"
 
     var provenance = this.props.provenance;
     if(provenance) {
@@ -19,7 +23,18 @@ var ProvenanceButton = React.createClass({
       var examples = [];
       if (provenance.context) {
         examples = provenance.context.map(function(c, i) {
-          return <p key={i}>... {c.fragment} ...</p>;
+          var matchOffset = [0, 0]
+          if(c.matchOffset)
+            matchOffset = c.matchOffset
+
+          var tags = c.words.map(function(word, j) {
+            if(j >= matchOffset[0] && j < matchOffset[1]) {
+              return <strong key={j} title={word.attributes.pos}>{word.word} </strong>
+            } else {
+              return <span key={j} title={word.attributes.pos}>{word.word} </span>
+            }
+          });
+          return <p key={i}>{tags}</p>;
         });
       }
 
