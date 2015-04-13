@@ -97,7 +97,7 @@ class TestOpConjunctionOfDisjunctions extends UnitSpec {
       removeStar2.op, removePlus1.op))(op.ops)
   }
 
-  "OpConjunctionOfDisjunctions" should "work with remove" in {
+  "OpConjunctionOfDisjunctions" should "work with RemoveEdge" in {
     val r2 = EvaluatedOp.fromPairs(
       SetToken(QueryToken(2), QWord("r2")), List((1,0), (2,1), (3,0), (4,0))
     )

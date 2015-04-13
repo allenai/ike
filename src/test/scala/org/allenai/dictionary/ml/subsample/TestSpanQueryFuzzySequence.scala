@@ -96,7 +96,7 @@ class TestSpanQueryFuzzySequence extends UnitSpec with ScratchDirectory {
     }
   }
 
-  it should "capture edits" in {
+  it should "capture query-token spans" in {
     assertResult(Seq(
       Seq("I", "I", "like", "mango"), // No Misses
       Seq("I", "I", "hate", "MISS: those") // Miss 'those'

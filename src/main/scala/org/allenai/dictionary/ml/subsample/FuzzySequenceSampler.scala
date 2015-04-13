@@ -6,7 +6,7 @@ import org.allenai.dictionary.ml.TokenizedQuery
 import org.apache.lucene.search.spans.SpanQuery
 
 /** Sampler that returns sentences that could be matched by a query that is
-  * within an edit distance of the given query. See SpanQueryFuzzySequence.
+  * within an edit distance of the given query. See SpanQueryFuzzySequence
   *
   * @param minEdits minimum edits a sentence can be from the query to be returned
   * @param maxEdits maximum edits a sentence can be from the query to be returned
@@ -18,6 +18,7 @@ case class FuzzySequenceSampler(minEdits: Int, maxEdits: Int)
   require(maxEdits >= minEdits)
 
   def buildFuzzySequenceQuery(tokenizedQuery: TokenizedQuery, searcher: Searcher): SpanQuery = {
+    require(QueryLanguage.getQueryLength(tokenizedQuery.getQuery) > 0)
     val asSpanQueries = tokenizedQuery.getSeq.map(
       q => searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(q))
     )

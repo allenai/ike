@@ -10,7 +10,7 @@ import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
   * @param query the 'query' spans to filter
   * @param filter the 'filter' spans to filter the query spans with
   * @param captureGroups the names of the captures groups to filter with, both the query and
-  *                    filter spans should contain these capture groups
+  *                  filter spans should contain these capture groups
   * @param startFromDoc document to start from
   */
 class SpansFilterByCaptureGroups(
@@ -61,9 +61,9 @@ class SpansFilterByCaptureGroups(
     }
   }
 
-  /** @return Whether this is are currently on a valid match, assuming both filter and query
-    *      are on the same document
-    */
+  /* @return Whether this is are currently on a valid match, assuming both filter and query
+   *     are on the same document
+   */
   private def isValidMatch: Boolean = {
     filter.getCapturedGroups(filterSpanHolder)
     query.getCapturedGroups(querySpanHolder)
@@ -75,10 +75,10 @@ class SpansFilterByCaptureGroups(
     }
   }
 
-  /** Makes we sure are on a valid matching, advancing if needed.
-    *
-    * @return false if no valid match could be found
-    */
+  /* Makes we sure are on a valid matching, advancing if needed.
+   *
+   * @return false if no valid match could be found
+   */
   private def syncMatch(): Boolean = {
     if (syncDoc()) {
       var continue = true
@@ -102,10 +102,10 @@ class SpansFilterByCaptureGroups(
     }
   }
 
-  /** Makes query and filter are on the same document
-    *
-    * @return false if query and filter could not be set to be on the same document
-    */
+  /* Makes query and filter are on the same document
+   *
+   * @return false if query and filter could not be set to be on the same document
+   */
   private def syncDoc(): Boolean = {
     if (query.doc == filter.doc) return true
     while (true) {

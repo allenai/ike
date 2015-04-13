@@ -20,7 +20,7 @@ object QLeafGenerator {
   * @param pos whether to generate QPos
   * @param word whether to generate QWord
   * @param clusterSizes what kinds of QCluster to generate
-  * @param avoidSuggesting A QLeaf this should never suggest
+  * @param avoidSuggesting a specific QLeaf this should never suggest
   */
 case class QLeafGenerator(pos: Boolean, word: Boolean,
     clusterSizes: Seq[Int], avoidSuggesting: Set[QLeaf] = Set()) {

@@ -57,8 +57,8 @@ object OpGenerator {
   }
 }
 
-/** Abstract class for classes that 'generates' possibles operation that could be applied to
-  * to a query and calculates what sentences that operation would allow our starting query to match
+/** Abstract class for classes that 'generate' possibles operation that could be applied to
+  * to a query and calculates what sentences that operation would a starting query to match
   */
 abstract class OpGenerator {
   def generate(matches: QueryMatches): Map[QueryOp, IntMap[Int]]

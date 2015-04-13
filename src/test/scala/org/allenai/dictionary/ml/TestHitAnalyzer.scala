@@ -84,14 +84,14 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
       Seq("mango").map(x => TableRow(Seq(TableValue(Seq(QWord(x))))))
     )
 
-    // Get this hits
+    // Get the hits
     val hitAnalysis = HitAnalyzer.buildHitAnalysis(
       Seq(hits), TokenizedQuery.buildFromQuery(query),
       1, 0, SpecifyingOpGenerator(false, false, Seq(2)),
       table
     )
 
-    // What gets put in str changes for debug reseason so best to just ignore it
+    // What gets put in str changes for debug reasons so best to just ignore it
     assertResult(WeightedExample(Negative, 0, 1.0, 0))(hitAnalysis.examples(0).copy(str=""))
     assertResult(WeightedExample(Unlabelled, 0, 1.0, 2))(hitAnalysis.examples(1).copy(str=""))
     assertResult(WeightedExample(Positive, 0, 1.0, 2))(hitAnalysis.examples(2).copy(str=""))

@@ -15,7 +15,7 @@ object Label extends Enumeration {
 }
 import Label._
 
-/** A token within a sentence and some of its annotation */
+/** A token within a sentence and some of its annotations */
 case class Token(word: String, pos: String, cluster: String)
 
 /** A sequence of tokens that are associated with a QExpr, if didMatch is true the QExpr matched
@@ -30,7 +30,7 @@ case class QueryMatch(tokens: Seq[Token], didMatch: Boolean)
   *
   * @param queryToken The query-token
   * @param matches the Tokens this QExpr matched, or should have matched, within a sequence of
-  *             sentences the original TokenizedQuery matched, or nearly matched
+  *            sentences the original TokenizedQuery matched, or nearly matched
   */
 case class QueryMatches(
   queryToken: QuerySlotData,
@@ -41,9 +41,9 @@ case class QueryMatches(
   * sentences each primitive operation would allow the starting query to match
   *
   * @param operatorHits Maps primitive operations to map of (sentence index within Examples ->
-  *                number of required 'edit' that operator completes for that sentence
-  *                (can be 0)). If a sentence index is not included the starting query will no long
-  *                match the corresponding sentence if the query operaiton is applied to it
+  *               number of required 'edit' that operator completes for that sentence
+  *               (can be 0)). If a sentence index is not included the starting query will no long
+  *               match the corresponding sentence if the query operaiton is applied to it
   * @param examples List of examples, one for each sentence
   */
 case class HitAnalysis(
@@ -53,10 +53,10 @@ case class HitAnalysis(
   def size: Int = examples.size
 }
 
-/** Class that contains the logic needed to turn Hits objects into a HitAnalysis object, this
+/** Contains the logic needed to turn BlackLab Hits into a HitAnalysis object, this
   * involves parsing this Hits to determine the labels of the hits, and to determine what
   * QueryOps can be applied, and how applying those ops would alter which hits the starting
-  * query would apply to.
+  * query would apply to
   */
 object HitAnalyzer extends Logging {
 
@@ -243,14 +243,14 @@ object HitAnalyzer extends Logging {
     * @param hits sequence of hits to build the object from
     * @param query Query to use when deciding which primitive operations to generate
     * @param prefixCounts number of tokens before each to gather and pass to generator
-    *                    in a Prefix Slot.
+    *                   in a Prefix Slot.
     * @param suffixCounts number of tokens before each hit to gather and pass to generator
-    *                    in a Suffix Slot.
+    *                   in a Suffix Slot.
     * @param generator generator used to decide what primtive operations to generate for each
-    *                 query-token within query
+    *                query-token within query
     * @param table table to use when labelling the hits as positive or negative
     * @return the HitAnalysis object containing one 'Example' for each hit in hits, in the same
-    *        order as was given
+    *       order as was given
     */
   def buildHitAnalysis(
     hits: Seq[Hits],

@@ -16,7 +16,7 @@ For 'narrowing' we support any type of query. The following changes can be made 
 1. Adding a prefix to the original query (ex. "fat cat" => "the fat cat")
 2. Adding a suffix to the original query (ex. "fat cat" => "fat cat ran")
 3. Replace a token in the original query (ex. "fat cat" => "fat NN")
-4. 1-3 can also use disjunctions (ex. "cat" => "{fat, lazy} fat", "NN" => "{cat, dog}")
+4. 1-3 can also suggest disjunctions (ex. "cat" => "{fat, lazy} fat", "NN" => "{cat, dog}")
 5. Removing a star or plus operator (ex "cat*" => "cat")
 6. Removing star operator (ex "the cat*" => "the")
 7. Changing a star to a plus (ex "cat*" => "cat+")
@@ -77,7 +77,7 @@ query to now match that sentence. To give a more detailed example consider the f
 
 Our starting query is "a cat"
 
-Our query operation replaces "a" with "DT" (so our new query would "DT cat") 
+Our query operation replaces "a" with "DT" (so our new query would be "DT cat")
 
 We have three sentences:
 1. "a cat"
@@ -98,13 +98,13 @@ And our operator
 * does not match sentence 4
 
 It is left to the compound operators to calculate the number of required operators for each 
-sentences will be made by applying all their primitive operators, and in particular to avoid 
-"double counting" requirements if multiple operators would, for example, edit the same word 
+sentences that will be made by applying all their primitive operators, and in particular to avoid
+"double counting" requirements if multiple operators would, for example, edit the same query-token
 within a query.
  
 Implementation-wise we record this information using an map of integers to integers, where the keys 
-are integers corresponding to particular sentences and the values are 0, if the given operation 
-does not fulfill a requirement for a particular sentence, 1 if it fulfills a requirement. 
+are integers corresponding to particular sentences and the values are the number of required
+edits made to that sentence.
 By comparing the number of requirement a operator has fulfilled for a
 particular sentence to the edit distance from the starting query to that sentence we can quickly 
 deduce whether the starting query would match then sentence if that set of operators were applied. 

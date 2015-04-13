@@ -39,7 +39,7 @@ case class CaptureSpan(name: String, start: Int, end: Int) {
   * <code>minMatches</code> to <code>maxMatches</code> inclusive edit distance of the input
   * sequence of clauses, where an edit is changing a clause token,
   * or deleting a clause from the start/end of the sequence. Input clauses must be fixed length.
-  * additionally supports return subsequences of its matches as capture groups.
+  * additionally supports return subsequences of its matches as capture groups
   *
   * @param clauses Clauses to of the fuzzy sequence, should be fixed length
   * @param documentLengthGetter Getter to find the lengths of documents
@@ -48,7 +48,7 @@ case class CaptureSpan(name: String, start: Int, end: Int) {
   * @param ignoreLastToken whether the the last token of sentences should be skipped
   * @param sequencesToCapture Subsequences to return as capture groups
   * @param registerMisses Whether to return clauses that missed a match as spans
-  *                  indicating where the missed clause 'should' have been placed
+  *                 indicating where the missed clause 'should' have been placed
   */
 class SpansFuzzySequence(
     private val clauses: Seq[Either[BLSpans, Int]],
@@ -90,8 +90,12 @@ class SpansFuzzySequence(
   // of child clauses, so the rest of our validation is deferred until then.
   require(minMatches > 0)
 
+  /* Max number of tokens we our sequence can slip out of bounds from the document and still have
+   a chance of yielding a valid match (through the use of deleting tokens) */
   var maxOutOfBoundsLeft = 0
   var maxOutOfBoundsRight = 0
+
+  /* Once we are at a valid match, the length of the document we are on */
   var docLength = -1
 
   /* Length of the sequence we will match to */
@@ -106,7 +110,10 @@ class SpansFuzzySequence(
   /* Number of matches that implicitly match everything */
   private var numImplicitMatches = -1
 
+  /* Where our implicit matches start, relative to the sequence as a whole */
   private var implicitMatchStarts = Seq[Int]()
+
+  /* Where our implicit matches end, relative to the sequence as a whole */
   private var implicitMatchEnds = Seq[Int]()
 
   /* Clauses that are candidates for participating in a fuzzy sequence match. Never
@@ -396,15 +403,15 @@ class SpansFuzzySequence(
 
   override def doc(): Int = currentMatch.doc
 
-  def sequenceStart(): Int = currentMatch.start
+  // Where the sequence we are matching starts, unlike start() this might be < 0 if our sequence
+  // overflows the current document (implying one of our edits needs to be a deleting a clause)
+  private def sequenceStart: Int = currentMatch.start
 
-  def sequenceEnd(): Int = sequenceStart + hitsLength
+  // Where the sequence we are matching ends, unlike end() this might be go beyond the document end
+  // if one of our 'edits' was to delete a token
+  private def sequenceEnd: Int = sequenceStart + hitsLength
 
-  override def start(): Int = math.max(currentMatch.start, 0)
+  override def start(): Int = math.max(sequenceStart, 0)
 
-  override def end(): Int = math.min(
-    sequenceStart + hitsLength,
-    documentLengthGetter.getFieldLength(doc) - (if (ignoreLastToken) 1 else 0)
-  )
-
+  override def end(): Int = math.min(sequenceEnd, docLength)
 }

@@ -8,7 +8,7 @@ import scala.collection.immutable.IntMap
 
 class TestGeneralizeTokenGenerator extends UnitSpec {
 
-  "GeneralizeTokenGenerator" should "Build correct tokens" in {
+  "GeneralizeTokenGenerator" should "Suggest correct operators" in {
     val query = QueryLanguage.parse("a (?<x>b c) d").get
     val tokenized = TokenizedQuery.buildFromQuery(query)
     val generator = GeneralizingOpGenerator(true, true, Seq(2), true, tokenized.size)
@@ -35,7 +35,7 @@ class TestGeneralizeTokenGenerator extends UnitSpec {
     assertResult(IntMap(2 -> 0, 3 -> 1))(generated(setCluster))
   }
 
-  it should "Should build correct multi remove ops" in {
+  it should "Suggest correct Remove ops" in {
 
     val matches = Seq(
       QueryMatches(QuerySlotData(Some(QWord("a")), QueryToken(1), false, true, false), Seq(

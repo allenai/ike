@@ -7,12 +7,12 @@ import org.allenai.dictionary.ml.{ QueryToken, Slot }
   */
 sealed abstract class QueryOp()
 
-/** Remove a token as long as it an 'edge', meaning all tokens before or after it have
+/** Remove a token as long as it is an 'edge', meaning all tokens before or after it have
   * also been removed
   */
 case class RemoveEdge(index: Int, edge: Int) extends QueryOp {
 
-  /** What tokens need to be removed from the starting query before this can be applied*/
+  /** @return which tokens need to be removed from the starting query before this can be applied */
   def afterRemovals: Range = if (edge < index) {
     Range(edge, index)
   } else {
@@ -64,8 +64,9 @@ abstract class ChangeModifier extends TokenQueryOp {
   }
 }
 
-/** Set a token in a qexpr. Token could be replace an existing token or be added as a suffix or
-  * prefix depending on slot.
+/** Set a token in a qexpr. Token could replace an existing token or be added as a suffix or
+  * prefix depending on slot. If applied to a QStar or QPlus operator changes the child
+  * of that operator
   */
 case class SetToken(slot: Slot, qexpr: QExpr) extends ChangeLeaf()
 

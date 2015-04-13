@@ -5,10 +5,10 @@ import org.allenai.dictionary.ml.QueryMatches
 
 import scala.collection.immutable.IntMap
 
-/** Builds QueryOps that make a query more specific (match strictly less sentences)
+/** Builds QueryOps that makes a query more specific (match strictly less sentences)
   *
-  * @param suggestPos whether to build operators that use QPos QExpr
-  * @param suggestWord whether to build operators that use QWord QExpr
+  * @param suggestPos whether to build operators that add QPos
+  * @param suggestWord whether to build operators that add QWord
   * @param clusterSizes what sizes of clusters to suggest adding to the query
   */
 case class SpecifyingOpGenerator(

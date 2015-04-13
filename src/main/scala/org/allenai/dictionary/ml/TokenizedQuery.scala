@@ -26,8 +26,8 @@ object QuerySlotData {
 }
 /** A 'slot' with a Tokenized query plus some additional data about that slot
   *
-  * @param qexpr the QEXpr in this slot, None if and only if slot is a Prefix or Suffix
-  * @param slot the Slot
+  * @param qexpr the QExpr in this slot, None if and only if slot is a Prefix or Suffix
+  * @param slot which query-token this data is about
   * @param isCapture whether this slot is contained within a capture group
   * @param leftEdge whether this slot is the left-most non capture group
   * @param rightEdge whether this slot is the right-most non capture group
@@ -149,8 +149,9 @@ object TokenizedQuery {
     *
     * @param qexpr Expression to tokenize
     * @param tableCols Sequence of table columns, used to name the query's unnamed capture group
-    * @throws UnconvertibleQuery if the query was not fixed length
     * @return the tokenized QExpr
+    * @throws IllegalArgumentException if the query capture groups could not be made mapped to
+    *                                the table columns
     */
   def buildFromQuery(qexpr: QExpr, tableCols: Seq[String]): TokenizedQuery = {
     buildFromQuery(QueryLanguage.nameCaptureGroups(qexpr, tableCols))
@@ -159,9 +160,8 @@ object TokenizedQuery {
   /** Builds a TokenizedQuery from a QExpr
     *
     * @param qexpr Expression to tokenize, assumed to be fixed length (always matches the same
-    *          number of tokens) and with no unnamed capture groups
+    *        number of tokens) and with no unnamed capture groups
     * @return the tokenized QExpr
-    * @throws UnconvertibleQuery if the query was not fixed length
     * @throws IllegalArgumentException if the query has unnamed capture groups
     */
   def buildFromQuery(qexpr: QExpr): TokenizedQuery = {
@@ -187,12 +187,12 @@ object TokenizedQuery {
   }
 }
 
-/** Query that has been 'tokenized' into a sequence of QExpr.
+/** Query that has been 'tokenized' into a sequence of QExpr
   *
   * @param captures Sequence of capture groups in the query
   * @param nonCaptures Sequence of of QExpr that occurs between each capture group, including
-  *               to the left and right of the first and last capture group. Can contain
-  *               empty sequences
+  *             to the left and right of the first and last capture group. Can contain
+  *             empty sequences
   * @throws IllegalArgumentException if capture.size + 1 != nonCapture.size
   */
 case class TokenizedQuery(captures: List[CaptureSequence], nonCaptures: List[Seq[QExpr]]) {
@@ -210,7 +210,7 @@ case class TokenizedQuery(captures: List[CaptureSequence], nonCaptures: List[Seq
   }
 
   /** @return the tokens of this, plus their Slot, their group number, and whether they are part
-    *     of a capture group or not
+    *   of a capture group or not
     */
   def getAnnotatedSeq: Seq[QuerySlotData] = {
     TokenizedQuery.mergeToAnnotated(captures, nonCaptures)

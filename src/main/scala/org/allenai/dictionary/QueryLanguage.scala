@@ -174,10 +174,9 @@ object QueryLanguage {
     case QPlus(_) => -1
     case QStar(_) => -1
     case l: QLeaf => 1
-    case QSeq(seq) => {
+    case QSeq(seq) =>
       val lengths = seq.map(getQueryLength)
       if (lengths.forall(_ != -1)) lengths.sum else -1
-    }
     case QDisj(seq) =>
       val lengths = seq.map(getQueryLength)
       if (lengths.forall(_ == lengths.head)) lengths.head else -1
@@ -193,7 +192,7 @@ object QueryLanguage {
 
   /** Ensures that all capture groups in QExpr are named capture groups with names corresponding
     * to a column in tableCols. If QExpr contains unnamed capture groups they will be replaced with
-    * named capture groups with names taken from tableCols in the order they appear.
+    * named capture groups with names taken from tableCols in the order they appear
     *
     * @param qexpr Query expression to name capture groups within
     * @param tableCols Sequence of the columns in a table to be used to name unnamed capture
@@ -201,7 +200,7 @@ object QueryLanguage {
     * @throws IllegalArgumentException if QExpr contains a mix of named and unnamed capture groups,
     *                                if the name capture group do not have names corresponding
     *                                to the columns in tableCols, or if the query has the wrong
-    *                                number of capture groups.
+    *                                number of capture groups
     */
   def nameCaptureGroups(qexpr: QExpr, tableCols: Seq[String]): QExpr = {
     var unnamedCounts = 0

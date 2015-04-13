@@ -8,7 +8,7 @@ import scala.collection.immutable.IntMap
 /** Base class for classes that, given a query operation, returns a score that reflects how
   * good that query would be as a suggestion to the user
   *
-  * @param examples The examples to evaluate query operation with
+  * @param examples The examples to evaluate query operations with
   */
 abstract class QueryEvaluator(val examples: IndexedSeq[WeightedExample]) {
 
@@ -23,28 +23,28 @@ abstract class QueryEvaluator(val examples: IndexedSeq[WeightedExample]) {
     if (x.label == Unlabelled) x.weight else 0).sum
 
   /** @return Whether this evaluator accounts for the current search depth when computing
-    *   its scoring function
+    *  its scoring function, if scores are expected to be monotonically decreasing with depth
     */
   def usesDepth(): Boolean
 
   /** Returns a score determining the general 'goodness' of a query operation
     *
     * @param op The operation to score, op.numEdits should specify the number of edits that
-    *       operation will make to each sentence in this.examples
+    *      operation will make to each sentence in this.examples
     * @param depth Depth of the current search
     * @return score of the query
     */
   def evaluate(op: CompoundQueryOp, depth: Int): Double
 
   /** @return Returns a message describing how they score for the given operation was
-    *   arrived at. This message might be displayed on the frontend to users.
+    *  arrived at. This message might be displayed on the frontend to users.
     */
   def evaluationMsg(op: CompoundQueryOp, depth: Int): String = {
     evaluate(op, depth).toString
   }
 
   /** @return As evaluationMsg, but may return a more detailed message. This message
-    *   will only be used for debugging
+    *  will only be used for debugging
     */
   def evaluationMsgLong(op: CompoundQueryOp, depth: Int): String = {
     evaluate(op, depth).toString

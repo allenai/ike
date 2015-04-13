@@ -7,15 +7,15 @@ import scala.collection.immutable.IntMap
 
 /** Builds QueryOps that make a query more general, so it will match more sentences. The
   * generalization is approximate, so some sentences that were matched originally might no longer
-  * match once ops produces by this are applied.
+  * match once ops produces by this are applied
   *
   * @param suggestPos whether to build operators that add POS in the query
   * @param suggestWord whether to build operators that add words to the query
   * @param clusterSizes what sizes of clusters to suggest adding to the query
   * @param addToken whether to suggest AddToken ops in addition to SetToken ops
   * @param maxRemoves the maximum number of tokens that can be removed, this will stop this from
-  *                 suggesting RemoveEdge ops that would require removing more then that many
-  *                 tokens
+  *                suggesting RemoveEdge ops that would require removing more then that many
+  *                tokens
   */
 case class GeneralizingOpGenerator(
     suggestPos: Boolean,

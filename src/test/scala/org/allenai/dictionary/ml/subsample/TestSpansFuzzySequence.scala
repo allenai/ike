@@ -23,9 +23,9 @@ class TestSpansFuzzySequence extends UnitSpec {
 
     val hits = new SpansFuzzySequence(Array(s1, s2, s3), documentEnds(), 2, false)
     assert(hits.next())
-    assertResult((2, 5))((hits.sequenceStart, hits.sequenceEnd)) // Partial match s1 and s2
+    assertResult((2, 5))((hits.start, hits.end)) // Partial match s1 and s2
     assert(hits.next())
-    assertResult((7, 10))((hits.sequenceStart, hits.sequenceEnd)) // partial match s2 and s3
+    assertResult((7, 10))((hits.start, hits.end)) // partial match s2 and s3
     assert(!hits.next())
   }
 
@@ -36,7 +36,7 @@ class TestSpansFuzzySequence extends UnitSpec {
 
     val hits = new SpansFuzzySequence(Array(s1, s2, s3), documentEnds(length = 9), 2, false)
     assert(hits.next())
-    assertResult((3, 0, 4))((hits.doc, hits.sequenceStart, hits.sequenceEnd))
+    assertResult((3, 0, 4))((hits.doc, hits.start, hits.end))
     assert(!hits.next())
   }
 
@@ -47,11 +47,11 @@ class TestSpansFuzzySequence extends UnitSpec {
 
     val hits = new SpansFuzzySequence(Array(s1, s2, s3), documentEnds(), 2, false)
     assert(hits.next())
-    assertResult((1, 4))((hits.sequenceStart, hits.sequenceEnd))
+    assertResult((1, 4))((hits.start, hits.end))
     assert(hits.next())
-    assertResult((2, 5))((hits.sequenceStart, hits.sequenceEnd))
+    assertResult((2, 5))((hits.start, hits.end))
     assert(hits.next())
-    assertResult((3, 6))((hits.sequenceStart, hits.sequenceEnd))
+    assertResult((3, 6))((hits.start, hits.end))
     assert(!hits.next())
   }
 
@@ -65,7 +65,7 @@ class TestSpansFuzzySequence extends UnitSpec {
       documentEnds(), 2, 2, false ,false, Seq(), false
     )
     assert(hits.next())
-    assertResult((2, 5))((hits.sequenceStart, hits.sequenceEnd))
+    assertResult((2, 5))((hits.start, hits.end))
     assert(!hits.next())
   }
 
@@ -80,7 +80,7 @@ class TestSpansFuzzySequence extends UnitSpec {
     val context = new HitQueryContext(hits)
     hits.setHitQueryContext(context)
     assert(hits.next())
-    assertResult((1, 6))((hits.sequenceStart, hits.sequenceEnd))
+    assertResult((1, 6))((hits.start, hits.end))
     hits.getCapturedGroups(captureGroups)
     assertResult((1, 2))((captureGroups(0).start, captureGroups(0).end))
     assertResult((2, 5))((captureGroups(1).start, captureGroups(1).end))
@@ -172,7 +172,7 @@ class TestSpansFuzzySequence extends UnitSpec {
     val hits = new SpansFuzzySequence(Array(s1, s2, s3), documentEnds(60), 2, 2,
       false, true, Seq(), false)
     assert(hits.skipTo(20))
-    assertResult((50, 2, 5))((hits.doc, hits.sequenceStart, hits.sequenceEnd))
+    assertResult((50, 2, 5))((hits.doc, hits.start, hits.end))
     assert(!hits.next())
 
     val hits2 = new SpansFuzzySequence(Array(s1, s2, s3), documentEnds(60), 2, 2,
@@ -189,9 +189,9 @@ class TestSpansFuzzySequence extends UnitSpec {
     )
     val hits = new SpansFuzzySequence(spans, documentEnds(60), 3, 10, false, true, Seq(), false)
     assert(hits.next())
-    assertResult((0, 0, 6))((hits.doc, hits.sequenceStart, hits.sequenceEnd))
+    assertResult((0, 0, 6))((hits.doc, hits.start, hits.end))
     assert(hits.next())
-    assertResult((1, 2, 8))((hits.doc, hits.sequenceStart, hits.sequenceEnd))
+    assertResult((1, 2, 8))((hits.doc, hits.start, hits.end))
     assert(!hits.next())
   }
 }

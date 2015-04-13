@@ -42,9 +42,7 @@ object CompoundQueryOp {
     tokenOps: Iterable[TokenQueryOp],
     current: QExpr
   ): Option[QExpr] = {
-    val (leafOps, otherOps) = tokenOps.partition {
-      op => op.isInstanceOf[ChangeLeaf]
-    }
+    val (leafOps, otherOps) = tokenOps.partition(_.isInstanceOf[ChangeLeaf])
     if (tokenOps.size == 0) {
       Some(current)
     } else if (otherOps.nonEmpty) {
@@ -179,11 +177,11 @@ object CompoundQueryOp {
 }
 
 /** Abstract class for classes that combine a set of QueryOps, while keeping track of the number
-  * of required edits the collective edits made to each sentence
+  * of required edits the collective operations made to each sentence
   *
   * @param ops set of query-token operations to apply to the query
   * @param numEdits Map of (sentence index) -> (number of required edits this combined op
-  *              will have made towards that sentence)
+  *            will have made towards that sentence)
   */
 abstract class CompoundQueryOp(
     val ops: Set[TokenQueryOp],

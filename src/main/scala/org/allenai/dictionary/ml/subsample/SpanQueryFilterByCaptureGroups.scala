@@ -8,12 +8,13 @@ import org.apache.lucene.util.Bits
 import java.util
 
 /** SpanQuery the filters hits from a query that do not capture and the same spans as another
-  * query. Note the capture groups from the filter query will not be returned.
+  * query. Note the capture groups from the filter query will not be returned
   *
   * @param _query The query to filter
   * @param _filter The query to filter by
   * @param captureGroups Capture groups to filter the query by, both the filter and the query should
-  *                     contain capture groups with the names in this list
+  *                   contain capture groups with the names in this list
+  * @param startFromDoc document to start from, returns hits have doc >= startFromDoc
   */
 class SpanQueryFilterByCaptureGroups(
     _query: SpanQuery,

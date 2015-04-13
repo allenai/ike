@@ -8,7 +8,6 @@ var Input = bs.Input
 var Label = bs.Label
 var Badge = bs.Badge
 var ButtonGroup = bs.ButtonGroup
-var Glyphicon = bs.Glyphicon
 var Table = bs.Table
 var xhr = require('xhr');
 
@@ -93,31 +92,6 @@ var SuggestQueryButton = React.createClass({
     this.props.query.requestChange("changed")
   },
 
-  createMenuItem: function(scoredQuery) {
-    return  (
-            <MenuItem
-              onSelect={this.suggestedQuerySelect}
-              target={scoredQuery.query}>
-             {scoredQuery.query}
-             &nbsp;
-             <span className="labelStrength">
-                 <Label bsStyle='success' style={{fontSize: '12'}}>
-                    <Glyphicon glyph='plus-sign'/>
-                    &nbsp;{scoredQuery.positiveScore.toFixed(2)}
-                 </Label>&nbsp;
-                 <Label bsStyle='danger' style={{fontSize: '12'}}>
-                    <Glyphicon glyph='minus-sign'/>
-                    &nbsp;{scoredQuery.negativeScore.toFixed(2)}
-                 </Label>&nbsp;
-                 <Label style={{fontSize: '12'}}>
-                    <Glyphicon glyph='question-sign'/>&nbsp;
-                    {scoredQuery.unlabelledScore.toFixed(2)}
-                 </Label>
-              </span>
-            </MenuItem>
-   )
-  },
-
   numberString: function(number) {
     if (number >= 10000) {
       return (number/1000) + "k"
@@ -130,22 +104,22 @@ var SuggestQueryButton = React.createClass({
     this.setState({narrow: !this.state.narrow})
   },
 
-  buildTableRow: function(scoredQuery, scoreScale, unlabelledScale) {
+  buildTableRow: function(scoredQuery, labelledScoreScale, unlabelledScoreScale) {
     var query = this.props.query
     function clicked() {
       query.requestChange(scoredQuery.query)
     }
 
     return (
-      <tr onClick={clicked} target={scoredQuery.query}>
+      <tr className="queryRow" onClick={clicked} target={scoredQuery.query}>
         <td className="queryCell">{scoredQuery.query}</td>
         <td className="queryCell queryStat">
-          {(scoredQuery.positiveScore * scoreScale).toFixed(2)}</td>
+          {(scoredQuery.positiveScore * labelledScoreScale).toFixed(2)}</td>
         <td className="queryCell queryStat">
-          {(scoredQuery.negativeScore * scoreScale).toFixed(2)}
+          {(scoredQuery.negativeScore * labelledScoreScale).toFixed(2)}
         </td>
         <td className="queryCell queryStat">
-          {(scoredQuery.unlabelledScore * unlabelledScale).toFixed(2)}
+          {(scoredQuery.unlabelledScore * unlabelledScoreScale).toFixed(2)}
         </td>
       </tr>
     )
@@ -160,31 +134,30 @@ var SuggestQueryButton = React.createClass({
         maxLabelledScore = Math.max(maxLabelledScore, suggestion.positiveScore, suggestion.negativeScore)
         maxUnlabelledScore = Math.max(maxUnlabelledScore, suggestion.unlabelledScore)
     }
-    var scoredScale = 1
-    var unlabelledScale = 1
-    while (maxLabelledScore * scoredScale < 0.1 && maxLabelledScore > 0) {
-        scoredScale *= 10
+    var labelledScoreScale = 1
+    var unlabelledScoreScale = 1
+    while (maxLabelledScore * labelledScoreScale < 0.1 && maxLabelledScore > 0) {
+        labelledScoreScale *= 10
     }
-    while (maxUnlabelledScore * unlabelledScale < 1 && maxUnlabelledScore > 0) {
-        unlabelledScale *= 10
+    while (maxUnlabelledScore * unlabelledScoreScale < 1 && maxUnlabelledScore > 0) {
+        unlabelledScoreScale *= 10
     }
     var rows = []
     for (var i = 0; i < arrayLength; i++) {
         var suggestion = this.state.suggestions[i]
-        rows.push(this.buildTableRow(suggestion, scoredScale, unlabelledScale))
+        rows.push(this.buildTableRow(suggestion, labelledScoreScale, unlabelledScoreScale))
     }
 
-    var scoredScaleStr = this.numberString(scoredScale)
-    var unlabelledScaleStr = this.numberString(unlabelledScale)
+    var labelledScoreScaleStr = this.numberString(labelledScoreScale)
+    var unlabelledScoreScaleStr = this.numberString(unlabelledScoreScale)
 
-    if (scoredScale == 1) {
+    if (labelledScoreScale == 1) {
       var positiveLabel = <div>Positive<br/>Probability</div>
       var negativeLabel = <div>Negative<br/>Probability</div>
     } else {
-      var positiveLabel = <div>Positives<br/>(Per {scoredScale} Docs)</div>
-      var negativeLabel = <div>Negatives<br/>(Per {scoredScale} Docs)</div>
+      var positiveLabel = <div>Positives<br/>(Per {labelledScoreScaleStr} Docs)</div>
+      var negativeLabel = <div>Negatives<br/>(Per {labelledScoreScaleStr} Docs)</div>
     }
-
 
     var tableInstance = (
       <Table
@@ -194,10 +167,10 @@ var SuggestQueryButton = React.createClass({
        hover>
         <thead>
           <tr>
-            <th className="queryHeader queryCell">Query</th>
-            <th className="queryHeader queryCell">{positiveLabel}</th>
-            <th className="queryHeader queryCell">{negativeLabel}</th>
-            <th className="queryHeader queryCell">Matches per<br/>{unlabelledScaleStr} Docs</th>
+            <th className="queryHeader">Query</th>
+            <th className="queryHeader">{positiveLabel}</th>
+            <th className="queryHeader">{negativeLabel}</th>
+            <th className="queryHeader">Matches per<br/>{unlabelledScoreScaleStr} Docs</th>
           </tr>
         </thead>
         <tbody>
@@ -209,7 +182,7 @@ var SuggestQueryButton = React.createClass({
     <div>
       <label className="control-label">Query</label>
       <div>
-            <ButtonGroup id="suggestion-menu">
+         <ButtonGroup>
           <DropdownButton
             style={{fontSize: 'small'}}
             pullRight

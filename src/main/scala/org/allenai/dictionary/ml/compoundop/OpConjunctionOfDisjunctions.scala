@@ -12,18 +12,18 @@ object OpConjunctionOfDisjunctions {
   ): Option[OpConjunctionOfDisjunctions] = evaluatedOp.op match {
     case tq: TokenQueryOp => Some(new OpConjunctionOfDisjunctions(Set(tq), evaluatedOp.matches,
       Map(tq.slot -> evaluatedOp.matches), maxRemoves))
-    case _ => None
+    case _ => None // Cannot initialize with a non-TokenQueryOp
   }
 }
 
 /** CompoundOp that combines ops that are compatible by either AND or OR operations. This comes
-  * at the price of some additional computation expense relative to OpConjunction.
+  * at the price of some additional computation expense relative to OpConjunction
   *
   * @param ops TokeQueryOps that this contains
   * @param numEdits maps sentence indices the number of required edits this has made to that
-  *              sentence
+  *            sentence
   * @param perSlotEdits Map slots -> maps of sentences indices number of edits made to that sentence
-  *                  by operations that were applied to that slot.
+  *                by operations that were applied to that slot.
   * @param maxRemoves Maximum number of RemoveToken(1) operations that can be added to this
   */
 case class OpConjunctionOfDisjunctions private (

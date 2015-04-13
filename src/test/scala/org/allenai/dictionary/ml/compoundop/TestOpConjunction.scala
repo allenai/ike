@@ -22,7 +22,7 @@ class TestOpConjunction extends UnitSpec {
   val removeToken = EvaluatedOp.fromPairs(RemoveToken(1), List((1,1), (2,1), (5,0)))
   val removeLeft = EvaluatedOp.fromPairs(RemoveEdge(2, 1), List((1,0), (5,0)))
 
-  "OpConjunction" should "work" in {
+  "OpConjunction" should "calculate numEdits correctly" in {
     assertResult(OpConjunction(removeLeft))(None)
     var op = OpConjunction(replace3).get.add(prefix2)
     assertResult(List((1,1), (3,0), (4,1)))(op.numEdits.toSeq.sorted)

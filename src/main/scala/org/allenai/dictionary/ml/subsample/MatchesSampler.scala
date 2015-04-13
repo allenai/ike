@@ -4,7 +4,7 @@ import nl.inl.blacklab.search.{ Hits, Searcher }
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml.TokenizedQuery
 
-/** Samples hits that the given query already matches.
+/** Samples hits that the given query already matches
   */
 case class MatchesSampler() extends Sampler() {
 
@@ -19,9 +19,7 @@ case class MatchesSampler() extends Sampler() {
     startFromDoc: Int
   ): Hits = {
     val rowQuery = Sampler.buildLabelledQuery(qexpr, table)
-    val spanQuery = searcher.createSpanQuery(
-      BlackLabSemantics.blackLabQuery(qexpr.getNamedQuery)
-    )
+    val spanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(qexpr.getNamedQuery))
     val rowSpanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(rowQuery))
     val filteredQuery = new SpanQueryFilterByCaptureGroups(spanQuery, rowSpanQuery,
       table.cols, startFromDoc)

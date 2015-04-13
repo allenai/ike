@@ -11,7 +11,7 @@ object OpConjunction {
   }
 }
 
-/** Class that combines operations that can be combined with the AND operation.
+/** Class that combines operations that can be combined by ANDing them together
   */
 case class OpConjunction private (
     override val ops: Set[TokenQueryOp],

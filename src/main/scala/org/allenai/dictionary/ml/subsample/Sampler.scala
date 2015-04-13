@@ -11,7 +11,7 @@ import org.apache.lucene.search.spans.SpanQuery
 object Sampler extends Logging {
 
   /** @return the rows within a table that the given query might match, rows are returned as a
-    *       sequence of columns, each column is a sequence of QWords
+    *      sequence of phrases, each phrase is a sequence of QWords
     */
   def getFilteredRows(query: TokenizedQuery, table: Table): Seq[Seq[Seq[QWord]]] = {
     val captureSizes = query.captures.map {
@@ -30,6 +30,10 @@ object Sampler extends Logging {
     }
   }
 
+  /** @param query Query the labelled query will be used to filter
+    * @param table to build the query for
+    * @return QExpr that captures rows of the given table
+    */
   def buildLabelledQuery(
     query: TokenizedQuery,
     table: Table
@@ -68,7 +72,9 @@ object Sampler extends Logging {
 
 /** Abstract class for classes the subsample data from a corpus using a black lab Searcher.
   * Classes return hits from the corpus that are 'close' to being matched by an input query, where
-  * 'close' is defined by the subclass.
+  * 'close' is defined by the subclass. If a query matches a sentence in multiple ways it is
+  * allowed to return the same capture span multiple times (ex. a* cat might return "a a cat" and
+  * "a cat" for the sentence "a a cat".
   *
   * The returned hits are additionally expected to be annotated so we can recover which parts of
   * the tokenized query matched which parts of each return hit. This is accomplished by
@@ -80,11 +86,11 @@ object Sampler extends Logging {
   * start and end values negated.
   *
   * Finally, if a query-token is fixed length and will never fail to match some part of the hit,
-  * subclasses can not register it in the capture groups. This can make some queries more efficient.
+  * subclasses can not register it in the capture groups. This can make some queries more efficient
   */
 abstract class Sampler {
 
-  /** Gets a random sample of hits from a corpus that are close to a query.
+  /** Gets a random sample of hits from a corpus that are close to a query
     *
     * @param qexpr Query to sample for
     * @param searcher Searcher to get samples from
@@ -94,11 +100,13 @@ abstract class Sampler {
   def getSample(qexpr: TokenizedQuery, searcher: Searcher, table: Table): Hits
 
   /** Gets a sample of hits from a corpus that are 'close' to a given query, and that are
-    * also limited to hits that capture terms from a particular table.
+    * also limited to hits that capture terms from a particular table
     *
     * @param qexpr Query to sample for
     * @param searcher Searcher to get samples from
     * @param table Table to limit queries to
+    * @param startFromDoc document to start collecting hits from, returned hits will not have doc
+    *                    smaller than startFromDoc
     * @return Hits object containing the samples
     */
   def getLabelledSample(
