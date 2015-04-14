@@ -15,7 +15,6 @@ import scala.collection.immutable.TreeSet
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import Ordering.Implicits._
-import scala.math.pow
 
 object CreatePhraseVectors extends App with Logging {
   // phrase2vec parameters
