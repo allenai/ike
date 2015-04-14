@@ -118,7 +118,7 @@ object CreatePhraseVectors extends App with Logging {
         }
       }
 
-      phrasifiedSentences(phrases).parForeach { sentence =>
+      phrasifiedSentences(phrases).foreach { sentence =>
         sentence.foreach(bumpCount(unigramCounts, _))
         if (sentence.length >= 2) {
           sentence.sliding(2).foreach {
