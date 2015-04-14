@@ -66,7 +66,7 @@ object CreatePhraseVectors extends App with Logging {
         val currentByteCount = byteCount.addAndGet(idText.text.length)
         val last = lastMessagePrinted.get()
         val now = System.currentTimeMillis()
-        val elapsed = (now - last).toDouble
+        val elapsed = (now - last).toDouble / 1000
         if (elapsed > 5 && lastMessagePrinted.compareAndSet(last, now)) {
           val documentsProcessed = currentDocumentCount - oldDocumentCount
           oldDocumentCount = currentDocumentCount
@@ -76,7 +76,8 @@ object CreatePhraseVectors extends App with Logging {
           oldByteCount = currentByteCount
           val kbps = bytesProcessed.toDouble / elapsed / 1000
 
-          logger.info(s"Read $currentDocumentCount documents, $dps%1.2f docs/s, $kbps%1.2f kb/s")
+          logger.info("Read %d documents, %1.2f docs/s, %1.2f kb/s".
+            format(currentDocumentCount, dps, kbps))
         }
 
         result
