@@ -43,28 +43,17 @@ object CreateIndex extends App {
     val indexDir = options.destinationDir
     val batchSize = options.batchSize
     var numAdded = 0
-    val idTexts = options.textSource.getScheme match {
-      case "file" =>
-        val path = Paths.get(options.textSource)
-        if (Files.isDirectory(path)) {
-          IdText.fromDirectory(path.toFile)
-        } else {
-          IdText.fromFlatFile(path.toFile)
-        }
-      case "datastore" =>
-        val locator = Datastore.locatorFromUrl(options.textSource)
-        if (locator.directory) {
-          IdText.fromDirectory(locator.path.toFile)
-        } else {
-          IdText.fromFlatFile(locator.path.toFile)
-        }
-      case otherAuthority =>
-        throw new RuntimeException(s"URL scheme not supported: $otherAuthority")
+    val idTexts = {
+      val path = CliUtils.pathFromUri(options.textSource)
+      if (Files.isDirectory(path)) {
+        IdText.fromDirectory(path.toFile)
+      } else {
+        IdText.fromFlatFile(path.toFile)
+      }
     }
 
     def indexableToken(lemmatized: Lemmatized[PostaggedToken]): IndexableToken = {
       val word = lemmatized.token.string
-      val wordLc = word.toLowerCase
       val pos = lemmatized.token.postag
       val lemma = lemmatized.lemma
       IndexableToken(word, pos, lemma)
