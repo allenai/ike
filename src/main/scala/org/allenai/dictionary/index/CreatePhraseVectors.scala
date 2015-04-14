@@ -36,7 +36,10 @@ object CreatePhraseVectors extends App with Logging {
   }
 
   parser.parse(args, Options()) foreach { options =>
-    def idTexts = {
+
+    /** Returns an iterator of documents in IdText format
+      */
+    def idTexts: Iterator[IdText] = {
       val path = CliUtils.pathFromUri(options.input)
       if (Files.isDirectory(path)) {
         IdText.fromDirectory(path.toFile)
@@ -45,9 +48,9 @@ object CreatePhraseVectors extends App with Logging {
       }
     }
 
-    type Phrase = Seq[String]
-
-    def sentences: Iterator[Phrase] = {
+    /** Turns the documents into an iterator of sentences
+      */
+    def sentences: Iterator[Seq[String]] = {
       val documentCount = new AtomicLong()
       var oldDocumentCount: Long = 0
       val byteCount = new AtomicLong()
@@ -83,8 +86,21 @@ object CreatePhraseVectors extends App with Logging {
       }.flatten
     }
 
+    type Phrase = Seq[String]
     type OrderedPrefixSet = TreeSet[Phrase]
 
+    /** Turns the sentences into list of phrases. A phrase is the combination (i.e., a Seq), of one
+      * or more tokens.
+      *
+      * For example, if the input phrase is "for the common good", and "common good" is one of the
+      * known phrases in the phrases parameter, the output will be this: [for] [the] [common good].
+      * In doing this it is greedy, not clever. If "for the" and "the common good" are known phrases,
+      * it will return [for the] [common] [good], because it doesn't figure out that it could get a
+      * longer phrase in a different way. We might be able to do better, but this is how the original
+      * phrase2vec code did it.
+      *
+      * @param phrases the phrases we know about
+      */
     def phrasifiedSentences(phrases: OrderedPrefixSet) = sentences.map { sentence =>
       // phrasifies sentences greedily
       def phrasesStartingWith(start: Phrase) = phrases.from(start).takeWhile(_.startsWith(start))
@@ -104,6 +120,10 @@ object CreatePhraseVectors extends App with Logging {
       result.toSeq
     }
 
+    /** Counts phrases in the input
+      * @param phrases the phrases we know about
+      * @return two maps, one with unigram counts, and one with bigram counts
+      */
     def phraseCounts(phrases: OrderedPrefixSet) = {
       val unigramCounts = new concurrent.TrieMap[Phrase, Int]
       val bigramCounts = new concurrent.TrieMap[(Phrase, Phrase), Int]
@@ -132,6 +152,12 @@ object CreatePhraseVectors extends App with Logging {
       (applyMinWordCount(unigramCounts), applyMinWordCount(bigramCounts))
     }
 
+    /** Given a set of phrases and a threshold, returns a new set of longer phrases.
+      *
+      * @param phrases   a set of phrases we already know about
+      * @param threshold the score threshold for new phrases
+      * @return a new set of phrases
+      */
     def updatePhrases(phrases: OrderedPrefixSet, threshold: Int): OrderedPrefixSet = {
       val (unigramCounts, bigramCounts) = phraseCounts(phrases)
       val wordCount = unigramCounts.values.sum
@@ -151,6 +177,8 @@ object CreatePhraseVectors extends App with Logging {
       phrases ++ newPhrases
     }
 
+    // update phrases three times
+    // Maybe it would be better if we ran this until we don't find any new phrases?
     var phrases = new OrderedPrefixSet
     for (i <- 0 until 3) {
       logger.info(s"Starting round ${i + 1} of making phrases.")
