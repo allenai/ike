@@ -162,7 +162,7 @@ object CreatePhraseVectors extends App with Logging {
       val (unigramCounts, bigramCounts) = phraseCounts(phrases)
       val wordCount = unigramCounts.values.sum
 
-      val newPhrases = bigramCounts.flatMap {
+      val newPhrasesMap = bigramCounts.flatMap {
         case ((left, right), bigramCount) =>
           for {
             leftCount <- unigramCounts.get(left)
@@ -170,11 +170,19 @@ object CreatePhraseVectors extends App with Logging {
             score = (wordCount * (bigramCount - minWordCount)) / (leftCount * rightCount)
             if score > threshold
           } yield {
-            left ++ right
+            (left ++ right, score)
           }
       }
 
-      phrases ++ newPhrases
+      val topN = 25
+      logger.info(s"Top $topN phrases by score:")
+      newPhrasesMap.toSeq.sortBy(-_._2).take(topN).foreach {
+        case (phrase, score) =>
+          val stringPhrase = phrase.mkString(" ")
+          logger.info(s"$stringPhrase ($score)")
+      }
+
+      phrases ++ newPhrasesMap.keys
     }
 
     // update phrases three times
