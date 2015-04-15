@@ -22,6 +22,8 @@ libraryDependencies ++= Seq(
     lucene("queries"),
     lucene("queryparser"),
     "nl.inl" %% "blacklab" % "1.0-ALLENAI-2",
+    "com.medallia.word2vec" % "Word2VecJava" % "0.9.0",
+    "org.apache.thrift" % "libthrift" % "0.9.1",
     scopt)
 
 javaOptions in Revolver.reStart += "-Xmx6G"

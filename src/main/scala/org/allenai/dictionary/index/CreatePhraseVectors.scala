@@ -1,8 +1,13 @@
 package org.allenai.dictionary.index
 
-import java.util.concurrent.atomic.{ AtomicLong, AtomicInteger }
+import java.io.{ FileOutputStream, File }
+import java.util.concurrent.atomic.AtomicLong
 
-import org.allenai.common.Logging
+import com.medallia.word2vec.Word2VecModel
+import com.medallia.word2vec.Word2VecTrainerBuilder.TrainingProgressListener
+import com.medallia.word2vec.neuralnetwork.NeuralNetworkType
+import com.medallia.word2vec.util.Format
+import org.allenai.common.{ Resource, Logging }
 import org.allenai.common.ParIterator._
 import org.allenai.nlpstack.segment.{ defaultSegmenter => segmenter }
 import org.allenai.nlpstack.tokenize.{ defaultTokenizer => tokenizer }
@@ -10,10 +15,13 @@ import org.allenai.nlpstack.tokenize.{ defaultTokenizer => tokenizer }
 import java.net.URI
 import java.nio.file.Files
 
+import org.apache.thrift.TSerializer
+
 import scala.collection.concurrent
 import scala.collection.immutable.TreeSet
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.JavaConverters._
 import Ordering.Implicits._
 
 object CreatePhraseVectors extends App with Logging {
@@ -21,16 +29,16 @@ object CreatePhraseVectors extends App with Logging {
   val minWordCount = 5
   val startThreshold = 200
 
-  case class Options(input: URI = null, destination: URI = null)
+  case class Options(input: URI = null, destination: File = null)
 
   val parser = new scopt.OptionParser[Options](this.getClass.getSimpleName.stripSuffix("$")) {
     opt[URI]('i', "input") required () action { (i, o) =>
       o.copy(input = i)
     } text "URL of the input file"
 
-    opt[URI]('d', "destination") required () action { (d, o) =>
+    opt[File]('d', "destination") required () action { (d, o) =>
       o.copy(destination = d)
-    } text "URL of the destination vector file"
+    } text "the destination vector file"
 
     help("help")
   }
@@ -94,10 +102,10 @@ object CreatePhraseVectors extends App with Logging {
       *
       * For example, if the input phrase is "for the common good", and "common good" is one of the
       * known phrases in the phrases parameter, the output will be this: [for] [the] [common good].
-      * In doing this it is greedy, not clever. If "for the" and "the common good" are known phrases,
-      * it will return [for the] [common] [good], because it doesn't figure out that it could get a
-      * longer phrase in a different way. We might be able to do better, but this is how the original
-      * phrase2vec code did it.
+      * In doing this it is greedy, not clever. If "for the" and "the common good" are known
+      * phrases, it will return [for the] [common] [good], because it doesn't figure out that it
+      * could get a longer phrase in a different way. We might be able to do better, but this is how
+      * the original phrase2vec code did it.
       *
       * @param phrases the phrases we know about
       */
@@ -187,12 +195,52 @@ object CreatePhraseVectors extends App with Logging {
 
     // update phrases three times
     // Maybe it would be better if we ran this until we don't find any new phrases?
-    var phrases = new OrderedPrefixSet
-    for (i <- 0 until 3) {
-      logger.info(s"Starting round ${i + 1} of making phrases.")
-      phrases = updatePhrases(phrases, startThreshold / (1 << i))
-      logger.info(s"Found ${phrases.size} phrases")
+    val phrases = (0 until 3).foldLeft(new OrderedPrefixSet) {
+      case (p, i) =>
+        logger.info(s"Starting round ${i + 1} of making phrases.")
+        val result = updatePhrases(p, startThreshold / (1 << i))
+        logger.info(s"Found ${result.size} phrases")
+        result
     }
-    phrases.foreach(println)
+
+    logger.info("Building vectors based on the phrases")
+
+    val tokensIterable = new java.lang.Iterable[java.util.List[String]] {
+      override def iterator = new java.util.Iterator[java.util.List[String]] {
+        private val inner = phrasifiedSentences(phrases)
+
+        override def next(): java.util.List[String] =
+          inner.next().map(_.mkString("_")).toList.asJava
+        override def hasNext: Boolean = inner.hasNext
+      }
+    }
+
+    // train the model
+    val model: Word2VecModel = Word2VecModel.trainer.
+      setMinVocabFrequency(minWordCount).
+      setWindowSize(8).
+      `type`(NeuralNetworkType.CBOW).
+      setLayerSize(200).
+      useNegativeSamples(25).
+      setDownSamplingRate(1e-4).
+      setNumIterations(5).
+      setListener(new TrainingProgressListener {
+        private var lastMessagePrinted = System.currentTimeMillis()
+
+        override def update(stage: TrainingProgressListener.Stage, progress: Double): Unit = {
+          val now = System.currentTimeMillis()
+          if (progress >= 100 || now - lastMessagePrinted > 5000) {
+            lastMessagePrinted = now
+            logger.info(
+              "Stage '%s' is %1.2f%% complete".format(Format.formatEnum(stage), progress * 100)
+            )
+          }
+        }
+      }).train(tokensIterable)
+
+    // store the model
+    val modelByteArray = new TSerializer().serialize(model.toThrift)
+    Resource.using(new FileOutputStream(options.destination))(_.write(modelByteArray))
+    logger.info(s"Wrote ${modelByteArray.length} bytes to ${options.destination}")
   }
 }
