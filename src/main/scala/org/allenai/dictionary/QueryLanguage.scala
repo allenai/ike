@@ -210,11 +210,14 @@ object QueryLanguage {
         val name = tableCols(unnamedCounts)
         unnamedCounts += 1
         QNamed(recurse(q), name)
-      case q: QAtom => recurse(q.qexpr)
-      case q: QLeaf => q
+      case QStar(q) => QStar(recurse(q))
+      case QPlus(q) => QPlus(recurse(q))
+      case QNonCap(q) => QNonCap(recurse(q))
       case QSeq(children) => QSeq(children.map(recurse))
       case QDisj(children) => QDisj(children.map(recurse))
       case QAnd(expr1, expr2) => QAnd(recurse(expr1), recurse(expr2))
+      case QRepetition(expr, min, max) => QRepetition(expr, min, max)
+      case q: QLeaf => q
     }
     val output = recurse(qexpr)
     require(unnamedCounts == 0 || unnamedCounts == tableCols.size)
