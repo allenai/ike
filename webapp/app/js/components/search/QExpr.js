@@ -225,6 +225,12 @@ var QPlus = React.createClass({
   mixins: [InnerNodeMixin],
   name: <Glyphicon glyph="plus"/>
 });
+var QRepetition = React.createClass({
+  mixins: [InnerNodeMixin],
+  name: function() {
+    return "Repeat [" + this.props.qexpr.min + "," + this.props.qexpr.max + "]"
+  }
+});
 var QPosFromWord = React.createClass({
   mixins: [QExprMixin],
   handleChange: function(e) {
@@ -330,6 +336,7 @@ var QExpr = React.createClass({
     QNonCap: QNonCap,
     QStar: QStar,
     QPlus: QPlus,
+    QRepetition: QRepetition,
     QDisj: QDisj,
     QClusterFromWord: QClusterFromWord,
     QPosFromWord: QPosFromWord

@@ -17,6 +17,7 @@ class TestQExprParser extends UnitSpec with ScratchDirectory {
   def nocap(expr: QExpr) = QNonCap(expr)
   def or(exprs: QExpr*) = QDisj(exprs)
   def star(expr: QExpr) = QStar(expr)
+  def rep(expr: QExpr, min: Int, max: Int) = QRepetition(expr, min, max)
   // scalastyle:on
 
   def parse(s: String): QExpr = QExprParser.parse(s).get
@@ -63,5 +64,12 @@ class TestQExprParser extends UnitSpec with ScratchDirectory {
     val e10 = qs(or(w("this"), w("that")), w("is"), w("a"), w("test"))
     assert(parse(q10) == e10)
 
+    val q11 = "the thing[1,5] ran"
+    val e11 = qs(w("the"), rep(w("thing"), 1, 5), w("ran"))
+    assert(parse(q11) == e11)
+
+    val q12 = "the {thing [1,-1], ran}"
+    val e12 = qs(w("the"), or(rep(w("thing"), 1, -1), w("ran")))
+    assert(parse(q12) == e12)
   }
 }

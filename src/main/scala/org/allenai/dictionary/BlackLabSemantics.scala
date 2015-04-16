@@ -29,6 +29,7 @@ object BlackLabSemantics {
       case QNonCap(e: QExpr) => blqHelper(e)
       case QStar(e: QExpr) => new TextPatternRepetition(blqHelper(e), 0, -1)
       case QPlus(e: QExpr) => new TextPatternRepetition(blqHelper(e), 1, -1)
+      case QRepetition(e, min, max) => new TextPatternRepetition(blqHelper(e), min, max)
       case QSeq(es: Seq[QExpr]) => new TextPatternSequence(es.map(blqHelper): _*)
       case QDisj(es: Seq[QExpr]) => new TextPatternOr(es.map(blqHelper): _*)
       case QAnd(expr1, expr2) => new TextPatternAnd(blqHelper(expr1), blqHelper(expr2))

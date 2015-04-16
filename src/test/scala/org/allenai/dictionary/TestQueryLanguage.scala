@@ -31,5 +31,31 @@ class TestQueryLanguage extends UnitSpec {
       val q1 = QUnnamed(QSeq(Seq(disjLength2, QSeq(Seq(QCluster(""), QPlus(QWord("")))))))
       QueryLanguage.getQueryLength(q1)
     }
+
+    assertResult(4) {
+      val q1 = QueryLanguage.parse("(a b)[2,2]").get
+      QueryLanguage.getQueryLength(q1)
+    }
+
+    assertResult(-1) {
+      val q1 = QueryLanguage.parse("(a b*)[2,2]").get
+      QueryLanguage.getQueryLength(q1)
+    }
+
+    assertResult(-1) {
+      val q1 = QueryLanguage.parse("(a b)[1,2]").get
+      QueryLanguage.getQueryLength(q1)
+    }
+  }
+
+  "getQueryString" should "get correct string" in {
+    def check(string: String) = {
+      val qexpr = QueryLanguage.parse(string).get
+      assert(QueryLanguage.getQueryString(qexpr) == string)
+    }
+    check("a b[1,2] (c d)* e")
+    check("a {d,e}* e")
+    assert(QueryLanguage.getQueryString(QStar(QSeq(Seq(QWord("a"), QWord("b")))))
+        == "(?:a b)*")
   }
 }
