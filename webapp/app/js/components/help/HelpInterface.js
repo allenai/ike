@@ -126,6 +126,17 @@ var HelpInterface = React.createClass({
       descr: 'Matches the word "dog" with one or more adjectives before it'
     },
     {
+      name: 'Repetitions',
+      example: 'JJ[2,4] dog',
+      descr: 'Matches the word "dog" with at least two but no more than' +
+       ' four adjectives before it'
+    },
+    {
+      name: 'Repetitions',
+      example: 'JJ[2,-1] dog',
+      descr: 'Matches the word "dog" with at least two adjectives before it'
+    },
+    {
       name: 'Wildcards',
       example: '. dog',
       descr: 'Matches any word followed by the word "dog"'
