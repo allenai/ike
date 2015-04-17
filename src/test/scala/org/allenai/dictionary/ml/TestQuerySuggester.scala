@@ -103,16 +103,21 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
 
   it should "suggest removing plus operators" in {
     val table = Table("test", Seq("c1"),
-      Seq(Seq("I"), Seq("it")).map { x =>
+      Seq(Seq("i"), Seq("it")).map { x =>
         TableRow(x.map(y => TableValue(Seq(QWord(y)))))
       },
-      Seq()
+      Seq(Seq("i like")).map { x =>
+        TableRow(x.map(y => TableValue(y.split(" ").map(QWord(_)))))
+      }
     )
     val startingQuery = QueryLanguage.parse("(?<c1> {I, like, hate, it}+)").get
     val suggestions =
       QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
         "test",  true, SuggestQueryConfig(5, 2, 100, 1, -5, 0, false))
-    assertResult(QueryLanguage.parse("(?<c1> {I, like, hate, it})").get)(suggestions(0).query)
+    val bestScore = suggestions.head.score
+    val bestSuggetions = suggestions.filter(_.score == bestScore)
+    assert(suggestions.take(3).map(_.query).toSet contains
+        QueryLanguage.parse("(?<c1> {I, like, hate,it})").get)
   }
 
   it should "suggest changing a plus operator" in {
@@ -128,7 +133,11 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val suggestions =
       QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
         "test",  true, SuggestQueryConfig(5, 1, 100, 1, -5, -5, false))
-    assert(suggestions.map(_.query).toSet contains
+    val bestScore = suggestions.head.score
+    // Fuzzy match to 1 to account for size penalities and the like
+    assert(Math.abs(bestScore - 1) < 0.1)
+    val bestSuggestions = suggestions.filter(_.score == bestScore).map(_.query)
+    assert(bestSuggestions contains
         QueryLanguage.parse("(?<c1> RB+) {mango, those, great}").get)
   }
 
@@ -161,7 +170,6 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val suggestions =
       QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
         "test",  false, SuggestQueryConfig(5, 2, 100, 1, -5, 0, true))
-    println(suggestions(0).query)
     val q = suggestions(0).query.asInstanceOf[QNamed]
     assertResult(q.name)("c1")
     assertResult(q.qexpr.asInstanceOf[QDisj].qexprs.toSet)(Set(QWord("I"), QWord("like")))

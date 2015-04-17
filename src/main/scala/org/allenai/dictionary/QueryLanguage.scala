@@ -25,10 +25,21 @@ case class QWildcard() extends QLeaf
 case class QNamed(qexpr: QExpr, name: String) extends QCapture
 case class QUnnamed(qexpr: QExpr) extends QCapture
 case class QNonCap(qexpr: QExpr) extends QAtom
-case class QStar(qexpr: QExpr) extends QAtom
-case class QPlus(qexpr: QExpr) extends QAtom
-case class QRepetition(qexpr: QExpr, min: Int, max: Int) extends QAtom
 case class QSeq(qexprs: Seq[QExpr]) extends QExpr
+
+sealed trait QRepeating extends QAtom {
+  def min: Int
+  def max: Int
+}
+case class QRepetition(qexpr: QExpr, min: Int, max: Int) extends QRepeating
+case class QStar(qexpr: QExpr) extends QRepeating {
+  val min = 0
+  val max = -1
+}
+case class QPlus(qexpr: QExpr) extends QRepeating {
+  val min = 1
+  val max = -1
+}
 case object QSeq {
   def fromSeq(seq: Seq[QExpr]): QExpr = seq match {
     case expr :: Nil => expr
@@ -167,7 +178,7 @@ object QueryLanguage {
 
   /** @param qexpr query to evaluate
     * @return number of tokens the query will match, or -1 if the query
-    *      can match a variable number of tokens'
+    *     can match a variable number of tokens'
     */
   def getQueryLength(qexpr: QExpr): Int = qexpr match {
     case QDict(_) => -1
@@ -196,11 +207,11 @@ object QueryLanguage {
     *
     * @param qexpr Query expression to name capture groups within
     * @param tableCols Sequence of the columns in a table to be used to name unnamed capture
-    *                groups
+    *               groups
     * @throws IllegalArgumentException if QExpr contains a mix of named and unnamed capture groups,
-    *                                if the name capture group do not have names corresponding
-    *                                to the columns in tableCols, or if the query has the wrong
-    *                                number of capture groups
+    *                               if the name capture group do not have names corresponding
+    *                               to the columns in tableCols, or if the query has the wrong
+    *                               number of capture groups
     */
   def nameCaptureGroups(qexpr: QExpr, tableCols: Seq[String]): QExpr = {
     var unnamedCounts = 0

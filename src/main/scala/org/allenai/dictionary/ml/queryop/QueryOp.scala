@@ -46,6 +46,9 @@ case class RemoveToken(slot: QueryToken) extends TokenQueryOp() {
   def combinable(other: TokenQueryOp): TokenCombination = NONE
 }
 
+/** Changes a top level modifier of a QExpr, such as * or + operators */
+sealed abstract class ChangeModifier extends TokenQueryOp()
+
 /** Changes a QDisj or QLeaf, that is possibly being modifier by a * or + operator */
 abstract class ChangeLeaf extends TokenQueryOp {
   def combinable(other: TokenQueryOp): TokenCombination = other match {
@@ -55,11 +58,31 @@ abstract class ChangeLeaf extends TokenQueryOp {
   }
 }
 
-/** Changes a top level modifier of a QExpr, such as * or + operators */
-abstract class ChangeModifier extends TokenQueryOp {
+object SetMin {
+  def apply(index: Int, min: Int): SetMin = {
+    SetMin(QueryToken(index), min)
+  }
+}
+case class SetMin(slot: Slot, min: Int) extends ChangeModifier {
   def combinable(other: TokenQueryOp): TokenCombination = other match {
     case cl: ChangeLeaf => AND
-    case cm: ChangeModifier => NONE
+    case cm: SetMax => if (cm.max >= min) AND else NONE
+    case cm: SetMin => NONE
+    case rt: RemoveToken => NONE
+  }
+}
+
+object SetMax {
+  def apply(index: Int, max: Int): SetMax = {
+    SetMax(QueryToken(index), max)
+  }
+}
+/** Changes a top level modifier of a QExpr, such as * or + operators */
+case class SetMax(slot: Slot, max: Int) extends ChangeModifier {
+  def combinable(other: TokenQueryOp): TokenCombination = other match {
+    case cl: ChangeLeaf => AND
+    case cm: SetMin => if (cm.min <= max) AND else NONE
+    case cm: SetMax => NONE
     case rt: RemoveToken => NONE
   }
 }
@@ -75,24 +98,6 @@ object AddToken {
   def apply(index: Int, qexpr: QExpr): AddToken = AddToken(QueryToken(index), qexpr)
 }
 case class AddToken(slot: QueryToken, qexpr: QExpr) extends ChangeLeaf()
-
-/** Removes a * modifier, ex. cat* => cat */
-object RemoveStar {
-  def apply(index: Int): RemoveStar = RemoveStar(QueryToken(index))
-}
-case class RemoveStar(slot: QueryToken) extends ChangeModifier()
-
-/** Removes a + modifier, ex. cat+ => cat */
-object RemovePlus {
-  def apply(index: Int): RemovePlus = RemovePlus(QueryToken(index))
-}
-case class RemovePlus(slot: QueryToken) extends ChangeModifier()
-
-/** Replace a * modifier, ex. cat* => cat+ */
-object StarToPlus {
-  def apply(index: Int): StarToPlus = StarToPlus(QueryToken(index))
-}
-case class StarToPlus(slot: QueryToken) extends ChangeModifier()
 
 /** TokenQueryOp that has been marked as required (meaning the query will
   * match the hit only if the operator is used) or not (meaning the query

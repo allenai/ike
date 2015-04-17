@@ -64,23 +64,23 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     }
   }
 
-  "CompoundOp" should "apply modify parent ops" in {
+  "CompoundOp" should "work for repetitions" in {
     val startingQuery = QueryLanguage.parse("NN* (?<capture> c1)").get
     val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
-    val remove = RemoveStar(1)
+    val min1 = SetMin(1, 1)
+    val max1 = SetMax(1, 1)
     val set = SetToken(QueryToken(1), QPos("VB"))
-    val startToPlus = StarToPlus(1)
     assertResult(QueryLanguage.parse("NN (?<capture> c1)").get) {
-      CompoundQueryOp.applyOps(tokenized, Set(remove)).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(min1, max1)).getQuery
     }
     assertResult(QueryLanguage.parse("VB* (?<capture> c1)").get) {
       CompoundQueryOp.applyOps(tokenized, Set(set)).getQuery
     }
     assertResult(QueryLanguage.parse("VB (?<capture> c1)").get) {
-      CompoundQueryOp.applyOps(tokenized, Set(remove, set)).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(min1, max1, set)).getQuery
     }
     assertResult(QueryLanguage.parse("VB+ (?<capture> c1)").get) {
-      CompoundQueryOp.applyOps(tokenized, Set(startToPlus, set)).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(min1, set)).getQuery
     }
   }
 

@@ -53,15 +53,15 @@ class TestOpConjunctionOfDisjunctions extends UnitSpec {
     SetToken(QueryToken(1), QWord("r2")),
     List((3,0))
   )
-  val removePlus1 = EvaluatedOp.fromPairs(
-    StarToPlus(1), List((3,1))
+  val setMax1 = EvaluatedOp.fromPairs(
+    SetMax(1, 1), List((3,1))
   )
 
   val remove3 = EvaluatedOp.fromPairs(
     RemoveToken(3), List((1, 1), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7,0))
   )
-  val removeStar2 = EvaluatedOp.fromPairs(
-    RemoveStar(2), List((1, 1), (2, 0), (3, 1))
+  val setMin2 = EvaluatedOp.fromPairs(
+    SetMin(2, 1), List((1, 1), (2, 0), (3, 1))
   )
   val replace2 = EvaluatedOp.fromPairs(
     SetToken(QueryToken(2), QWord("r2")), List((2, 1), (3, 0))
@@ -75,9 +75,10 @@ class TestOpConjunctionOfDisjunctions extends UnitSpec {
     assert(!op.canAdd(add3.op))
     assert(!op.canAdd(RemoveToken(1))) // This slot is set, we should not be able to remove it
 
-    op = op.add(removeStar2)
+    op = op.add(setMin2)
     assertResult(List((1, 3), (2, 0)))(op.numEdits.toSeq.sorted)
-    assert(!op.canAdd(StarToPlus(2))) // We already removed the *
+    assert(!op.canAdd(SetMin(2, 2)))
+    assert(!op.canAdd(SetMax(2, 0)))
 
     op = op.add(replace2)
     assertResult(List((2, 1)))(op.numEdits.toSeq.sorted)
@@ -90,11 +91,11 @@ class TestOpConjunctionOfDisjunctions extends UnitSpec {
     assertResult(List((2, 1), (3,1)))(op.numEdits.toSeq.sorted)
 
     // (removePlus1 AND (replace12 OR replace11)) AND (removeStar2 AND replace2) AND remove3
-    op = op.add(removePlus1)
+    op = op.add(setMax1)
     assertResult(List((3,2)))(op.numEdits.toSeq.sorted)
 
     assertResult(Set(replace11.op, replace12.op, remove3.op, replace2.op,
-      removeStar2.op, removePlus1.op))(op.ops)
+      setMin2.op, setMax1.op))(op.ops)
   }
 
   "OpConjunctionOfDisjunctions" should "work with RemoveEdge" in {

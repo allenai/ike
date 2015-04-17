@@ -35,6 +35,30 @@ object CompoundQueryOp {
     }
   }
 
+  private def changeLeaf(leafOps: Iterable[ChangeLeaf], current: QExpr): QExpr = {
+    if (leafOps.size == 0) {
+      current
+    } else {
+      val allExpressions = leafOps.map {
+        case SetToken(_, q) => q
+        case AddToken(_, q) => q
+        case _ => throw new RuntimeException()
+      }.toList
+      if (leafOps.exists(_.isInstanceOf[AddToken])) {
+        // If there are any AddToken Ops keep the original QExpr
+        current match {
+          case QDisj(exprs) => QDisj(exprs ++ allExpressions)
+          case _ => QDisj(current :: allExpressions)
+        }
+      } else {
+        allExpressions match {
+          case x :: Nil => x
+          case _ => QDisj(allExpressions)
+        }
+      }
+    }
+  }
+
   // Given a sequence of TokenQueryOps, assumed to apply to the same, filled slot, builds
   // a new QExpr that is the result of apply all the given operators to that slot. Returns
   // None if the existing token should be removed without being replaced
@@ -42,51 +66,42 @@ object CompoundQueryOp {
     tokenOps: Iterable[TokenQueryOp],
     current: QExpr
   ): Option[QExpr] = {
-    val (leafOps, otherOps) = tokenOps.partition(_.isInstanceOf[ChangeLeaf])
-    if (tokenOps.size == 0) {
-      Some(current)
-    } else if (otherOps.nonEmpty) {
-      require(otherOps.size == 1)
-      otherOps.head match {
-        case RemoveToken(_) =>
-          require(leafOps.isEmpty); None
-        case RemovePlus(_) => current match {
-          case QPlus(expr) => Some(changeToken(leafOps, expr).get)
-          case _ => throw new IllegalArgumentException()
-        }
-        case RemoveStar(_) => current match {
-          case QStar(expr) => Some(changeToken(leafOps, expr).get)
-          case _ => throw new IllegalArgumentException()
-        }
-        case StarToPlus(_) => current match {
-          case QStar(expr) => Some(QPlus(changeToken(leafOps, expr).get))
-          case _ => throw new IllegalArgumentException()
-        }
-        case _ => throw new RuntimeException()
-      }
+    if (tokenOps.exists(_.isInstanceOf[RemoveToken])) {
+      require(tokenOps.size == 1)
+      None
     } else {
-      current match {
-        case QStar(expr) => Some(QStar(changeToken(leafOps, expr).get))
-        case QPlus(expr) => Some(QPlus(changeToken(leafOps, expr).get))
-        case _ =>
-          val allExpressions = leafOps.map {
-            case SetToken(_, q) => q
-            case AddToken(_, q) => q
-            case _ => throw new RuntimeException()
-          }.toList
-          if (tokenOps.exists(_.isInstanceOf[AddToken])) {
-            // If there are any AddToken Ops keep the original QExpr
-            current match {
-              case QDisj(exprs) => Some(QDisj(exprs ++ allExpressions))
-              case _ => Some(QDisj(current :: allExpressions))
-            }
-          } else {
-            allExpressions match {
-              case x :: Nil => Some(x)
-              case _ => Some(QDisj(allExpressions))
-            }
+      val (leafOps, otherOps) = tokenOps.partition(_.isInstanceOf[ChangeLeaf])
+      val leafOpsCast = leafOps.map(_.asInstanceOf[ChangeLeaf])
+      if (otherOps.size == 0) {
+        val newOp = current match {
+          case QStar(expr) => QStar(changeLeaf(leafOpsCast, expr))
+          case QPlus(expr) => QPlus(changeLeaf(leafOpsCast, expr))
+          case QRepetition(expr, min, max) => QRepetition(changeLeaf(leafOpsCast, expr), min, max)
+          case _ => changeLeaf(leafOpsCast, current)
+        }
+        Some(newOp)
+      } else {
+        require(otherOps.size <= 2) // At most a SetMin and a SetMax op
+        val newChild = current match {
+          case QStar(expr) => changeLeaf(leafOpsCast, expr)
+          case QPlus(expr) => changeLeaf(leafOpsCast, expr)
+          case QRepetition(expr, _, _) => changeLeaf(leafOpsCast, expr)
+          case _ => throw new IllegalArgumentException()
+        }
+        val repeatOp = current.asInstanceOf[QRepeating]
+        val (min, max) =
+          otherOps.foldLeft((repeatOp.min, repeatOp.max)) {
+            case ((_, curMax), op: SetMin) => (op.min, curMax)
+            case ((curMin, _), op: SetMax) => (curMin, op.max)
+            case _ => throw new RuntimeException("Should only have SetMin and SetMax ops left")
           }
-
+        (min, max, repeatOp) match {
+          case (0, 0, _) => None
+          case (1, 1, _) => Some(newChild)
+          case (0, -1, QPlus(_)) => Some(QStar(newChild))
+          case (1, -1, QStar(_)) => Some(QPlus(newChild))
+          case (_, _, qr: QRepeating) => Some(QRepetition(newChild, min, max))
+        }
       }
     }
   }
@@ -122,11 +137,11 @@ object CompoundQueryOp {
     val suffixSeq = buildExpression(suffixOps)
 
     val modifierOps = groupedbySlot.flatMap {
-      case (slot, qexprs) =>
+      case (slot, ops) =>
         slot match {
           case QueryToken(token) => Some((
             token,
-            changeToken(qexprs, query.getSeq(token - 1))
+            changeToken(ops, query.getSeq(token - 1))
           ))
           case _ => None
         }
@@ -181,7 +196,7 @@ object CompoundQueryOp {
   *
   * @param ops set of query-token operations to apply to the query
   * @param numEdits Map of (sentence index) -> (number of required edits this combined op
-  *            will have made towards that sentence)
+  *           will have made towards that sentence)
   */
 abstract class CompoundQueryOp(
     val ops: Set[TokenQueryOp],

@@ -23,9 +23,9 @@ case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
   *
   * @param label label of the hit
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
-  *                 this hit (see the ml/README.md)
+  *                this hit (see the ml/README.md)
   * @param captureStrings the string we captured, as a Sequence of capture groups of sequences of
-  *                  words
+  *                 words
   * @param doc the document number this Example came from
   * @param str String of hit, kept only for debugging purposes
   */
@@ -87,7 +87,7 @@ object QuerySuggester extends Logging {
     * @param opBuilder Builder function for CompoundQueryOps
     * @param beamSize Size of the beam to use in the search
     * @param depth Depth to run the search to, corresponds the to maximum size
-    *      of a CompoundQueryOp that can be proposed
+    *     of a CompoundQueryOp that can be proposed
     * @param query optional query, only used when printing query ops
     * @return Sequence of CompoundQueryOps, together with their score and a string
     * message about some statistics about that op of at most beamSize size
@@ -187,7 +187,7 @@ object QuerySuggester extends Logging {
     * @param tables Tables to use when building the query
     * @param target Name of the table to optimize the suggested queries for
     * @param narrow Whether the suggestions should narrow or broaden the starting
-    *       query
+    *      query
     * @param config Configuration details to use when suggesting the new queries
     * @return Suggested queries, along with their scores and a String msg details some
     * statistics about each query
@@ -310,7 +310,6 @@ object QuerySuggester extends Logging {
     val totalNegativeHits = hitAnalysis.examples.count(x => x.label == Negative)
     logger.info(s"Found $totalPositiveHits positive " +
       s"and $totalNegativeHits negative with ${hitAnalysis.operatorHits.size} possible operators")
-
     if (totalPositiveHits == 0) {
       logger.info("Not enough data found")
       return Seq()

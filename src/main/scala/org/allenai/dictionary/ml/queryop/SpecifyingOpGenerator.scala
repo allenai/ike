@@ -35,39 +35,56 @@ case class SpecifyingOpGenerator(
   def generate(matches: QueryMatches): Map[QueryOp, IntMap[Int]] = {
     val index = matches.queryToken.slot.token
     val isCapture = matches.queryToken.isCapture
+    val expr = matches.queryToken.qexpr
 
-    matches.queryToken.qexpr match {
-      case Some(QPlus(child)) =>
-        val removePlus = matches.matches.zipWithIndex.flatMap {
-          case (qMatch, matchIndex) =>
-            if (qMatch.tokens.size == 1) Some((matchIndex, if (qMatch.didMatch) 0 else 1)) else None
-        }
-        val setTokenOps = OpGenerator.getSetTokenOps(
-          matches, getLeafGenerator(Some(child), isCapture)
-        )
-        setTokenOps.asInstanceOf[Map[QueryOp, IntMap[Int]]] +
-          (RemovePlus(index) -> IntMap(removePlus: _*))
-      case Some(QStar(child)) =>
+    if (expr.isEmpty || !expr.get.isInstanceOf[QRepeating]) {
+      OpGenerator.getSetTokenOps(matches, getLeafGenerator(expr, isCapture)).
+        asInstanceOf[Map[QueryOp, IntMap[Int]]]
+    } else {
+      val repeatingOp = expr.get.asInstanceOf[QRepeating]
+      val childLength = QueryLanguage.getQueryLength(repeatingOp.qexpr)
+      if (childLength == -1) {
+        Map()
+      } else {
+        case class Repetitions(index: Int, repeats: Int, required: Int)
         val editsWithSize = matches.matches.zipWithIndex.map {
           case (qMatch, matchIndex) =>
-            (matchIndex, qMatch.tokens.size, if (qMatch.didMatch) 0 else 1)
+            Repetitions(matchIndex, qMatch.tokens.size / childLength,
+              if (qMatch.didMatch) 0 else 1)
         }
-        val starToPlus = IntMap(editsWithSize.filter(_._2 > 0).map(x => (x._1, x._3)): _*)
-        val removeStar = IntMap(editsWithSize.filter(_._2 == 1).map(x => (x._1, x._3)): _*)
-        val remove = IntMap(editsWithSize.filter(_._2 == 0).map(x => (x._1, x._3)): _*)
-        val setTokenOps = OpGenerator.getSetTokenOps(
-          matches, getLeafGenerator(Some(child), isCapture)
-        )
-        val setTokenOpWithEmpties = setTokenOps.map {
-          case (k, v) => (k, v ++ remove)
+        val removeOps =
+          if (repeatingOp.min == 0) {
+            Seq((
+              RemoveToken(index),
+              IntMap(editsWithSize.filter(_.repeats == 0).map(x => (x.index, x.required)): _*)
+            ))
+          } else {
+            Seq()
+          }
+        val nRepeats = editsWithSize.map(_.repeats).toSet.toSeq
+        val setMinOps = nRepeats.filter(_ != repeatingOp.min).map { n =>
+          (SetMin(index, n), IntMap(editsWithSize.filter(_.repeats >= n).
+            map(x => (x.index, x.required)): _*))
         }
-        setTokenOpWithEmpties.asInstanceOf[Map[QueryOp, IntMap[Int]]] +
-          (RemoveStar(index) -> removeStar) +
-          (StarToPlus(index) -> starToPlus) +
-          (RemoveToken(index) -> remove)
-      case other: Option[QExpr] =>
-        OpGenerator.getSetTokenOps(matches, getLeafGenerator(other, isCapture)).
-          asInstanceOf[Map[QueryOp, IntMap[Int]]]
+        val setMaxOps = nRepeats.filter(_ != repeatingOp.max).map { n =>
+          (SetMax(index, n), IntMap(editsWithSize.filter(_.repeats <= n).
+            map(x => (x.index, x.required)): _*))
+        }
+
+        val setUnbounded =
+          if (repeatingOp.max != -1) {
+            Seq((SetMax(index, -1), IntMap(editsWithSize.
+              map(x => (x.index, x.required)): _*)))
+          } else {
+            Seq()
+          }
+        val leafOps = OpGenerator.getSetTokenOps(matches, getLeafGenerator(
+          Some(repeatingOp.qexpr),
+          isCapture
+        )).asInstanceOf[Map[QueryOp, IntMap[Int]]]
+
+        (setUnbounded ++ setMinOps ++ setMaxOps ++ removeOps ++ leafOps).toMap
+      }
     }
   }
 }
