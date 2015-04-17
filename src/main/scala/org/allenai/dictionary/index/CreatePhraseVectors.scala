@@ -141,16 +141,11 @@ object CreatePhraseVectors extends App with Logging {
       * @return two maps, one with unigram counts, and one with bigram counts
       */
     def phraseCounts(phrases: OrderedPrefixSet) = {
-      val unigramCounts = new concurrent.TrieMap[Phrase, Int]
-      val bigramCounts = new concurrent.TrieMap[(Phrase, Phrase), Int]
-      def bumpCount[T](map: concurrent.Map[T, Int], key: T): Unit = {
-        val prev = map.putIfAbsent(key, 1)
-        prev match {
-          case Some(count) =>
-            val success = map.replace(key, count, count + 1)
-            if (!success) bumpCount(map, key)
-          case None => // yay!
-        }
+      val unigramCounts = mutable.Map[Phrase, Int]()
+      val bigramCounts = mutable.Map[(Phrase, Phrase), Int]()
+      def bumpCount[T](map: mutable.Map[T, Int], key: T): Unit = {
+        val count = map.getOrElse(key, 0) + 1
+        map.update(key, count)
       }
 
       phrasifiedSentences(phrases).foreach { sentence =>
@@ -163,7 +158,7 @@ object CreatePhraseVectors extends App with Logging {
         }
       }
 
-      def applyMinWordCount[T](map: concurrent.Map[T, Int]) =
+      def applyMinWordCount[T](map: mutable.Map[T, Int]) =
         map.filter { case (_, count) => count >= minWordCount }
       (applyMinWordCount(unigramCounts), applyMinWordCount(bigramCounts))
     }
