@@ -66,10 +66,18 @@ object CreatePhraseVectors extends App with Logging {
       val lastMessagePrinted = new AtomicLong(System.currentTimeMillis())
 
       idTexts.parMap { idText =>
-        val result = segmenter.segment(idText.text).map { sentence =>
-          tokenizer.tokenize(sentence.text).map { token =>
-            token.string.toLowerCase
+        val result = try {
+          segmenter.segment(idText.text).map { sentence =>
+            tokenizer.tokenize(sentence.text).map { token =>
+              token.string.toLowerCase
+            }
           }
+        } catch {
+          case StackOverflowError =>
+            logger.warn("Stack overflow when tokenizing. Ignoring document.")
+            logger.info("Untokenizable text:")
+            logger.info(idText.text)
+            Seq()
         }
 
         val currentDocumentCount = documentCount.incrementAndGet()
