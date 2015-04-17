@@ -73,7 +73,7 @@ object CreatePhraseVectors extends App with Logging {
             }
           }
         } catch {
-          case StackOverflowError =>
+          case _: StackOverflowError =>
             logger.warn("Stack overflow when tokenizing. Ignoring document.")
             logger.info("Untokenizable text:")
             logger.info(idText.text)
