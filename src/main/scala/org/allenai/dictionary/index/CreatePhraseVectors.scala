@@ -17,7 +17,6 @@ import java.nio.file.Files
 
 import org.apache.thrift.TSerializer
 
-import scala.collection.concurrent
 import scala.collection.immutable.TreeSet
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
