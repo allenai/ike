@@ -1,9 +1,10 @@
 package org.allenai.dictionary
 
-import scala.util.parsing.combinator.RegexParsers
-import java.util.regex.Pattern
-import scala.util.{ Try, Failure, Success }
 import java.text.ParseException
+import java.util.regex.Pattern
+
+import scala.util.parsing.combinator.RegexParsers
+import scala.util.{ Failure, Success, Try }
 
 sealed trait QExpr
 sealed trait QLeaf extends QExpr
@@ -63,8 +64,9 @@ object QExprParser extends RegexParsers {
   def curlyDisj = "{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq
   def operand = named | nonCap | unnamed | curlyDisj | atom
   def integer = """-?[0-9]+""".r ^^ { _.toInt }
-  def repetition  = (operand <~ "[") ~ ((integer <~ ",") ~ (integer <~ "]")) ^^ {x =>
-      QRepetition(x._1, x._2._1, x._2._2)}
+  def repetition = (operand <~ "[") ~ ((integer <~ ",") ~ (integer <~ "]")) ^^ { x =>
+    QRepetition(x._1, x._2._1, x._2._2)
+  }
   def starred = operand <~ "*" ^^ QStar
   def plussed = operand <~ "+" ^^ QPlus
   def modified = starred | plussed | repetition
@@ -164,7 +166,7 @@ object QueryLanguage {
 
   /** @param qexpr query to evaluate
     * @return number of tokens the query will match, or -1 if the query
-    *       can match a variable number of tokens'
+    *      can match a variable number of tokens'
     */
   def getQueryLength(qexpr: QExpr): Int = qexpr match {
     case QDict(_) => -1
@@ -194,11 +196,11 @@ object QueryLanguage {
     *
     * @param qexpr Query expression to name capture groups within
     * @param tableCols Sequence of the columns in a table to be used to name unnamed capture
-    *                 groups
+    *                groups
     * @throws IllegalArgumentException if QExpr contains a mix of named and unnamed capture groups,
-    *                                 if the name capture group do not have names corresponding
-    *                                 to the columns in tableCols, or if the query has the wrong
-    *                                 number of capture groups.
+    *                                if the name capture group do not have names corresponding
+    *                                to the columns in tableCols, or if the query has the wrong
+    *                                number of capture groups.
     */
   def nameCaptureGroups(qexpr: QExpr, tableCols: Seq[String]): QExpr = {
     var unnamedCounts = 0

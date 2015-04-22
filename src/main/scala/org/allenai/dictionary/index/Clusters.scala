@@ -1,6 +1,8 @@
 package org.allenai.dictionary.index
-import org.allenai.pipeline.IoHelpers._
 import java.io.File
+
+import org.allenai.pipeline.IoHelpers._
+
 import scala.io.Source
 
 case class ClusterRecord(cluster: String, word: String, count: Int)

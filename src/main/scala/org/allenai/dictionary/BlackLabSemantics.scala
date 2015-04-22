@@ -1,15 +1,7 @@
 package org.allenai.dictionary
 
-import nl.inl.blacklab.search.TextPattern
-import nl.inl.blacklab.search.TextPatternTerm
-import nl.inl.blacklab.search.TextPatternProperty
-import nl.inl.blacklab.search.sequences.TextPatternSequence
-import nl.inl.blacklab.search.TextPatternPrefix
-import nl.inl.blacklab.search.sequences.TextPatternAnyToken
-import nl.inl.blacklab.search.TextPatternOr
-import nl.inl.blacklab.search.TextPatternAnd
-import nl.inl.blacklab.search.sequences.TextPatternRepetition
-import nl.inl.blacklab.search.TextPatternCaptureGroup
+import nl.inl.blacklab.search.{ TextPattern, TextPatternAnd, TextPatternCaptureGroup, TextPatternOr, TextPatternPrefix, TextPatternProperty, TextPatternTerm }
+import nl.inl.blacklab.search.sequences.{ TextPatternAnyToken, TextPatternRepetition, TextPatternSequence }
 
 object BlackLabSemantics {
   def notImplemented: Exception = new UnsupportedOperationException

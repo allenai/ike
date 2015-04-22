@@ -6,7 +6,7 @@ import nl.inl.blacklab.search._
   *
   * @param leafs What QLeafs to generate for each suffix
   * @param indices Indices of tokens to generated tokens for, the token
-  *      immediately after that hit indexed as '1', then '2' ect.
+  *     immediately after that hit indexed as '1', then '2' ect.
   */
 case class SuffixOpGenerator(leafs: QLeafGenerator, indices: Seq[Int])
     extends TokenQueryOpGenerator {

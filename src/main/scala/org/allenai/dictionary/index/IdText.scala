@@ -1,9 +1,11 @@
 package org.allenai.dictionary.index
 
 import java.io.File
-import scala.io.Source
+
 import com.typesafe.config.Config
 import org.allenai.dictionary.DataFile
+
+import scala.io.Source
 
 case class IdText(id: String, text: String)
 
