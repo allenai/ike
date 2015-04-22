@@ -49,6 +49,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   val searchApps = config.getConfigList("DictionaryToolWebapp.indices").asScala.map { config =>
     config.getString("name") -> Future { SearchApp(config) }
   }.toMap
+  def readySearchApps = searchApps.filter(_._2.isCompleted)
 
   val staticContentRoot = "public"
   val serviceRoutes = searchApps.map {
@@ -95,14 +96,15 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
             <div align="center">
               <img src="/assets/logo.260x260.png" alt="OkCorpus"/>
               <br/>
-              <div style="display: inline-block; font-size: 200%;" align="left">
-                <p>Pick your corpus:</p>
+              <div style="display: inline-block; font-size: 150%" align="left">
                 {
-                  NodeSeq.fromSeq(searchApps.keys.toList.flatMap { name =>
-                    NodeSeq.fromSeq(Seq(
-                      <a href={ name }>{ name }</a>,
-                      <br/>
-                    ))
+                  NodeSeq.fromSeq(readySearchApps.mapValues(_.get.description).toSeq.map {
+                    case (name: String, description: Option[String]) =>
+                      <p>
+                        <span style="font-size: 130%"><a href={ name }>{ name }</a></span>
+                        <br/>
+                        { description.getOrElse("") }
+                      </p>
                   })
                 }
               </div>
