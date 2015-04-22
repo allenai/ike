@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.allenai.common.Logging
 import spray.can.Http
-import spray.http.{ CacheDirectives, HttpHeaders, StatusCodes }
+import spray.http.{ HttpMethods, CacheDirectives, HttpHeaders, StatusCodes }
 import spray.httpx.SprayJsonSupport
 import spray.routing.{ ExceptionHandler, HttpService }
 import spray.util.LoggingContext
@@ -113,6 +113,10 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   } ~ get {
     unmatchedPath { p => getFromFile(staticContentRoot + p) }
+  }
+
+  val tablesRoute = pathPrefix("api" / "tables") {
+    get { complete("foo") }
   }
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =

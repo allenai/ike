@@ -6,7 +6,7 @@ val okcorpus = project.in(file(".")).enablePlugins(WebappPlugin)
 
 name := "okcorpus"
 
-description := "buildin' them electric dictionaries"
+description := "buildin' them electric tables"
 
 libraryDependencies ++= Seq(
     allenAiCommon,
@@ -22,6 +22,8 @@ libraryDependencies ++= Seq(
     lucene("highlighter"),
     lucene("queries"),
     lucene("queryparser"),
+    "com.typesafe.slick" %% "slick" % "2.1.0",
+    "org.postgresql" % "postgresql" % "9.4-1201-jdbc41",
     "nl.inl" %% "blacklab" % "1.0-ALLENAI-2",
     scopt)
 
