@@ -30,9 +30,9 @@ case class SearchApp(config: Config) extends Logging {
     searcher.find(textPattern).window(0, limit)
   }
   def fromHits(hits: HitsWindow): Try[Seq[BlackLabResult]] = Try {
-    BlackLabResult.fromHits(hits).toSeq.map(HackyBlackLabSemantics.removeConstToken)
+    BlackLabResult.fromHits(hits).toSeq
   }
-  def semantics(query: QExpr): Try[TextPattern] = Try(HackyBlackLabSemantics.blackLabQuery(query))
+  def semantics(query: QExpr): Try[TextPattern] = Try(BlackLabSemantics.blackLabQuery(query))
   def suggestQuery(request: SuggestQueryRequest): Try[SuggestQueryResponse] = for {
     query <- QueryLanguage.parse(request.query)
     suggestion <- Try(
