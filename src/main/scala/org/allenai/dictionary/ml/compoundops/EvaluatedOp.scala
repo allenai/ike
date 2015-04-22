@@ -19,7 +19,7 @@ object EvaluatedOp {
   *
   * @param op operatorw
   * @param matches Map of (sentence index) -> 1, if this operator fills a requirement
-  *               for the sentence and 0 if this operator matches the sentence
+  *              for the sentence and 0 if this operator matches the sentence
   *
   */
 case class EvaluatedOp(op: TokenQueryOp, matches: IntMap[Int])

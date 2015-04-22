@@ -6,6 +6,7 @@ import org.allenai.dictionary._
 import org.allenai.dictionary.ml.compoundops._
 import org.allenai.dictionary.ml.primitveops._
 import org.allenai.dictionary.ml.subsample._
+
 import scala.collection.JavaConverters._
 import scala.collection.immutable.IntMap
 
@@ -16,14 +17,14 @@ object Label extends Enumeration {
   type Label = Value
   val Positive, Negative, Unlabelled = Value
 }
-import Label._
+import org.allenai.dictionary.ml.Label._
 
 /** A particular sentence from the corpus we will evaluate queries on.
   *
   * @param label Label of the sentence
   * @param requiredEdits The 'edit distance' from our current query to a query that would match this
-  *                   example. Hence the number of operators we will need to apply to the
-  *                   starting query if we want it to match this sentence
+  *                  example. Hence the number of operators we will need to apply to the
+  *                  starting query if we want it to match this sentence
   * @param str The sentence, stored for logging / debugging purposes
   */
 case class Example(label: Label, requiredEdits: Int, str: String)
@@ -37,8 +38,8 @@ object QuerySuggester extends Logging {
     * sentence in the subsample and which sentences each primitive operation applies to.
     *
     * @param operatorHits Maps primitive operations to map for (sentence index with in examples ->
-    *                  number of required 'edit' that operator completes for that sentence
-    *                  (can be 0))
+    *                 number of required 'edit' that operator completes for that sentence
+    *                 (can be 0))
     * @param examples List of examples, one for each sentence
     */
   case class HitAnalysis(
@@ -69,7 +70,7 @@ object QuerySuggester extends Logging {
   /** Builds a HitAnalysis object from a sequence a series of Hits
     *
     * @param hits Hits to build the HitAnalysis object from, it will contain one Example
-    *           for each hit in Hits
+    *          for each hit in Hits
     * @param generators generators to generate primitive operations from
     * @param positiveTerms Positive examples
     * @param negativeTerms Negative examples
@@ -142,9 +143,9 @@ object QuerySuggester extends Logging {
     * @param opBuilder Builder function for CompoundQueryOps
     * @param beamSize Size of the beam to use in the search
     * @param depth Depth to run the search to, corresponds the to maximum size
-    *           of a CompoundQueryOp that can be proposed
+    *          of a CompoundQueryOp that can be proposed
     * @return Sequence of CompoundQueryOps, together with their score and a string
-    *      message about some statistics about that op of at most beamSize size
+    *     message about some statistics about that op of at most beamSize size
     */
   def selectOperator(
     hitAnalysis: HitAnalysis,
@@ -240,10 +241,10 @@ object QuerySuggester extends Logging {
     * @param tables Tables to use when building the query
     * @param target Name of the table to optimize the suggested queries for
     * @param narrow Whether the suggestions should narrow or broaden the starting
-    *            query
+    *           query
     * @param config Configuration details to use when suggesting the new queries
     * @return Suggested queries, along with their scores and a String msg details some
-    *      statistics about each query
+    *     statistics about each query
     */
   def suggestQuery(
     searcher: Searcher,

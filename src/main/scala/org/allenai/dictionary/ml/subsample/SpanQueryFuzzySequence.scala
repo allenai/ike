@@ -31,10 +31,10 @@ import org.apache.lucene.util.Bits
   *
   * @param mixedClauses Sequence of Queries or integers to use as subclauses
   * @param minMatches Minimum number of clauses that must match a sequence for us to return that
-  *                  sequence
+  *                 sequence
   * @param maxMatches Maximum number of clauses that must match a sequence we return
   * @param captureMisses Whether to return, the clauses that did not participate in a match, the
-  *                     spans of where they should have matched
+  *                    spans of where they should have matched
   * @param ignoreLastToken Whether to ignore the last token of each document
   * @param sequencesToCapture Subsequences of each match to return as capture groups
   */
