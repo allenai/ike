@@ -14,11 +14,11 @@ import spray.util.LoggingContext
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{ Await, Future }
+import scala.language.postfixOps
 import scala.util.control.NonFatal
 import scala.xml.NodeSeq
-import scala.language.postfixOps
 
 object DictionaryToolWebapp {
   lazy val config = ConfigFactory.load().getConfig("DictionaryToolWebapp")
@@ -40,8 +40,8 @@ object DictionaryToolWebapp {
 }
 
 class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport with Logging {
-  import JsonSerialization._
   import DictionaryToolWebapp.FutureWithGet
+  import JsonSerialization._
 
   logger.debug("Starting DictionaryToolActor") // this is just here to force logger initialization
 

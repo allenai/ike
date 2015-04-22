@@ -1,9 +1,9 @@
 package org.allenai.dictionary.ml.primitveops
 
-import scala.util.Success
-
 import nl.inl.blacklab.search.Kwic
 import org.allenai.dictionary._
+
+import scala.util.Success
 
 object QLeafGenerator {
   def validWord(word: String): Boolean = {

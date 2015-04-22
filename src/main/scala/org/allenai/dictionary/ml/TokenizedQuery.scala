@@ -57,7 +57,7 @@ object TokenizedQuery {
   /** Builds a TokenizedQuery from a QExpr
     *
     * @param qexpr Expression to tokenize, assumed to be fixed length (always matches the same
-    *             number of tokens) and with no unnamed capture groups
+    *            number of tokens) and with no unnamed capture groups
     * @return the tokenized QExpr
     * @throws UnconvertibleQuery if the query was not fixed length
     * @throws IllegalArgumentException if the query has unnamed capture groups
@@ -93,8 +93,8 @@ object TokenizedQuery {
   *
   * @param captures Sequence of capture groups in the query
   * @param nonCaptures Sequence of of QExpr that occurs between each capture group, including
-  *                  to the left and right of the first and last capture group. Can contain
-  *                  empty sequences
+  *                 to the left and right of the first and last capture group. Can contain
+  *                 empty sequences
   * @throws IllegalArgumentException if capture.size + 1 != nonCapture.size
   */
 case class TokenizedQuery(captures: List[CaptureSequence], nonCaptures: List[Seq[QExpr]]) {
