@@ -1,6 +1,6 @@
 package org.allenai.dictionary.ml.primitveops
 
-import nl.inl.blacklab.search.{ Hits, Hit }
+import nl.inl.blacklab.search.{ Hit, Hits }
 
 /** Generates MarkedOps for all tokens in a hit. Uses the capture groups
   * stored by FuzzySequenceQuery to determine which of the proposed operators
@@ -9,7 +9,7 @@ import nl.inl.blacklab.search.{ Hits, Hit }
   * @param setToken used to generate SetToken ops
   * @param addToken used to generate AddToken ops
   * @param captureIndices the indices to find the capture groups where the
-  *                    required edits have been (see FuzzySequenceQuery)
+  *                   required edits have been (see FuzzySequenceQuery)
   */
 case class RequiredEditsGenerator(
   setToken: QLeafGenerator,

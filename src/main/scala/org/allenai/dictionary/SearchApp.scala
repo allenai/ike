@@ -1,14 +1,12 @@
 package org.allenai.dictionary
 
-import nl.inl.blacklab.search.Searcher
 import com.typesafe.config.Config
-import nl.inl.blacklab.search.TextPattern
+import nl.inl.blacklab.search.{ HitsWindow, Searcher, TextPattern }
+import org.allenai.common.Config.EnhancedConfig
 import org.allenai.common.Logging
 import org.allenai.dictionary.ml.QuerySuggester
-import scala.util.Try
-import nl.inl.blacklab.search.HitsWindow
-import scala.util.Success
-import org.allenai.common.Config.EnhancedConfig
+
+import scala.util.{ Success, Try }
 
 case class SuggestQueryRequest(query: String, tables: Map[String, Table],
   target: String, narrow: Boolean, config: SuggestQueryConfig)

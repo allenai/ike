@@ -1,12 +1,9 @@
 package org.allenai.dictionary.index
+import org.allenai.nlpstack.core.{ Lemmatized, PostaggedToken, Segment, Token }
+import org.allenai.nlpstack.lemmatize.{ MorphaStemmer => lemmatizer }
+import org.allenai.nlpstack.postag.{ defaultPostagger => postagger }
 import org.allenai.nlpstack.segment.{ defaultSegmenter => segmenter }
 import org.allenai.nlpstack.tokenize.{ defaultTokenizer => tokenizer }
-import org.allenai.nlpstack.postag.{ defaultPostagger => postagger }
-import org.allenai.nlpstack.lemmatize.{ MorphaStemmer => lemmatizer }
-import org.allenai.nlpstack.core.Segment
-import org.allenai.nlpstack.core.Token
-import org.allenai.nlpstack.core.PostaggedToken
-import org.allenai.nlpstack.core.Lemmatized
 
 object NlpAnnotate {
   def segment(text: String): Seq[Segment] = segmenter.segment(text).toSeq

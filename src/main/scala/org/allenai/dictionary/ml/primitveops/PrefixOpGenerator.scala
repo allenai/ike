@@ -1,12 +1,12 @@
 package org.allenai.dictionary.ml.primitveops
 
-import nl.inl.blacklab.search.{ Hits, Hit }
+import nl.inl.blacklab.search.{ Hit, Hits }
 
 /** Generates applicable Prefix operators for a given hit.
   *
   * @param leafs, what QLeaf operators to generate for each prefix token
   * @param indices to generate prefixes for, where '1' indicates the
-  *               token before the hit, 2 the second token before the hit, ect.
+  *              token before the hit, 2 the second token before the hit, ect.
   */
 case class PrefixOpGenerator(leafs: QLeafGenerator, indices: Seq[Int])
     extends TokenQueryOpGenerator {

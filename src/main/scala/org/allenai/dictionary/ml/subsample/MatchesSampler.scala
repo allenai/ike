@@ -1,10 +1,9 @@
 package org.allenai.dictionary.ml.subsample
 
-import org.allenai.dictionary.ml.TokenizedQuery
-
 import nl.inl.blacklab.search.{ Hits, Searcher }
 import org.allenai.common.Logging
 import org.allenai.dictionary._
+import org.allenai.dictionary.ml.TokenizedQuery
 
 /** Samples hits that the given query already matches.
   */

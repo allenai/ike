@@ -1,8 +1,8 @@
 package org.allenai.dictionary.ml.compoundops
 
 import org.allenai.dictionary._
-import org.allenai.dictionary.ml.{ CaptureSequence, TokenizedQuery }
 import org.allenai.dictionary.ml.primitveops._
+import org.allenai.dictionary.ml.{ CaptureSequence, TokenizedQuery }
 
 import scala.collection.immutable.IntMap
 
@@ -129,7 +129,7 @@ object CompoundQueryOp {
   *
   * @param ops Set of operations that were combined
   * @param numEdits Map of (sentence index) -> (number of edits this combined op
-  *              will have made towards that sentence)
+  *             will have made towards that sentence)
   */
 abstract class CompoundQueryOp(
     val ops: Set[TokenQueryOp],

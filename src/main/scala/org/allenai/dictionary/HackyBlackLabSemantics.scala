@@ -1,8 +1,6 @@
 package org.allenai.dictionary
 
-import nl.inl.blacklab.search.TextPattern
-import nl.inl.blacklab.search.TextPatternProperty
-import nl.inl.blacklab.search.TextPatternTerm
+import nl.inl.blacklab.search.{ TextPattern, TextPatternProperty, TextPatternTerm }
 import nl.inl.blacklab.search.sequences.TextPatternSequence
 import org.allenai.common.immutable.Interval
 
