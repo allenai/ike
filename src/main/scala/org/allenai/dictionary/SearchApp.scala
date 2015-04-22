@@ -8,6 +8,7 @@ import org.allenai.dictionary.ml.QuerySuggester
 import scala.util.Try
 import nl.inl.blacklab.search.HitsWindow
 import scala.util.Success
+import org.allenai.common.Config.EnhancedConfig
 
 case class SuggestQueryRequest(query: String, tables: Map[String, Table],
   target: String, narrow: Boolean, config: SuggestQueryConfig)
@@ -24,6 +25,7 @@ case class SearchResponse(qexpr: QExpr, groups: Seq[GroupedBlackLabResult])
 
 case class SearchApp(config: Config) extends Logging {
   logger.debug(s"Building SearchApp for ${config.getString("name")}")
+  val description = config.get[String]("description")
   val indexDir = DataFile.fromConfig(config)
   val searcher = Searcher.open(indexDir)
   def blackLabHits(textPattern: TextPattern, limit: Int): Try[HitsWindow] = Try {
