@@ -4,7 +4,7 @@ import com.typesafe.config.{ Config, ConfigFactory }
 import org.allenai.common.Config._
 import org.allenai.common.Logging
 import org.allenai.dictionary.{ TableRow, QWord, TableValue, Table }
-import play.api.libs.json.{ JsValue => PlayJsValue }
+import play.api.libs.json.{ JsValue => PlayJsValue, Json => PlayJson }
 import spray.json.{ JsValue => SprayJsValue }
 import spray.json.pimpString
 
@@ -78,7 +78,7 @@ object Tablestore extends Logging {
     require(currentVersion == EXPECTED_VERSION)
   }
 
-  def tables: Seq[Table] = {
+  def tables: Map[String, Table] = {
     val tableSpec2rows = db.withTransaction { implicit session =>
       val q = (tablesTable leftJoin entriesTable on (_.name === _.tName)) map {
         case (t, e) =>
@@ -103,7 +103,30 @@ object Tablestore extends Logging {
           TableRow(row._1.map(value2tableValue), row._3.map(playJson2sprayJson))
         val tableRows = filteredRows.groupBy(_._2).mapValues(_.map(row2tableRow))
         val tableRowsWithDefault = tableRows.withDefaultValue(Seq.empty)
-        Table(tname, tcolumns, tableRowsWithDefault(true), tableRowsWithDefault(false))
-    }.toSeq
+        tname -> Table(tname, tcolumns, tableRowsWithDefault(true), tableRowsWithDefault(false))
+    }
+  }
+
+  def put(table: Table): Table = {
+    db.withTransaction { implicit session =>
+      val q = tablesTable.filter(_.name === table.name)
+      q.delete
+      // foreign key constraints auto-delete the entries as well
+
+      tablesTable += ((table.name, table.cols.toList))
+
+      def tableValue2value(tableValue: TableValue) = tableValue.qwords.map(_.value).mkString(" ")
+      def tableRow2row(tableRow: TableRow, isPositiveExample: Boolean) = {
+        val values = tableRow.values.map(tableValue2value).toList
+        val provenance =
+          tableRow.provenance.map(sprayJson => PlayJson.parse(sprayJson.compactPrint))
+        (table.name, values, isPositiveExample, provenance)
+      }
+
+      entriesTable ++= table.positive.map(tableRow2row(_, true))
+      entriesTable ++= table.negative.map(tableRow2row(_, false))
+    }
+
+    tables(table.name)
   }
 }

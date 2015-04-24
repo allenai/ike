@@ -99,7 +99,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
               <br/>
               <div style="display: inline-block; font-size: 150%" align="left">
                 {
-                  NodeSeq.fromSeq(readySearchApps.mapValues(_.get.description).toSeq.map {
+                  NodeSeq.fromSeq(readySearchApps.mapValues(_.get.description).toSeq.sorted.map {
                     case (name: String, description: Option[String]) =>
                       <p>
                         <span style="font-size: 130%"><a href={ name }>{ name }</a></span>
@@ -119,7 +119,23 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   }
 
   val tablesRoute = pathPrefix("api" / "tables") {
-    get { complete { Tablestore.tables.map(_.toString).mkString("\n") } }
+    pathEndOrSingleSlash {
+      get {
+        complete { Tablestore.tables.keys.mkString("\n") }
+      }
+    } ~ path(Segment) { tableName =>
+      get {
+        Tablestore.tables.get(tableName) match {
+          case None => complete(StatusCodes.NotFound)
+          case Some(table) if table.name == tableName => complete(table)
+          case _ => complete(StatusCodes.BadRequest)
+        }
+      } ~ put {
+        entity(as[Table]) { table =>
+          complete(Tablestore.put(table))
+        }
+      }
+    }
   }
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
