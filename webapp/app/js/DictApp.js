@@ -14,12 +14,9 @@ var DictApp = React.createClass({
     TableManager.addChangeListener(function(tables) {
       this.setState({tables: tables});
     }.bind(this));
+    TableManager.loadTablesFromServer();
   },
   getInitialState: function() {
-    var localTables = TableManager.loadTablesFromLocalStorage();
-    // Initially point to the first table name, if available.
-    var tableNames = Object.keys(localTables);
-    var target = tableNames.length > 0 ? tableNames[0] : null;
     return {
       config: {
         limit: 1000,
@@ -44,8 +41,8 @@ var DictApp = React.createClass({
         request: null,
         errorMessage: null
       },
-      tables: localTables,
-      target: target
+      tables: [],
+      target: null
     };
   },
   renderContent: function() {

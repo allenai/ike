@@ -1,51 +1,11 @@
+var xhr = require('xhr');
+
 var tables = {};
 var listeners = [];
 var rowIndex = {};
 
 var TableManager = {
-  hasTablesInLocalStorage: function() {
-    return ('tables' in localStorage);
-  },
-  deserializeTables: function() {
-    try {
-      var serialized = localStorage.getItem('tables');
-      var deserialized = JSON.parse(serialized);
-      var t = typeof deserialized;
-      if (t == 'object') {
-        return deserialized;
-      } else {
-        console.warn('Expected localStorage.tables to be object, found ' + t);
-        return {};
-      }
-    } catch (err) {
-      console.warn('Could not deserialize tables: ' + err.message);
-      return {};
-    }
-  },
-  /** Loads the tables from localStorage and adds them to the TableManager
-    * data structures.
-    */
-  loadTablesFromLocalStorage: function() {
-    if (this.hasTablesInLocalStorage()) {
-      var deserialized = this.deserializeTables();
-      var tableNames = Object.keys(deserialized);
-      tableNames.map(function(tableName) {
-        var table = deserialized[tableName];
-        this.createTable(table);
-      }.bind(this));
-      return deserialized;
-    } else {
-      return {};
-    }
-  },
-  saveTablesToLocalStorage: function() {
-    var serialized = JSON.stringify(tables);
-    try {
-      localStorage.setItem('tables', serialized);
-    } catch (err) {
-      alert('Could not save tables: ' + err.message);
-    }
-  },
+
   rowId: function(tableName, rowType, row) {
     var rowString = this.rowString(row);
     var fields = [tableName, rowType, rowString];
@@ -96,7 +56,7 @@ var TableManager = {
     listeners.map(function(listener) {
       listener(tables);
     });
-    this.saveTablesToLocalStorage();
+    // TODO this.saveTablesToLocalStorage();
   },
   hasTable: function(tableName) {
     return tableName in tables;
@@ -204,5 +164,42 @@ var TableManager = {
       return row.join("\t");
     }).join("\n");
   },
+
+  makeTablePutRequest: function(table) {
+    return {
+      json: table,
+      uri: '/api/tables/' + table.name,
+      method: 'PUT'
+    };
+  },
+
+  requestTableFromServer: function(tableName) {
+    var self = this;
+    xhr({
+      uri: '/api/tables/' + tableName,
+      method: 'GET'
+    }, function(err, response, body) {
+      if(response.statusCode === 200) {
+        self.createTable(JSON.parse(body));
+      } else {
+        console.log("Unexpected response requesting a table: " + response);
+      }
+    });
+  },
+
+  loadTablesFromServer: function() {
+    var self = this;
+    xhr({
+      uri: '/api/tables',
+      method: 'GET'
+    }, function(err, response, body) {
+      if(response.statusCode === 200) {
+        body.split("\n").forEach(self.requestTableFromServer.bind(self))
+      } else {
+        console.log("Unexpected response requesting tables: " + response)
+      }
+    });
+  },
+
 };
 module.exports = TableManager;
