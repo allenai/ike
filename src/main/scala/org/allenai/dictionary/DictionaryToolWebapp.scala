@@ -6,6 +6,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.allenai.common.Logging
+import org.allenai.dictionary.persistence.Tablestore
 import spray.can.Http
 import spray.http.{ HttpMethods, CacheDirectives, HttpHeaders, StatusCodes }
 import spray.httpx.SprayJsonSupport
@@ -118,7 +119,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   }
 
   val tablesRoute = pathPrefix("api" / "tables") {
-    get { complete("foo") }
+    get { complete { Tablestore.tables.map(_.toString).mkString("\n") } }
   }
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
@@ -131,5 +132,5 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
-  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoutes)
+  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoutes ~ tablesRoute)
 }

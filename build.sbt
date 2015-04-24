@@ -23,6 +23,8 @@ libraryDependencies ++= Seq(
     lucene("queries"),
     lucene("queryparser"),
     "com.typesafe.slick" %% "slick" % "2.1.0",
+    "com.github.tminglei" %% "slick-pg" % "0.8.2",
+    "com.typesafe.play" %% "play-json" % "2.3.8",
     "org.postgresql" % "postgresql" % "9.4-1201-jdbc41",
     "nl.inl" %% "blacklab" % "1.0-ALLENAI-2",
     scopt)
