@@ -188,6 +188,10 @@ var TableManager = {
   },
 
   loadTablesFromServer: function() {
+    // delete old table storage from the browser
+    localStorage.removeItem('tables')
+
+    // load tables from server
     var self = this;
     xhr({
       uri: '/api/tables',
