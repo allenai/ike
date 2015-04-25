@@ -56,12 +56,11 @@ var TableManager = {
     listeners.map(function(listener) {
       listener(tables);
     });
-    // TODO this.saveTablesToLocalStorage();
   },
   hasTable: function(tableName) {
     return tableName in tables;
   },
-  createTable: function(table) {
+  createTable: function(table, dontWriteToServer) {
     if (!this.hasTable(table.name)) {
       var positive = 'positive' in table ? table.positive : [];
       var negative = 'negative' in table ? table.negative : [];
@@ -78,6 +77,8 @@ var TableManager = {
         this.addRowIndex(table.name, 'negative', row);
       }.bind(this));
       this.updateListeners();
+      if(!dontWriteToServer)
+        this.writeTableToServer(table.name);
     }
   },
   deleteTable: function(tableName) {
@@ -86,6 +87,7 @@ var TableManager = {
     if (this.hasTable(tableName)) {
       delete tables[tableName];
       this.updateListeners();
+      // TODO: delete table from server
     }
     posRows.map(this.removeRowIndex);
     negRows.map(this.removeRowIndex);
@@ -102,6 +104,7 @@ var TableManager = {
       rows.unshift(row);
       this.addRowIndex(tableName, rowType, row);
       this.updateListeners();
+      this.writeTableToServer(tableName);
     }
   },
   deleteRow: function(tableName, rowType, row) {
@@ -112,6 +115,7 @@ var TableManager = {
       this.updateListeners();
       var rowId = this.rowId(tableName, rowType, row);
       this.removeRowIndex(tableName, rowType, row);
+      this.writeTableToServer(tableName);
     }
   },
   removeRowIndex: function(tableName, rowType, row) {
@@ -165,12 +169,16 @@ var TableManager = {
     }).join("\n");
   },
 
-  makeTablePutRequest: function(table) {
-    return {
-      json: table,
-      uri: '/api/tables/' + table.name,
-      method: 'PUT'
-    };
+  writeTableToServer: function(tableName) {
+    xhr({
+      uri: '/api/tables/' + tableName,
+      method: 'PUT',
+      json: tables[tableName]
+    }, function(err, response, body) {
+      if(response.statusCode !== 200) {
+        console.log("Unexpected response writing a table: " + response);
+      }
+    });
   },
 
   requestTableFromServer: function(tableName) {
@@ -180,7 +188,7 @@ var TableManager = {
       method: 'GET'
     }, function(err, response, body) {
       if(response.statusCode === 200) {
-        self.createTable(JSON.parse(body));
+        self.createTable(JSON.parse(body), true);
       } else {
         console.log("Unexpected response requesting a table: " + response);
       }
@@ -204,6 +212,5 @@ var TableManager = {
       }
     });
   },
-
 };
 module.exports = TableManager;
