@@ -108,6 +108,8 @@ object Tablestore extends Logging {
   }
 
   def put(table: Table): Table = {
+    logger.info(s"Writing table ${table.name}")
+
     db.withTransaction { implicit session =>
       val q = tablesTable.filter(_.name === table.name)
       q.delete
