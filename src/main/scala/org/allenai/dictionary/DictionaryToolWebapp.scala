@@ -134,6 +134,9 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
         entity(as[Table]) { table =>
           complete(Tablestore.put(table))
         }
+      } ~ delete {
+        Tablestore.delete(tableName)
+        complete(StatusCodes.OK)
       }
     }
   }

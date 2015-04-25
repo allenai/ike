@@ -87,7 +87,7 @@ var TableManager = {
     if (this.hasTable(tableName)) {
       delete tables[tableName];
       this.updateListeners();
-      // TODO: delete table from server
+      this.deleteTableFromServer(tableName);
     }
     posRows.map(this.removeRowIndex);
     negRows.map(this.removeRowIndex);
@@ -167,6 +167,18 @@ var TableManager = {
     return allRows.map(function(row) {
       return row.join("\t");
     }).join("\n");
+  },
+
+  deleteTableFromServer: function(tableName) {
+    console.log(tableName);
+    xhr({
+      uri: '/api/tables/' + tableName,
+      method: 'DELETE'
+    }, function(err, response, body) {
+      if(response.statusCode !== 200) {
+        console.log("Unexpected response deleting a table: " + response);
+      }
+    });
   },
 
   writeTableToServer: function(tableName) {

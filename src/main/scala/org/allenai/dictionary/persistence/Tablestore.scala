@@ -131,4 +131,14 @@ object Tablestore extends Logging {
 
     tables(table.name)
   }
+
+  def delete(tableName: String): Unit = {
+    logger.info(s"Deleting table $tableName")
+
+    db.withTransaction { implicit session =>
+      val q = tablesTable.filter(_.name === tableName)
+      q.delete
+      // foreign key constraints auto-delete the entries as well
+    }
+  }
 }
