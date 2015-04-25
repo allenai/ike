@@ -218,7 +218,9 @@ var TableManager = {
       method: 'GET'
     }, function(err, response, body) {
       if(response.statusCode === 200) {
-        body.split("\n").forEach(self.requestTableFromServer.bind(self))
+        if(body) {
+          body.split("\n").forEach(self.requestTableFromServer.bind(self))
+        }
       } else {
         console.log("Unexpected response requesting tables: " + response)
       }
