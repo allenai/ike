@@ -12,12 +12,14 @@ var ResultContext = React.createClass({
     };
     var highlighted = words.map(function(word, i) {
       if (highlightedIndex(i)) {
-        return <span key={i} className='highlighted'>{word} </span>
+        return "<span class='highlighted'>" + word + "</span>"
       } else {
-        return <span key={i}>{word} </span>;
+        return word;
       }
     });
-    return <div>{highlighted}</div>;
+    var innerHtml = highlighted.join(' ');
+
+    return <div dangerouslySetInnerHTML={{__html: innerHtml}}/>;
   }
 });
 module.exports = ResultContext;
