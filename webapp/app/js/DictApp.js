@@ -11,8 +11,19 @@ var HelpInterface = require('./components/help/HelpInterface.js');
 var DictApp = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
   componentDidMount: function() {
+    var target = this.linkState('target');
+
     TableManager.addChangeListener(function(tables) {
       this.setState({tables: tables});
+      if(target.value == null && tables) {
+        for(var tableName in tables) {
+          if(tables.hasOwnProperty(tableName)) {
+            target.requestChange(tableName);
+            break;
+          }
+        }
+      }
+
     }.bind(this));
     TableManager.loadTablesFromServer();
   },
