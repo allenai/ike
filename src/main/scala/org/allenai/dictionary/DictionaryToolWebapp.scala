@@ -124,19 +124,23 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
         complete { Tablestore.tables.keys.mkString("\n") }
       }
     } ~ path(Segment) { tableName =>
-      get {
-        Tablestore.tables.get(tableName) match {
-          case None => complete(StatusCodes.NotFound)
-          case Some(table) if table.name == tableName => complete(table)
-          case _ => complete(StatusCodes.BadRequest)
+      pathEnd {
+        get {
+          Tablestore.tables.get(tableName) match {
+            case None => complete(StatusCodes.NotFound)
+            case Some(table) if table.name == tableName => complete(table)
+            case _ => complete(StatusCodes.BadRequest)
+          }
+        } ~ put {
+          entity(as[Table]) { table =>
+            complete(Tablestore.put(table))
+          }
+        } ~ delete {
+          complete {
+            Tablestore.delete(tableName)
+            StatusCodes.OK
+          }
         }
-      } ~ put {
-        entity(as[Table]) { table =>
-          complete(Tablestore.put(table))
-        }
-      } ~ delete {
-        Tablestore.delete(tableName)
-        complete(StatusCodes.OK)
       }
     }
   }
