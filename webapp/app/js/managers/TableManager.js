@@ -131,12 +131,13 @@ var TableManager = {
       return false;
 
     var rows;
-    if(rowType === "positive")
+    if(rowType === "positive") {
       rows = table.positive;
-    else if(rowType === "negative")
+    } else if(rowType === "negative") {
       rows = table.negative;
-    else
+    } else {
       return false;
+    }
 
     var rowString = function(row) {
       var values = row.values;
