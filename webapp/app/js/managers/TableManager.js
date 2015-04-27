@@ -1,6 +1,5 @@
 var tables = {};
 var listeners = [];
-var rowIndex = {};
 
 var TableManager = {
   hasTablesInLocalStorage: function() {
@@ -45,19 +44,6 @@ var TableManager = {
     } catch (err) {
       alert('Could not save tables: ' + err.message);
     }
-  },
-  rowId: function(tableName, rowType, row) {
-    var rowString = this.rowString(row);
-    var fields = [tableName, rowType, rowString];
-    return fields.join(".");
-  },
-  rowString: function(row) {
-    var values = row.values;
-    var valueStrings = values.map(this.valueString);
-    return valueStrings.join("|");
-  },
-  rowStrings: function(rows) {
-    return rows.map(this.rowString);
   },
   valueString: function(value) {
     var qwords = value.qwords;
@@ -111,12 +97,6 @@ var TableManager = {
         positive: positive,
         negative: negative
       };
-      positive.map(function(row) {
-        this.addRowIndex(table.name, 'positive', row);
-      }.bind(this));
-      negative.map(function(row) {
-        this.addRowIndex(table.name, 'negative', row);
-      }.bind(this));
       this.updateListeners();
     }
   },
@@ -127,12 +107,6 @@ var TableManager = {
       delete tables[tableName];
       this.updateListeners();
     }
-    posRows.map(this.removeRowIndex);
-    negRows.map(this.removeRowIndex);
-  },
-  addRowIndex: function(tableName, rowType, row) {
-    var id = this.rowId(tableName, rowType, row);
-    rowIndex[id] = true;
   },
   addRow: function(tableName, rowType, row) {
     var hasTable = this.hasTable(tableName);
@@ -140,7 +114,6 @@ var TableManager = {
     if (hasTable && !hasRow) {
       var rows = tables[tableName][rowType];
       rows.unshift(row);
-      this.addRowIndex(tableName, rowType, row);
       this.updateListeners();
     }
   },
@@ -150,19 +123,29 @@ var TableManager = {
       var index = rows.indexOf(row);
       rows.splice(index, 1);
       this.updateListeners();
-      var rowId = this.rowId(tableName, rowType, row);
-      this.removeRowIndex(tableName, rowType, row);
-    }
-  },
-  removeRowIndex: function(tableName, rowType, row) {
-    var id = this.rowId(tableName, rowType, row);
-    if (id in rowIndex) {
-      delete rowIndex[id];
     }
   },
   hasRow: function(tableName, rowType, row) {
-    var rowId = this.rowId(tableName, rowType, row);
-    return rowId in rowIndex;
+    var table = tables[tableName];
+    if(!table)
+      return false;
+
+    var rows;
+    if(rowType === "positive") {
+      rows = table.positive;
+    } else if(rowType === "negative") {
+      rows = table.negative;
+    } else {
+      return false;
+    }
+
+    var rowString = function(row) {
+      var values = row.values;
+      var valueStrings = values.map(TableManager.valueString);
+      return valueStrings.join("|");
+    };
+
+    return rows.map(rowString).indexOf(rowString(row)) >= 0;
   },
   hasPositiveRow: function(tableName, row) {
     return this.hasRow(tableName, "positive", row);
