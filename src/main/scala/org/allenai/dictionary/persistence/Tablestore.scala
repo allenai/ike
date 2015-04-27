@@ -84,7 +84,6 @@ object Tablestore extends Logging {
         case (t, e) =>
           (t.name, t.columns, e.values.?, e.isPositiveExample.?, e.provenance)
       }
-      logger.debug(q.selectStatement)
       q.list.groupBy { case (tname, tcolumns, _, _, _) => (tname, tcolumns) }
     }
 
