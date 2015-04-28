@@ -13,7 +13,7 @@ import java.util
   * @param _query The query to filter
   * @param _filter The query to filter by
   * @param captureGroups Capture groups to filter the query by, both the filter and the query should
-  *                   contain capture groups with the names in this list
+  *                  contain capture groups with the names in this list
   * @param startFromDoc document to start from, returns hits have doc >= startFromDoc
   */
 class SpanQueryFilterByCaptureGroups(

@@ -14,8 +14,8 @@ import scala.collection.immutable.IntMap
   * @param clusterSizes what sizes of clusters to suggest adding to the query
   * @param addToken whether to suggest AddToken ops in addition to SetToken ops
   * @param maxRemoves the maximum number of tokens that can be removed, this will stop this from
-  *                suggesting RemoveEdge ops that would require removing more then that many
-  *                tokens
+  *               suggesting RemoveEdge ops that would require removing more then that many
+  *               tokens
   */
 case class GeneralizingOpGenerator(
     suggestPos: Boolean,

@@ -196,7 +196,7 @@ object CompoundQueryOp {
   *
   * @param ops set of query-token operations to apply to the query
   * @param numEdits Map of (sentence index) -> (number of required edits this combined op
-  *           will have made towards that sentence)
+  *          will have made towards that sentence)
   */
 abstract class CompoundQueryOp(
     val ops: Set[TokenQueryOp],

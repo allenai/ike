@@ -48,7 +48,7 @@ case class CaptureSpan(name: String, start: Int, end: Int) {
   * @param ignoreLastToken whether the the last token of sentences should be skipped
   * @param sequencesToCapture Subsequences to return as capture groups
   * @param registerMisses Whether to return clauses that missed a match as spans
-  *                 indicating where the missed clause 'should' have been placed
+  *                indicating where the missed clause 'should' have been placed
   */
 class SpansFuzzySequence(
     private val clauses: Seq[Either[BLSpans, Int]],

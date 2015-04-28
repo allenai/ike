@@ -10,7 +10,7 @@ import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
   * @param query the 'query' spans to filter
   * @param filter the 'filter' spans to filter the query spans with
   * @param captureGroups the names of the captures groups to filter with, both the query and
-  *                  filter spans should contain these capture groups
+  *                 filter spans should contain these capture groups
   * @param startFromDoc document to start from
   */
 class SpansFilterByCaptureGroups(

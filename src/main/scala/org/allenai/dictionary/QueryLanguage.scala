@@ -19,7 +19,7 @@ case class QPos(value: String) extends QLeaf
 case class QDict(value: String) extends QLeaf
 case class QClusterFromWord(value: Int, wordValue: String, clusterId: String)
   extends QLeaf
-case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])  
+case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])
   extends QLeaf
 case class QWildcard() extends QLeaf
 case class QNamed(qexpr: QExpr, name: String) extends QCapture
@@ -178,7 +178,7 @@ object QueryLanguage {
 
   /** @param qexpr query to evaluate
     * @return range of tokens the query will match, ends with -1 if the query
-    *     can match a variable number of tokens'
+    *    can match a variable number of tokens'
     */
   def getQueryLength(qexpr: QExpr): (Int, Int) = qexpr match {
     case QDict(_) => (0, -1)
@@ -209,11 +209,11 @@ object QueryLanguage {
     *
     * @param qexpr Query expression to name capture groups within
     * @param tableCols Sequence of the columns in a table to be used to name unnamed capture
-    *               groups
+    *              groups
     * @throws IllegalArgumentException if QExpr contains a mix of named and unnamed capture groups,
-    *                               if the name capture group do not have names corresponding
-    *                               to the columns in tableCols, or if the query has the wrong
-    *                               number of capture groups
+    *                              if the name capture group do not have names corresponding
+    *                              to the columns in tableCols, or if the query has the wrong
+    *                              number of capture groups
     */
   def nameCaptureGroups(qexpr: QExpr, tableCols: Seq[String]): QExpr = {
     var unnamedCounts = 0

@@ -19,8 +19,8 @@ object EvaluatedOp {
   *
   * @param op operator
   * @param matches Map of (sentence index) -> 1, if this operator fills a requirement for the
-  *            sentence and -> 0 if the associated query this operator was built from
-  *            would match the sentence once this operator is applied
+  *           sentence and -> 0 if the associated query this operator was built from
+  *           would match the sentence once this operator is applied
   *
   */
 case class EvaluatedOp(op: QueryOp, matches: IntMap[Int])
