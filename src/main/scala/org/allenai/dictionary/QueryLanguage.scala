@@ -19,7 +19,7 @@ case class QPos(value: String) extends QLeaf
 case class QDict(value: String) extends QLeaf
 case class QClusterFromWord(value: Int, wordValue: String, clusterId: String)
   extends QLeaf
-case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])
+case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])  
   extends QLeaf
 case class QWildcard() extends QLeaf
 case class QNamed(qexpr: QExpr, name: String) extends QCapture
@@ -33,12 +33,12 @@ sealed trait QRepeating extends QAtom {
 }
 case class QRepetition(qexpr: QExpr, min: Int, max: Int) extends QRepeating
 case class QStar(qexpr: QExpr) extends QRepeating {
-  val min = 0
-  val max = -1
+  def min = 0
+  def max = -1
 }
 case class QPlus(qexpr: QExpr) extends QRepeating {
-  val min = 1
-  val max = -1
+  def min = 1
+  def max = -1
 }
 case object QSeq {
   def fromSeq(seq: Seq[QExpr]): QExpr = seq match {
@@ -177,28 +177,30 @@ object QueryLanguage {
   }
 
   /** @param qexpr query to evaluate
-    * @return number of tokens the query will match, or -1 if the query
+    * @return range of tokens the query will match, ends with -1 if the query
     *     can match a variable number of tokens'
     */
-  def getQueryLength(qexpr: QExpr): Int = qexpr match {
-    case QDict(_) => -1
-    case QPlus(_) => -1
-    case QStar(_) => -1
-    case l: QLeaf => 1
-    case QSeq(seq) =>
-      val lengths = seq.map(getQueryLength)
-      if (lengths.forall(_ != -1)) lengths.sum else -1
-    case QDisj(seq) =>
-      val lengths = seq.map(getQueryLength)
-      if (lengths.forall(_ == lengths.head)) lengths.head else -1
-    case QRepetition(expr, min, max) => if (min == max) {
-      val exprLength = getQueryLength(expr)
-      if (exprLength == -1) -1 else exprLength * min
-    } else {
-      -1
+  def getQueryLength(qexpr: QExpr): (Int, Int) = qexpr match {
+    case QDict(_) => (0, -1)
+    case qr: QRepeating => {
+      val (baseMin, baseMax) = getQueryLength(qr.qexpr)
+      val max = if (baseMax == -1 || qr.max == -1) -1 else baseMax * qr.max
+      (baseMin * qr.min, max)
     }
+    case l: QLeaf => (1, 1)
+    case QSeq(seq) =>
+      val (mins, maxes) = seq.map(getQueryLength(_)).unzip
+      val max = if (maxes.forall(_ != -1)) maxes.sum else -1
+      (mins.sum, max)
+    case QDisj(seq) =>
+      val (mins, maxes) = seq.map(getQueryLength(_)).unzip
+      val max = if (maxes.forall(_ != -1)) maxes.max else -1
+      (mins.min, max)
+    case QAnd(q1, q2) =>
+      val (min1, max1) = getQueryLength(q1)
+      val (min2, max2) = getQueryLength(q2)
+      (Math.min(min1, min2), math.max(max1, max2))
     case q: QAtom => getQueryLength(q.qexpr)
-    case QAnd(q1, q2) => math.max(getQueryLength(q1), getQueryLength(q2))
   }
 
   /** Ensures that all capture groups in QExpr are named capture groups with names corresponding

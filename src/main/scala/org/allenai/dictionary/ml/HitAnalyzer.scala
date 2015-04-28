@@ -121,7 +121,10 @@ object HitAnalyzer extends Logging {
         }
         (label, captures)
       }
-      val requiredEdits = otherCaptureIndices.count(allCaptureSpans(_).end < 0)
+      val requiredEdits = otherCaptureIndices.count ( index => {
+        val span = allCaptureSpans(index)
+        span != null && allCaptureSpans(index).end < 0
+      })
       val str = kwic.getTokens("word").asScala.mkString(" ")
       Example(label, requiredEdits, captures, hit.doc, str)
     }
@@ -169,8 +172,8 @@ object HitAnalyzer extends Logging {
           (captureGroups.indexOf(name), true)
         } else {
           val size = QueryLanguage.getQueryLength(token)
-          require(size != -1)
-          (size, false)
+          require(size._2 != -1 && size._1 == size._2)
+          (size._2, false)
         }
     }
     val allQueryMatches = hits.asScala.map { hit =>
@@ -184,10 +187,15 @@ object HitAnalyzer extends Logging {
             if (useCapture) {
               // Get the span from the capture groups
               val span = captureGroups(num)
-              val length = math.abs(span.end) - math.abs(span.start)
+              val length =
+                if (span == null) {
+                  0
+                } else {
+                  math.abs(span.end) - math.abs(span.start)
+                }
               val (matchedTokens, rest) = tokens.splitAt(length)
               tokens = rest
-              QueryMatch(matchedTokens, didMatch = span.end >= 0)
+              QueryMatch(matchedTokens, didMatch = span != null && span.end >= 0)
             } else {
               // Infer the span matches using the QExpr length
               val (matchedTokens, rest) = tokens.splitAt(num)
@@ -267,8 +275,10 @@ object HitAnalyzer extends Logging {
 
     logger.debug("Calculating labels and weights...")
     val (examples, exampleTime) = Timing.time {
-      val examples = hits.map(h => getExamples(query, h, table)).flatten
+      val examples = hits.map(h =>
+        getExamples(query, h, table)).flatten
       getWeightedExamples(examples)
+
     }
     logger.debug(s"Done in ${exampleTime.toMillis / 1000.0} seconds")
 

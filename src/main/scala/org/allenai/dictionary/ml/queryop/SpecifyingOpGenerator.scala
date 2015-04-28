@@ -42,7 +42,7 @@ case class SpecifyingOpGenerator(
         asInstanceOf[Map[QueryOp, IntMap[Int]]]
     } else {
       val repeatingOp = expr.get.asInstanceOf[QRepeating]
-      val childLength = QueryLanguage.getQueryLength(repeatingOp.qexpr)
+      val childLength = QueryLanguage.getQueryLength(repeatingOp.qexpr)._2
       if (childLength == -1) {
         Map()
       } else {
@@ -71,19 +71,12 @@ case class SpecifyingOpGenerator(
             map(x => (x.index, x.required)): _*))
         }
 
-        val setUnbounded =
-          if (repeatingOp.max != -1) {
-            Seq((SetMax(index, -1), IntMap(editsWithSize.
-              map(x => (x.index, x.required)): _*)))
-          } else {
-            Seq()
-          }
         val leafOps = OpGenerator.getSetTokenOps(matches, getLeafGenerator(
           Some(repeatingOp.qexpr),
           isCapture
         )).asInstanceOf[Map[QueryOp, IntMap[Int]]]
 
-        (setUnbounded ++ setMinOps ++ setMaxOps ++ removeOps ++ leafOps).toMap
+        (setMinOps ++ setMaxOps ++ removeOps ++ leafOps).toMap
       }
     }
   }

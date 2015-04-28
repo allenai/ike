@@ -18,7 +18,7 @@ case class FuzzySequenceSampler(minEdits: Int, maxEdits: Int)
   require(maxEdits >= minEdits)
 
   def buildFuzzySequenceQuery(tokenizedQuery: TokenizedQuery, searcher: Searcher): SpanQuery = {
-    require(QueryLanguage.getQueryLength(tokenizedQuery.getQuery) > 0)
+    require(QueryLanguage.getQueryLength(tokenizedQuery.getQuery)._2 > 0)
     val asSpanQueries = tokenizedQuery.getSeq.map(
       q => searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(q))
     )

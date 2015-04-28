@@ -25,7 +25,8 @@ object Sampler extends Logging {
     val allRows = (table.positive ++ table.negative).map(_.values.map(_.qwords))
     allRows.filter { row =>
       row.zip(orderedCapturedSizes).forall {
-        case (words, captureSize) => words.size == captureSize || captureSize == -1
+        case (words, captureSize) => words.size >= captureSize._1 &&
+            (captureSize._2 == -1 || words.size <= captureSize._2)
       }
     }
   }
@@ -54,15 +55,11 @@ object Sampler extends Logging {
       val rowCaptures = row.zip(captureNames).map {
         case (phrase, columnName) => QNamed(QSeq(phrase), columnName)
       }
+      // TODO we could also limit the starting query to only match a lenght that could match a row
       // For each row, build a query of the form
       // "phraseInColumn1 . . . phraseInColumn2 .* phraseInColumn2"
       val withWildCards = distanceBetweenCaptures.zip(rowCaptures).map {
-        case (distance, capture) =>
-          if (distance == -1) {
-            Seq(capture, QStar(QWildcard()))
-          } else {
-            capture +: List.tabulate(distance)(_ => QWildcard())
-          }
+        case (distance, capture) => Seq(capture, QRepetition(QWildcard(), distance._1, distance._2))
       } :+ List(rowCaptures.last)
       QSeq(withWildCards.flatten)
     })

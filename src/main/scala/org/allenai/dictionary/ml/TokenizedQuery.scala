@@ -101,7 +101,8 @@ object TokenizedQuery {
     def zipToNamed(sq: Seq[QExpr], names: Seq[String]): Seq[QExpr] = {
       sq.zip(names).map {
         case (qexpr, name) =>
-          if (QueryLanguage.getQueryLength(qexpr) == -1) {
+          val size = QueryLanguage.getQueryLength(qexpr)
+          if (size._1 != size._2 || size._2 == -1) {
             QNamed(qexpr, name)
           } else {
             qexpr
