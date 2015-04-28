@@ -32,23 +32,26 @@ object Tablestore extends Logging {
   }
   private val settingsTable = TableQuery[SettingsTable]
 
-  private class TableTable(tag: Tag) extends SqlTable[(String, List[String])](tag, "tables") {
-    def name = column[String]("name", O.PrimaryKey)
+  private class TableTable(tag: Tag) extends SqlTable[(Int, String, String, List[String])](tag, "tables") {
+    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+    def user = column[String]("user")
+    def name = column[String]("name")
     def columns = column[List[String]]("columns")
-    def * = (name, columns)
+    def * = (id, user, name, columns)
+    def idx = index("idx_UserName", (user, name), unique = true)
   }
   private val tablesTable = TableQuery[TableTable]
 
   private class EntriesTable(tag: Tag)
-      extends SqlTable[(String, List[String], Boolean, Option[PlayJsValue])](tag, "entries") {
-    def tName = column[String]("tName")
+      extends SqlTable[(Int, List[String], Boolean, Option[PlayJsValue])](tag, "entries") {
+    def tId = column[Int]("tId")
     def values = column[List[String]]("values")
     def isPositiveExample = column[Boolean]("isPositiveExample")
     def provenance = column[Option[PlayJsValue]]("provenance")
-    def * = (tName, values, isPositiveExample, provenance)
+    def * = (tId, values, isPositiveExample, provenance)
 
-    def table = foreignKey("table_fk", tName, tablesTable)(
-      _.name,
+    def table = foreignKey("fk_tables", tId, tablesTable)(
+      _.id,
       onUpdate = ForeignKeyAction.Cascade,
       onDelete = ForeignKeyAction.Cascade
     )
@@ -78,12 +81,13 @@ object Tablestore extends Logging {
     require(currentVersion == EXPECTED_VERSION)
   }
 
-  def tables: Map[String, Table] = {
+  def tables(userEmail: String): Map[String, Table] = {
     val tableSpec2rows = db.withTransaction { implicit session =>
-      val q = (tablesTable leftJoin entriesTable on (_.name === _.tName)) map {
-        case (t, e) =>
-          (t.name, t.columns, e.values.?, e.isPositiveExample.?, e.provenance)
-      }
+      val q = (tablesTable.filter(_.user === userEmail) leftJoin entriesTable
+        on (_.id === _.tId)) map {
+          case (t, e) =>
+            (t.name, t.columns, e.values.?, e.isPositiveExample.?, e.provenance)
+        }
       q.list.groupBy { case (tname, tcolumns, _, _, _) => (tname, tcolumns) }
     }
 
@@ -106,32 +110,33 @@ object Tablestore extends Logging {
     }
   }
 
-  def put(table: Table): Table = {
+  def put(userEmail: String, table: Table): Table = {
     logger.info(s"Writing table ${table.name}")
 
     db.withTransaction { implicit session =>
-      val q = tablesTable.filter(_.name === table.name)
+      val q = tablesTable.filter { t => t.user === userEmail && t.name === table.name }
       q.delete
       // foreign key constraints auto-delete the entries as well
 
-      tablesTable += ((table.name, table.cols.toList))
+      val tableId = (tablesTable returning tablesTable.map(_.id)) +=
+        ((0, userEmail, table.name, table.cols.toList))
 
       def tableValue2value(tableValue: TableValue) = tableValue.qwords.map(_.value).mkString(" ")
       def tableRow2row(tableRow: TableRow, isPositiveExample: Boolean) = {
         val values = tableRow.values.map(tableValue2value).toList
         val provenance =
           tableRow.provenance.map(sprayJson => PlayJson.parse(sprayJson.compactPrint))
-        (table.name, values, isPositiveExample, provenance)
+        (tableId, values, isPositiveExample, provenance)
       }
 
       entriesTable ++= table.positive.map(tableRow2row(_, true))
       entriesTable ++= table.negative.map(tableRow2row(_, false))
     }
 
-    tables(table.name)
+    tables(userEmail)(table.name)
   }
 
-  def delete(tableName: String): Unit = {
+  def delete(userEmail: String, tableName: String): Unit = {
     logger.info(s"Deleting table $tableName")
 
     db.withTransaction { implicit session =>

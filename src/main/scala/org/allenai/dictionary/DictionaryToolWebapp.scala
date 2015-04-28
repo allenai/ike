@@ -119,26 +119,37 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   }
 
   val tablesRoute = pathPrefix("api" / "tables") {
-    pathEndOrSingleSlash {
-      get {
-        complete { Tablestore.tables.keys.mkString("\n") }
-      }
-    } ~ path(Segment) { tableName =>
-      pathEnd {
+    pathPrefix(Segment) { userEmail =>
+      path(Segment) { tableName =>
+        pathEnd {
+          get {
+            complete {
+              Tablestore.tables(userEmail).get(tableName) match {
+                case None => StatusCodes.NotFound
+                case Some(table) if table.name == tableName => table
+                case _ => StatusCodes.BadRequest
+              }
+            }
+          } ~ put {
+            entity(as[Table]) { table =>
+              complete {
+                if (table.name == tableName)
+                  Tablestore.put(userEmail, table)
+                else
+                  StatusCodes.BadRequest
+              }
+            }
+          } ~ delete {
+            complete {
+              Tablestore.delete(userEmail, tableName)
+              StatusCodes.OK
+            }
+          }
+        }
+      } ~ pathEndOrSingleSlash {
         get {
-          Tablestore.tables.get(tableName) match {
-            case None => complete(StatusCodes.NotFound)
-            case Some(table) if table.name == tableName => complete(table)
-            case _ => complete(StatusCodes.BadRequest)
-          }
-        } ~ put {
-          entity(as[Table]) { table =>
-            complete(Tablestore.put(table))
-          }
-        } ~ delete {
           complete {
-            Tablestore.delete(tableName)
-            StatusCodes.OK
+            Tablestore.tables(userEmail).keys.mkString("\n")
           }
         }
       }

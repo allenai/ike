@@ -27,7 +27,6 @@ var DictApp = React.createClass({
       }
 
     }.bind(this));
-    TableManager.loadTablesFromServer();
   },
   getInitialState: function() {
     return {
@@ -94,6 +93,7 @@ var DictApp = React.createClass({
       userEmail: profile.getEmail(),
       userImageUrl: profile.getImageUrl()
     });
+    TableManager.setUserEmail(profile.getEmail());
   },
   renderHeader: function() {
     var signInButton =

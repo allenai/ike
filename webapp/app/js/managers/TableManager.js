@@ -2,8 +2,17 @@ var xhr = require('xhr');
 
 var tables = {};
 var listeners = [];
+var userEmail = null;
 
 var TableManager = {
+  setUserEmail: function(newUserEmail) {
+    tables = {};
+    userEmail = newUserEmail;
+    this.updateListeners();
+
+    if(userEmail) this.loadTablesFromServer();
+  },
+
   valueString: function(value) {
     var qwords = value.qwords;
     var words = qwords.map(function(qw) { return qw.value; });
@@ -154,7 +163,7 @@ var TableManager = {
   deleteTableFromServer: function(tableName) {
     console.log(tableName);
     xhr({
-      uri: '/api/tables/' + tableName,
+      uri: '/api/tables/' + encodeURIComponent(userEmail) + "/" + encodeURIComponent(tableName),
       method: 'DELETE'
     }, function(err, response, body) {
       if(response.statusCode !== 200) {
@@ -165,7 +174,7 @@ var TableManager = {
 
   writeTableToServer: function(tableName) {
     xhr({
-      uri: '/api/tables/' + tableName,
+      uri: '/api/tables/' + encodeURIComponent(userEmail) + "/" + encodeURIComponent(tableName),
       method: 'PUT',
       json: tables[tableName]
     }, function(err, response, body) {
@@ -178,7 +187,7 @@ var TableManager = {
   requestTableFromServer: function(tableName) {
     var self = this;
     xhr({
-      uri: '/api/tables/' + tableName,
+      uri: '/api/tables/' + encodeURIComponent(userEmail) + "/" + encodeURIComponent(tableName),
       method: 'GET'
     }, function(err, response, body) {
       if(response.statusCode === 200) {
@@ -196,7 +205,7 @@ var TableManager = {
     // load tables from server
     var self = this;
     xhr({
-      uri: '/api/tables',
+      uri: '/api/tables/' + encodeURIComponent(userEmail),
       method: 'GET'
     }, function(err, response, body) {
       if(response.statusCode === 200) {
