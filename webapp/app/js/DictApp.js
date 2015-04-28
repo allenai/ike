@@ -3,6 +3,8 @@ var bs = require('react-bootstrap');
 var PageHeader = bs.PageHeader;
 var TabbedArea = bs.TabbedArea;
 var TabPane = bs.TabPane;
+var DropdownButton = bs.DropdownButton;
+var MenuItem = bs.MenuItem;
 var SearchInterface = require('./components/search/SearchInterface.js');
 var TablesInterface = require('./components/table/TablesInterface.js');
 var TableManager = require('./managers/TableManager.js');
@@ -52,6 +54,8 @@ var DictApp = React.createClass({
         request: null,
         errorMessage: null
       },
+      userEmail: null,
+      userImageUrl: null,
       tables: [],
       target: null
     };
@@ -84,13 +88,35 @@ var DictApp = React.createClass({
       </div>
     );
   },
+  onSignIn: function(googleUser) {
+    var profile = googleUser.getBasicProfile();
+    this.setState({
+      userEmail: profile.getEmail(),
+      userImageUrl: profile.getImageUrl()
+    });
+  },
   renderHeader: function() {
-    return (
-      <div>
+    var signInButton =
+      <div
+        className="g-signin2"
+        data-onsuccess="onSignIn"/>
+    window.onSignIn = this.onSignIn;
+    var userImage =
+      <img
+        src={this.state.userImageUrl}
+        width="32"
+        height="32"
+        border="1"/>
+    var authButtons =
+      <DropdownButton title={userImage} pullRight>
+        <MenuItem style={{float: "right"}}>{signInButton}</MenuItem>
+      </DropdownButton>;
+
+    return (<div>
         <a href="/"><img src="/assets/logo.png" width="64"/></a>
-        <em>&ldquo;The Pacific Northwest's Cutest Extraction Tool&rdquo;</em>
-      </div>
-    );
+        <em>&ldquo;The Pacific Northwest&#39;s Cutest Extraction Tool&rdquo;</em>
+        <div className="pull-right">{authButtons}</div>
+    </div>);
   },
   render: function() {
     var content = this.renderContent();
