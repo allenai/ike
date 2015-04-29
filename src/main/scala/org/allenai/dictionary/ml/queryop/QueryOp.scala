@@ -52,7 +52,7 @@ sealed abstract class ChangeModifier extends TokenQueryOp()
 /** Changes a QDisj or QLeaf, that is possibly being modifier by a * or + operator */
 abstract class ChangeLeaf extends TokenQueryOp {
   def combinable(other: TokenQueryOp): TokenCombination = other match {
-    case cl: ChangeLeaf => OR
+    case cl: ChangeLeaf => if (other == this) NONE else OR
     case cm: ChangeModifier => AND
     case rt: RemoveToken => NONE
   }

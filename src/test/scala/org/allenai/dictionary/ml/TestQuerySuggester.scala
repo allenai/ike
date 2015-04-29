@@ -45,18 +45,27 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     )
     val data = HitAnalysis(operatorHits, examples)
 
-    val scoredQueries = QuerySuggester.selectOperator(
-      data, PositiveMinusNegative(examples, 1),
+    // OpConjunction and OpConjunctionOfDisjunction should be equivalent in this case
+    Seq(
       (x: EvaluatedOp) => OpConjunction.apply(x),
-      3, 2
-    )
+      (x: EvaluatedOp) => OpConjunctionOfDisjunctions.apply(x)
+    ).foreach { combiner =>
+      val scoredQueries = QuerySuggester.selectOperator(
+        data, new PositiveMinusNegative(examples, 1),
+        combiner,
+        3, 2
+      )
 
-    // Best Results is ANDing op1 and op2
-    assertResult(Set(
-      Set(op1, op2),
-      Set(op1),
-      Set(op2)
-    )) { scoredQueries.map(_._1.ops).toSet }
+      // Best Results is ANDing op1 and op2
+      assertResult(Seq(
+        Set(op1, op2),
+        Set(op1),
+        Set(op2)
+      )) {
+        scoredQueries.map(_._1.ops)
+      }
+    }
+
   }
 
   it should "Select correct OR queries" in {
