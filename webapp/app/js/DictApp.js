@@ -127,12 +127,14 @@ var DictApp = React.createClass({
   },
   renderHeader: function() {
     window.onSignIn = this.onSignIn;
-    var userImage =
+    var userImage = this.state.userEmail ? this.state.userEmail : "Please sign in!";
+    userImage = [userImage + " "];
+    userImage.push(
       <img
         src={this.state.userImageUrl ? this.state.userImageUrl : "/assets/blank_user.png"}
-        width="32"
-        height="32"
-        border="1"/>
+        key="userImage"
+        width="24"
+        height="24"/>);
     var authMenuOption =
       this.state.userEmail ?
         <MenuItem key="signOut" onSelect={this.signOut}>{"Sign out"}</MenuItem> :
