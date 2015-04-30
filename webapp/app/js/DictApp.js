@@ -87,22 +87,43 @@ var DictApp = React.createClass({
       </div>
     );
   },
-  onSignIn: function(googleUser) {
-    var profile = googleUser.getBasicProfile();
-    this.setState({
-      userEmail: profile.getEmail(),
-      userImageUrl: profile.getImageUrl()
-    });
-    TableManager.setUserEmail(profile.getEmail());
-  },
-  signOut: function() {
-    var self = this;
-    gapi.auth2.getAuthInstance().signOut().then(function() {
+  onSignIn: function(authResult) {
+    var self = this
+    if (authResult['status']['signed_in']) {
+      gapi.client.load('plus','v1', function() {
+        var request = gapi.client.plus.people.get({ userId: "me" });
+        request.execute(function(resp) {
+          var userEmail = resp.emails[0].value;
+          self.setState({
+            userEmail: userEmail,
+            userImageUrl: resp.image.url
+          });
+          TableManager.setUserEmail(userEmail);
+        });
+      });
+    } else {
       self.setState({
         userEmail: null,
         userImageUrl: null
       });
+      TableManager.setUserEmail(null);
+    }
+  },
+  signIn: function() {
+    var additionalParams = {
+      callback: this.onSignIn,
+      cookiepolicy: "single_host_origin",
+      clientid: "793503486502-8q1pf7shj3jq7ak2q8ib1ca5hlufdfv7.apps.googleusercontent.com"
+    };
+    gapi.auth.signIn(additionalParams);
+  },
+  signOut: function() {
+    gapi.auth.signOut();
+    this.setState({
+      userEmail: null,
+      userImageUrl: null
     });
+    TableManager.setUserEmail(null);
   },
   renderHeader: function() {
     var signInButton =
@@ -116,13 +137,14 @@ var DictApp = React.createClass({
         width="32"
         height="32"
         border="1"/>
-    var authMenuOptions = [<MenuItem key="signIn">{signInButton}</MenuItem>];
-    if(this.state.userEmail)
-      authMenuOptions.push(<MenuItem key="signOut" onSelect={this.signOut}>Sign out</MenuItem>);
+    var authMenuOption =
+      this.state.userEmail ?
+        <MenuItem key="signOut" onSelect={this.signOut}>{"Sign out"}</MenuItem> :
+        <MenuItem key="signIn" onSelect={this.signIn}>{"Sign in"}</MenuItem>;
 
     var authButtons =
       <DropdownButton title={userImage} pullRight>
-        {authMenuOptions}
+        {authMenuOption}
       </DropdownButton>;
 
     return (<div>
