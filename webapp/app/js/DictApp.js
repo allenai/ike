@@ -112,7 +112,7 @@ var DictApp = React.createClass({
     window.onSignIn = this.onSignIn;
     var userImage =
       <img
-        src={this.state.userImageUrl}
+        src={this.state.userImageUrl ? this.state.userImageUrl : "/assets/blank_user.png"}
         width="32"
         height="32"
         border="1"/>
