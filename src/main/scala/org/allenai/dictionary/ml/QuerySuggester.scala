@@ -23,9 +23,9 @@ case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
   *
   * @param label label of the hit
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
-  *               this hit (see the ml/README.md)
+  *             this hit (see the ml/README.md)
   * @param captureStrings the string we captured, as a Sequence of capture groups of sequences of
-  *                words
+  *              words
   * @param doc the document number this Example came from
   * @param str String of hit, kept only for debugging purposes
   */
@@ -42,44 +42,6 @@ object QuerySuggester extends Logging {
 
   lazy val querySuggestionConf = ConfigFactory.load().getConfig("QuerySuggester")
 
-  /** @return the average weight of the positive, negative, and unlabelled hits the edits made in
-    * <code>sentenceId2EditCount</code> would yield per a document
-    */
-  def getPerDocumentScores(
-    sentenceId2EditCount: IntMap[Int],
-    lastUnlabelledDoc: Int,
-    lastDoc: Int,
-    examples: Seq[WeightedExample]
-  ): (Double, Double, Double) = {
-    var positive = 0.0
-    var negative = 0.0
-    var unlabelled = 0.0
-    var numUnlabelled = 0
-
-    sentenceId2EditCount.foreach {
-      case (key, numEdits) =>
-        val example = examples(key)
-        if (numEdits >= example.requiredEdits) {
-          val label = example.label match {
-            case Positive => positive += example.weight
-            case Negative => negative += example.weight
-            case Unlabelled =>
-              numUnlabelled += 1
-              unlabelled += example.weight
-          }
-          label
-        }
-    }
-    val unlabelledPerDoc = numUnlabelled / (lastUnlabelledDoc.toDouble + 1)
-    val unlabelledWeightPerDoc = unlabelled / (lastUnlabelledDoc.toDouble + 1)
-    // How much unlabelled weight expected if we had continued to match unlabelled docs as the
-    // same rate in the unlabelled docs, note at the moment this glosses over the fact that in
-    // reality we would expect diminishing returns due to how we weight examples
-    val unlabelledWeightExtrapolated = unlabelledWeightPerDoc * (lastDoc + 1)
-    val total = unlabelledWeightExtrapolated + positive + negative
-    (positive / lastDoc, negative / lastDoc, unlabelledPerDoc)
-  }
-
   /** Uses a beam search to select the best CompoundQueryOp
     *
     * @param hitAnalysis data to use when evaluating queries
@@ -87,7 +49,7 @@ object QuerySuggester extends Logging {
     * @param opBuilder Builder function for CompoundQueryOps
     * @param beamSize Size of the beam to use in the search
     * @param depth Depth to run the search to, corresponds the to maximum size
-    *    of a CompoundQueryOp that can be proposed
+    *  of a CompoundQueryOp that can be proposed
     * @param query optional query, only used when printing query ops
     * @return Sequence of CompoundQueryOps, together with their score and a string
     * message about some statistics about that op of at most beamSize size
@@ -125,7 +87,7 @@ object QuerySuggester extends Logging {
       priorityQueue.foreach {
         case (op, score) =>
           val opStr = if (query.isEmpty) op.toString() else op.toString(query.get)
-          logger.debug(s"$opStr\n${evaluationFunction.evaluationMsgLong(op, depth)}")
+          logger.debug(s"$opStr\n${evaluationFunction.evaluationMsg(op, depth)}")
       }
     }
 
@@ -138,7 +100,7 @@ object QuerySuggester extends Logging {
       printQueue(i + 1)
 
       if (evaluationFunction.usesDepth()) {
-        // Now the depth has changes, rescore the old queries so their scores are up-to-date
+        // Now the depth has changed, rescore the old queries
         val withNewScores = priorityQueue.map {
           case (x, _) => (x, evaluationFunction.evaluate(x, i + 1))
         }
@@ -187,7 +149,7 @@ object QuerySuggester extends Logging {
     * @param tables Tables to use when building the query
     * @param target Name of the table to optimize the suggested queries for
     * @param narrow Whether the suggestions should narrow or broaden the starting
-    *     query
+    *   query
     * @param config Configuration details to use when suggesting the new queries
     * @return Suggested queries, along with their scores and a String msg details some
     * statistics about each query
@@ -314,6 +276,11 @@ object QuerySuggester extends Logging {
       logger.info("Not enough data found")
       return Seq()
     }
+    val lastDoc = if (labelledSize > 0) {
+      labelledHits.get(labelledSize - 1).doc
+    } else {
+      lastUnlabelledDoc
+    }
 
     val opCombiner =
       if (config.allowDisjunctions) {
@@ -322,16 +289,17 @@ object QuerySuggester extends Logging {
         (x: EvaluatedOp) => OpConjunction.apply(x, maxRemoves)
       }
 
+    val unlabelledBiasCorrection = lastDoc / lastUnlabelledDoc.toDouble
     val evalFunction =
       if (narrow) {
-        CoverageSum(
+        SumEvaluator(
           hitAnalysis.examples,
-          config.pWeight, config.nWeight, config.uWeight
+          config.pWeight, config.nWeight, config.uWeight * unlabelledBiasCorrection
         )
       } else {
-        WeightedCoverageSum(
+        PartialSumEvaluator(
           hitAnalysis.examples,
-          config.pWeight, config.nWeight, config.uWeight, config.depth
+          config.pWeight, config.nWeight, config.uWeight * unlabelledBiasCorrection, config.depth
         )
       }
 
@@ -347,22 +315,12 @@ object QuerySuggester extends Logging {
       )
     }
     logger.debug(s"Done selecting in ${searchTime.toMillis / 1000.0}")
-    val lastDoc = if (labelledSize > 0) {
-      labelledHits.get(labelledSize - 1).doc
-    } else {
-      lastUnlabelledDoc
-    }
     val scoredOps = operators.flatMap {
       case (op, score) =>
         val query = op.applyOps(tokenizedQuery).getQuery
-        val (p, n, u) = getPerDocumentScores(
-          op.numEdits,
-          lastUnlabelledDoc, lastDoc, evalFunction.examples
-        )
-        // NaNs will break the client, so it pays to be careful here. Otherwise we will be
-        // conservative and return queries as long as they were not given the lowest possible score
-        if (score > Double.NegativeInfinity && Seq(score, p, n, u).forall(!_.isNaN)) {
-          Some(ScoredQuery(query, score, p, n, u))
+        val (p, n, u) = QueryEvaluator.countOccurrences(op.numEdits, hitAnalysis.examples)
+        if (score > Double.NegativeInfinity) {
+          Some(ScoredQuery(query, score, p, n, u * unlabelledBiasCorrection))
         } else {
           None
         }

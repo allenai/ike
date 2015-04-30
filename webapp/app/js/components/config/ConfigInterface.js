@@ -130,27 +130,27 @@ var ConfigInterface = React.createClass({
                     label={'Positive Weight ' + config.ml.pWeight.toFixed(2)}
                     value={config.ml.pWeight}
                     onChange={pWeightChange}
-                    step='0.5'
-                    min='-20'
-                    max='20'>
+                    step='0.2'
+                    min='-5'
+                    max='5'>
                 </Input>
                 <Input
                     type='range'
                     label={'Negative Weight ' + config.ml.nWeight.toFixed(2)}
                     value={config.ml.nWeight}
                     onChange={nWeightChange}
-                    step='0.5'
-                    min='-20'
-                    max='20'>
+                    step='0.2'
+                    min='-5'
+                    max='5'>
                 </Input>
                 <Input
                     type='range'
                     label={'Unlabelled Weight ' + config.ml.uWeight.toFixed(2)}
                     value={config.ml.uWeight}
                     onChange={uWeightChange}
-                    step='0.5'
-                    min='-20'
-                    max='20'>
+                    step='0.01'
+                    min='-2'
+                    max='2'>
                 </Input>
                 </Panel>
                 <Panel header='Narrow Scoring' collapsed='True'>
@@ -159,27 +159,27 @@ var ConfigInterface = React.createClass({
                     label={'Positive Weight ' + config.ml.pWeightNarrow.toFixed(2)}
                     value={config.ml.pWeightNarrow}
                     onChange={pWeightChangeNarrow}
-                    step='0.5'
-                    min='-20'
-                    max='20'>
+                    step='0.2'
+                    min='-5'
+                    max='5'>
                 </Input>
                 <Input
                     type='range'
                     label={'Negative Weight ' + config.ml.nWeightNarrow.toFixed(2)}
                     value={config.ml.nWeightNarrow}
                     onChange={nWeightChangeNarrow}
-                    step='0.5'
-                    min='-20'
-                    max='20'>
+                    step='0.2'
+                    min='-5'
+                    max='5'>
                 </Input>
                 <Input
                     type='range'
                     label={'Unlabelled Weight ' + config.ml.uWeightNarrow.toFixed(2)}
                     value={config.ml.uWeightNarrow}
                     onChange={uWeightChangeNarrow}
-                    step='0.5'
-                    min='-20'
-                    max='20'>
+                    step='0.01'
+                    min='-2'
+                    max='2'>
                 </Input>
                 </Panel>
                 </PanelGroup>

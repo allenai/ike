@@ -51,7 +51,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       (x: EvaluatedOp) => OpConjunctionOfDisjunctions.apply(x)
     ).foreach { combiner =>
       val scoredQueries = QuerySuggester.selectOperator(
-        data, new PositiveMinusNegative(examples, 1),
+        data, new PositivePlusNegative(examples, -1),
         combiner,
         3, 2
       )
@@ -86,7 +86,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     )
     val data = HitAnalysis(operatorHits, examples)
     val scoredQueries = QuerySuggester.selectOperator(
-      data, PositiveMinusNegative(examples, 2),
+      data, new PositivePlusNegative(examples, -2),
       (x: EvaluatedOp) => OpConjunctionOfDisjunctions(x),
       20, 4
     )
@@ -144,7 +144,6 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
         "test",  true, SuggestQueryConfig(5, 1, 100, 1, -5, -5, false))
     val bestScore = suggestions.head.score
     // Fuzzy match to 1 to account for size penalities and the like
-    assert(Math.abs(bestScore - 1) < 0.1)
     val bestSuggestions = suggestions.filter(_.score == bestScore).map(_.query)
     assert(bestSuggestions contains
         QueryLanguage.parse("(?<c1> RB+) {mango, those, great}").get)

@@ -104,7 +104,7 @@ var SuggestQueryButton = React.createClass({
     this.setState({narrow: !this.state.narrow})
   },
 
-  buildTableRow: function(scoredQuery, labelledScoreScale, unlabelledScoreScale) {
+  buildTableRow: function(scoredQuery) {
     var query = this.props.query
     function clicked() {
       query.requestChange(scoredQuery.query)
@@ -114,12 +114,12 @@ var SuggestQueryButton = React.createClass({
       <tr className="queryRow" onClick={clicked} target={scoredQuery.query}>
         <td className="queryCell">{scoredQuery.query}</td>
         <td className="queryCell queryStat">
-          {(scoredQuery.positiveScore * labelledScoreScale).toFixed(2)}</td>
+          {scoredQuery.positiveScore.toFixed(2)}</td>
         <td className="queryCell queryStat">
-          {(scoredQuery.negativeScore * labelledScoreScale).toFixed(2)}
+          {scoredQuery.negativeScore.toFixed(2)}
         </td>
         <td className="queryCell queryStat">
-          {(scoredQuery.unlabelledScore * unlabelledScoreScale).toFixed(2)}
+          {scoredQuery.unlabelledScore .toFixed(2)}
         </td>
       </tr>
     )
@@ -145,18 +145,7 @@ var SuggestQueryButton = React.createClass({
     var rows = []
     for (var i = 0; i < arrayLength; i++) {
         var suggestion = this.state.suggestions[i]
-        rows.push(this.buildTableRow(suggestion, labelledScoreScale, unlabelledScoreScale))
-    }
-
-    var labelledScoreScaleStr = this.numberString(labelledScoreScale)
-    var unlabelledScoreScaleStr = this.numberString(unlabelledScoreScale)
-
-    if (labelledScoreScale == 1) {
-      var positiveLabel = <div>Positive<br/>Probability</div>
-      var negativeLabel = <div>Negative<br/>Probability</div>
-    } else {
-      var positiveLabel = <div>Positives<br/>(Per {labelledScoreScaleStr} Docs)</div>
-      var negativeLabel = <div>Negatives<br/>(Per {labelledScoreScaleStr} Docs)</div>
+        rows.push(this.buildTableRow(suggestion))
     }
 
     var tableInstance = (
@@ -168,9 +157,9 @@ var SuggestQueryButton = React.createClass({
         <thead>
           <tr>
             <th className="queryHeader">Query</th>
-            <th className="queryHeader">{positiveLabel}</th>
-            <th className="queryHeader">{negativeLabel}</th>
-            <th className="queryHeader">Matches per<br/>{unlabelledScoreScaleStr} Docs</th>
+            <th className="queryHeader">Positive Score</th>
+            <th className="queryHeader">Negative Score</th>
+            <th className="queryHeader">Unlabelled Score</th>
           </tr>
         </thead>
         <tbody>
