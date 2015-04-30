@@ -95,6 +95,15 @@ var DictApp = React.createClass({
     });
     TableManager.setUserEmail(profile.getEmail());
   },
+  signOut: function() {
+    var self = this;
+    gapi.auth2.getAuthInstance().signOut().then(function() {
+      self.setState({
+        userEmail: null,
+        userImageUrl: null
+      });
+    });
+  },
   renderHeader: function() {
     var signInButton =
       <div
@@ -107,15 +116,19 @@ var DictApp = React.createClass({
         width="32"
         height="32"
         border="1"/>
+    var authMenuOptions = [<MenuItem key="signIn">{signInButton}</MenuItem>];
+    if(this.state.userEmail)
+      authMenuOptions.push(<MenuItem key="signOut" onSelect={this.signOut}>Sign out</MenuItem>);
+
     var authButtons =
       <DropdownButton title={userImage} pullRight>
-        <MenuItem style={{float: "right"}}>{signInButton}</MenuItem>
+        {authMenuOptions}
       </DropdownButton>;
 
     return (<div>
-        <a href="/"><img src="/assets/logo.png" width="64"/></a>
-        <em>&ldquo;The Pacific Northwest&#39;s Cutest Extraction Tool&rdquo;</em>
-        <div className="pull-right">{authButtons}</div>
+      <a href="/"><img src="/assets/logo.png" width="64"/></a>
+      <em>&ldquo;The Pacific Northwest&#39;s Cutest Extraction Tool&rdquo;</em>
+      <div className="pull-right">{authButtons}</div>
     </div>);
   },
   render: function() {
