@@ -151,7 +151,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
 
   it should "suggest adding to a disjunction" in {
     val table = Table("test", Seq("c1"),
-      Seq(Seq("like"), Seq("tastes"), Seq("taste")).map { x =>
+      Seq(Seq("like"),Seq("taste")).map { x =>
         TableRow(x.map(y => TableValue(Seq(QWord(y)))))
       },
       Seq()
@@ -159,10 +159,10 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val startingQuery = QueryLanguage.parse("^01 ({like, hate})").get
     val suggestions =
       QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
-        "test",  false, SuggestQueryConfig(5, 2, 100, 1, -5, 0, true))
+        "test",  false, SuggestQueryConfig(5, 1, 100, 1, -5, 0, true))
     val seq = suggestions(0).query.asInstanceOf[QSeq].qexprs
     assertResult(QCluster("01"))(seq(0))
-    assertResult(Set("like", "hate", "taste", "tastes").map(QWord(_)))(
+    assertResult(Set("like", "hate", "taste").map(QWord(_)))(
       seq(1).asInstanceOf[QNamed].qexpr.asInstanceOf[QDisj].qexprs.toSet)
     assertResult(2)(seq.size)
   }
