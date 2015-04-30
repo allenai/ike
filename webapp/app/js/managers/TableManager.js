@@ -161,7 +161,6 @@ var TableManager = {
   },
 
   deleteTableFromServer: function(tableName) {
-    console.log(tableName);
     xhr({
       uri: '/api/tables/' + encodeURIComponent(userEmail) + "/" + encodeURIComponent(tableName),
       method: 'DELETE'
