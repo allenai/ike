@@ -126,10 +126,6 @@ var DictApp = React.createClass({
     TableManager.setUserEmail(null);
   },
   renderHeader: function() {
-    var signInButton =
-      <div
-        className="g-signin2"
-        data-onsuccess="onSignIn"/>
     window.onSignIn = this.onSignIn;
     var userImage =
       <img
