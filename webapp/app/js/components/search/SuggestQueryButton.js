@@ -25,10 +25,11 @@ var SuggestQueryButton = React.createClass({
   suggestQueryCallBack: function(err, resp, body) {
     this.setState({waiting: false})
     if (resp.statusCode == 200) {
-      var newSuggestions = JSON.parse(body)
+      var suggestions = JSON.parse(body)
+      suggestions.suggestions.unshift(suggestions.original)
       this.setState({
-        suggestions: newSuggestions.scoredQueries,
-        sampleSize: newSuggestions.samplePercent
+        suggestions: suggestions.suggestions,
+        sampleSize: suggestions.samplePercent
       })
     } else {
       alert('Got Error: ' + err + '\n<' + body + '>')

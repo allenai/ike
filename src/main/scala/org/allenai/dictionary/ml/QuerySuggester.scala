@@ -14,7 +14,11 @@ import com.typesafe.config.ConfigFactory
 import scala.collection.JavaConverters._
 import scala.collection.immutable.IntMap
 
-case class Suggestions(scoredQueries: Seq[ScoredQuery], docsSampledFrom: Int)
+case class Suggestions(
+  original: ScoredQuery,
+  suggestions: Seq[ScoredQuery],
+  docsSampledFrom: Int
+)
 case class ScoredOps(ops: CompoundQueryOp, score: Double, positiveScore: Double,
   negativeScore: Double, unlabelledScore: Double)
 case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
@@ -24,9 +28,9 @@ case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
   *
   * @param label label of the hit
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
-  *            this hit (see the ml/README.md)
+  *          this hit (see the ml/README.md)
   * @param captureStrings the string we captured, as a Sequence of capture groups of sequences of
-  *             words
+  *           words
   * @param doc the document number this Example came from
   * @param str String of hit, kept only for debugging purposes
   */
@@ -150,7 +154,7 @@ object QuerySuggester extends Logging {
     * @param tables Tables to use when building the query
     * @param target Name of the table to optimize the suggested queries for
     * @param narrow Whether the suggestions should narrow or broaden the starting
-    *  query
+    * query
     * @param config Configuration details to use when suggesting the new queries
     * @return Suggested queries, along with their scores and a String msg details some
     * statistics about each query
@@ -273,10 +277,7 @@ object QuerySuggester extends Logging {
     val totalNegativeHits = hitAnalysis.examples.count(x => x.label == Negative)
     logger.info(s"Found $totalPositiveHits positive " +
       s"and $totalNegativeHits negative with ${hitAnalysis.operatorHits.size} possible operators")
-    if (totalPositiveHits == 0) {
-      logger.info("Not enough data found")
-      return Suggestions(Seq(), 0)
-    }
+
     val lastDoc = if (labelledSize > 0) {
       labelledHits.get(labelledSize - 1).doc
     } else {
@@ -304,18 +305,25 @@ object QuerySuggester extends Logging {
         )
       }
 
-    logger.debug("Selecting query...")
-    val (operators, searchTime) = Timing.time {
-      QuerySuggester.selectOperator(
-        hitAnalysis,
-        evalFunction,
-        opCombiner,
-        config.beamSize,
-        config.depth,
-        Some(tokenizedQuery)
-      )
+    val operators = if (totalPositiveHits > 0) {
+      logger.debug("Selecting query...")
+      val (operators, searchTime) = Timing.time {
+        QuerySuggester.selectOperator(
+          hitAnalysis,
+          evalFunction,
+          opCombiner,
+          config.beamSize,
+          config.depth,
+          Some(tokenizedQuery)
+        )
+      }
+      logger.debug(s"Done selecting in ${searchTime.toMillis / 1000.0}")
+      operators
+    } else {
+      logger.info("Not enough positive hits found")
+      Seq()
     }
-    logger.debug(s"Done selecting in ${searchTime.toMillis / 1000.0}")
+
     val scoredOps = operators.flatMap {
       case (op, score) =>
         val query = op.applyOps(tokenizedQuery).getQuery
@@ -326,8 +334,18 @@ object QuerySuggester extends Logging {
           None
         }
     }.take(querySuggestionConf.getInt("numToReturn"))
+
+    val original = {
+      val edits = IntMap(Range(0, hitAnalysis.examples.size).map((_, 0)): _*)
+      val score = evalFunction.evaluate(NullOp(edits), config.depth)
+      val (p, n, u) = QueryEvaluator.countOccurrences(
+        IntMap(Range(0, hitAnalysis.examples.size).map((_, 0)): _*),
+        hitAnalysis.examples
+      )
+      ScoredQuery(startingQuery, score, p, n, u * unlabelledBiasCorrection)
+    }
     logger.info(s"Done suggesting query for " +
       "${QueryLanguage.getQueryString(queryWithNamedCaptures)}")
-    Suggestions(scoredOps, lastDoc)
+    Suggestions(original, scoredOps, lastDoc)
   }
 }

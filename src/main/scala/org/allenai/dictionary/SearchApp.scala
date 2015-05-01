@@ -14,7 +14,11 @@ case class SuggestQueryConfig(beamSize: Int, depth: Int, maxSampleSize: Int, pWe
   nWeight: Double, uWeight: Double, allowDisjunctions: Boolean, allowClusters: Boolean = true)
 case class ScoredStringQuery(query: String, score: Double, positiveScore: Double,
   negativeScore: Double, unlabelledScore: Double)
-case class SuggestQueryResponse(scoredQueries: Seq[ScoredStringQuery], samplePercent: Double)
+case class SuggestQueryResponse(
+  original: ScoredStringQuery,
+  suggestions: Seq[ScoredStringQuery],
+  samplePercent: Double
+)
 case class WordInfoRequest(word: String, config: SearchConfig)
 case class WordInfoResponse(word: String, clusterId: Option[String], posTags: Map[String, Int])
 case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1)
@@ -41,15 +45,19 @@ case class SearchApp(config: Config) extends Logging {
         request.narrow, request.config)
     )
     stringQueries <- Try(
-      suggestions.scoredQueries.map(x => {
+      suggestions.suggestions.map(x => {
         ScoredStringQuery(QueryLanguage.getQueryString(x.query), x.score, x.positiveScore,
           x.negativeScore, x.unlabelledScore)
       })
     )
-    response = SuggestQueryResponse(
-      stringQueries,
-      suggestions.docsSampledFrom / searcher.getIndexReader.numDocs().toDouble
+    originalQuery = suggestions.original
+    original = ScoredStringQuery(
+      QueryLanguage.getQueryString(originalQuery.query),
+      originalQuery.score, originalQuery.positiveScore, originalQuery.negativeScore,
+      originalQuery.unlabelledScore
     )
+    response = SuggestQueryResponse(original, stringQueries,
+      suggestions.docsSampledFrom / searcher.getIndexReader.numDocs().toDouble)
   } yield response
   def parse(r: SearchRequest): Try[QExpr] = r.query match {
     case Left(queryString) => QueryLanguage.parse(queryString)
