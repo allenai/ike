@@ -47,13 +47,13 @@ case class RemoveToken(slot: QueryToken) extends TokenQueryOp() {
 }
 
 /** Changes a top level modifier of a QExpr, such as * or + operators */
-sealed abstract class ChangeModifier extends TokenQueryOp()
+sealed abstract class ChangeRepetition extends TokenQueryOp()
 
 /** Changes a QDisj or QLeaf, that is possibly being modifier by a * or + operator */
 abstract class ChangeLeaf extends TokenQueryOp {
   def combinable(other: TokenQueryOp): TokenCombination = other match {
     case cl: ChangeLeaf => if (other == this) NONE else OR
-    case cm: ChangeModifier => AND
+    case cm: ChangeRepetition => AND
     case rt: RemoveToken => NONE
   }
 }
@@ -63,7 +63,7 @@ object SetMin {
     SetMin(QueryToken(index), min)
   }
 }
-case class SetMin(slot: Slot, min: Int) extends ChangeModifier {
+case class SetMin(slot: Slot, min: Int) extends ChangeRepetition {
   def combinable(other: TokenQueryOp): TokenCombination = other match {
     case cl: ChangeLeaf => AND
     case cm: SetMax => if (cm.max >= min) AND else NONE
@@ -78,7 +78,7 @@ object SetMax {
   }
 }
 /** Changes a top level modifier of a QExpr, such as * or + operators */
-case class SetMax(slot: Slot, max: Int) extends ChangeModifier {
+case class SetMax(slot: Slot, max: Int) extends ChangeRepetition {
   def combinable(other: TokenQueryOp): TokenCombination = other match {
     case cl: ChangeLeaf => AND
     case cm: SetMin => if (cm.min <= max) AND else NONE
