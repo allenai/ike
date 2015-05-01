@@ -27,6 +27,8 @@ var DictApp = React.createClass({
       }
 
     }.bind(this));
+
+    TableManager.setUserEmail(localStorage["userEmail"]);
   },
   getInitialState: function() {
     return {
@@ -53,8 +55,8 @@ var DictApp = React.createClass({
         request: null,
         errorMessage: null
       },
-      userEmail: null,
-      userImageUrl: null,
+      userEmail: localStorage["userEmail"],
+      userImageUrl: localStorage["userImageUrl"],
       tables: [],
       target: null
     };
@@ -99,6 +101,8 @@ var DictApp = React.createClass({
             userImageUrl: resp.image.url
           });
           TableManager.setUserEmail(userEmail);
+          localStorage["userEmail"] = userEmail;
+          localStorage["userImageUrl"] = resp.image.url;
         });
       });
     } else {
@@ -107,6 +111,8 @@ var DictApp = React.createClass({
         userImageUrl: null
       });
       TableManager.setUserEmail(null);
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("userImageUrl");
     }
   },
   signIn: function() {
@@ -124,6 +130,8 @@ var DictApp = React.createClass({
       userImageUrl: null
     });
     TableManager.setUserEmail(null);
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userImageUrl");
   },
   renderHeader: function() {
     window.onSignIn = this.onSignIn;

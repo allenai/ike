@@ -6,11 +6,13 @@ var userEmail = null;
 
 var TableManager = {
   setUserEmail: function(newUserEmail) {
-    tables = {};
-    userEmail = newUserEmail;
-    this.updateListeners();
+    if(newUserEmail !== userEmail) {
+      tables = {};
+      userEmail = newUserEmail;
+      this.updateListeners();
 
-    if(userEmail) this.loadTablesFromServer();
+      if(userEmail) this.loadTablesFromServer();
+    }
   },
   userEmail: function() {
     return userEmail;
