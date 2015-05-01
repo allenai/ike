@@ -2,10 +2,26 @@ var React = require('react/addons');
 var bs = require('react-bootstrap');
 var Input = bs.Input;
 var Panel = bs.Panel;
+var Modal = bs.Modal;
+var Button = bs.Button;
+var Alert = bs.Alert;
 var EditableList = require('../misc/EditableList.js');
+var TableManager = require('../../managers/TableManager.js');
 var TableAdder = React.createClass({
+  componentDidMount: function() {
+    var callback = function() {
+      if(TableManager.userEmail()) {
+        this.setState({error: null});
+      } else {
+        this.setState({error: "You must be logged in to create tables."});
+      }
+    }.bind(this)
+
+    TableManager.addChangeListener(callback);
+    callback();
+  },
   getInitialState: function() {
-    return {name: '', cols: []};
+    return {name: '', cols: [], error: null};
   },
   validCol: function(col) {
     return col && col.trim() && this.state.cols.indexOf(col) < 0;
@@ -31,13 +47,17 @@ var TableAdder = React.createClass({
       positive: [],
       negative: []
     };
-    this.props.onSubmit(table);
+    try {
+      this.props.onSubmit(table);
+    } catch(err) {
+      alert(err); // TODO: replace with something pretty
+    }
     this.setState({name: '', cols: []});
   },
   submitDisabled: function() {
     var name = this.state.name;
     var cols = this.state.cols;
-    return name.trim() == '' || cols.length == 0;
+    return name.trim() == '' || cols.length == 0 || this.state.error;
   },
   nameInput: function() {
     var label = "Table Name";
@@ -45,6 +65,7 @@ var TableAdder = React.createClass({
     var onChange = this.handleNameChange;
     var value = this.state.name;
     return <Input
+      key="name"
       type="text"
       label={label}
       value={this.state.name}
@@ -59,10 +80,11 @@ var TableAdder = React.createClass({
       onAdd={this.addCol}
       onRemove={this.removeCol}
       value={this.state.cols}/>;
-    return <div>{label}{list}</div>;
+    return <div key="columnList">{label}{list}</div>;
   },
   submitButton: function() {
     return <Input
+      key="submitButton"
       type="submit"
       value="Create Table"
       disabled={this.submitDisabled()}
@@ -72,7 +94,12 @@ var TableAdder = React.createClass({
     var nameInput = this.nameInput();
     var columnInput = this.columnInput();
     var submitButton = this.submitButton();
-    return <div>{nameInput}{columnInput}{submitButton}</div>;
+
+    var content = [nameInput, columnInput];
+    if(this.state.error) content.push(<Alert key="error" bsStyle="danger">{this.state.error}</Alert>);
+    content.push(submitButton);
+
+    return <div>{content}</div>;
   }
 });
 module.exports = TableAdder;

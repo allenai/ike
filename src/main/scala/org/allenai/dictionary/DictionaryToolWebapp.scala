@@ -6,8 +6,9 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.allenai.common.Logging
+import org.allenai.dictionary.persistence.Tablestore
 import spray.can.Http
-import spray.http.{ CacheDirectives, HttpHeaders, StatusCodes }
+import spray.http.{ HttpMethods, CacheDirectives, HttpHeaders, StatusCodes }
 import spray.httpx.SprayJsonSupport
 import spray.routing.{ ExceptionHandler, HttpService }
 import spray.util.LoggingContext
@@ -98,7 +99,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
               <br/>
               <div style="display: inline-block; font-size: 150%" align="left">
                 {
-                  NodeSeq.fromSeq(readySearchApps.mapValues(_.get.description).toSeq.map {
+                  NodeSeq.fromSeq(readySearchApps.mapValues(_.get.description).toSeq.sorted.map {
                     case (name: String, description: Option[String]) =>
                       <p>
                         <span style="font-size: 130%"><a href={ name }>{ name }</a></span>
@@ -117,6 +118,44 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     unmatchedPath { p => getFromFile(staticContentRoot + p) }
   }
 
+  val tablesRoute = pathPrefix("api" / "tables") {
+    pathPrefix(Segment) { userEmail =>
+      path(Segment) { tableName =>
+        pathEnd {
+          get {
+            complete {
+              Tablestore.tables(userEmail).get(tableName) match {
+                case None => StatusCodes.NotFound
+                case Some(table) if table.name == tableName => table
+                case _ => StatusCodes.BadRequest
+              }
+            }
+          } ~ put {
+            entity(as[Table]) { table =>
+              complete {
+                if (table.name == tableName)
+                  Tablestore.put(userEmail, table)
+                else
+                  StatusCodes.BadRequest
+              }
+            }
+          } ~ delete {
+            complete {
+              Tablestore.delete(userEmail, tableName)
+              StatusCodes.OK
+            }
+          }
+        }
+      } ~ pathEndOrSingleSlash {
+        get {
+          complete {
+            Tablestore.tables(userEmail).keys.mkString("\n")
+          }
+        }
+      }
+    }
+  }
+
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
       case NonFatal(e) =>
@@ -127,5 +166,5 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
-  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoutes)
+  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoutes ~ tablesRoute)
 }

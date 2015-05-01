@@ -1,50 +1,23 @@
+var xhr = require('xhr');
+
 var tables = {};
 var listeners = [];
+var userEmail = null;
 
 var TableManager = {
-  hasTablesInLocalStorage: function() {
-    return ('tables' in localStorage);
-  },
-  deserializeTables: function() {
-    try {
-      var serialized = localStorage.getItem('tables');
-      var deserialized = JSON.parse(serialized);
-      var t = typeof deserialized;
-      if (t == 'object') {
-        return deserialized;
-      } else {
-        console.warn('Expected localStorage.tables to be object, found ' + t);
-        return {};
-      }
-    } catch (err) {
-      console.warn('Could not deserialize tables: ' + err.message);
-      return {};
+  setUserEmail: function(newUserEmail) {
+    if(newUserEmail !== userEmail) {
+      tables = {};
+      userEmail = newUserEmail;
+      this.updateListeners();
+
+      if(userEmail) this.loadTablesFromServer();
     }
   },
-  /** Loads the tables from localStorage and adds them to the TableManager
-    * data structures.
-    */
-  loadTablesFromLocalStorage: function() {
-    if (this.hasTablesInLocalStorage()) {
-      var deserialized = this.deserializeTables();
-      var tableNames = Object.keys(deserialized);
-      tableNames.map(function(tableName) {
-        var table = deserialized[tableName];
-        this.createTable(table);
-      }.bind(this));
-      return deserialized;
-    } else {
-      return {};
-    }
+  userEmail: function() {
+    return userEmail;
   },
-  saveTablesToLocalStorage: function() {
-    var serialized = JSON.stringify(tables);
-    try {
-      localStorage.setItem('tables', serialized);
-    } catch (err) {
-      alert('Could not save tables: ' + err.message);
-    }
-  },
+
   valueString: function(value) {
     var qwords = value.qwords;
     var words = qwords.map(function(qw) { return qw.value; });
@@ -82,12 +55,12 @@ var TableManager = {
     listeners.map(function(listener) {
       listener(tables);
     });
-    this.saveTablesToLocalStorage();
   },
   hasTable: function(tableName) {
     return tableName in tables;
   },
-  createTable: function(table) {
+  createTable: function(table, dontWriteToServer) {
+    if(!userEmail) throw "You have to sign in before creating tables.";
     if (!this.hasTable(table.name)) {
       var positive = 'positive' in table ? table.positive : [];
       var negative = 'negative' in table ? table.negative : [];
@@ -98,14 +71,18 @@ var TableManager = {
         negative: negative
       };
       this.updateListeners();
+      if(!dontWriteToServer)
+        this.writeTableToServer(table.name);
     }
   },
   deleteTable: function(tableName) {
+    if(!userEmail) throw "You have to sign in before deleting tables.";
     var posRows = this.getRows(tableName, "positive");
     var negRows = this.getRows(tableName, "negative");
     if (this.hasTable(tableName)) {
       delete tables[tableName];
       this.updateListeners();
+      this.deleteTableFromServer(tableName);
     }
   },
   addRow: function(tableName, rowType, row) {
@@ -115,6 +92,7 @@ var TableManager = {
       var rows = tables[tableName][rowType];
       rows.unshift(row);
       this.updateListeners();
+      this.writeTableToServer(tableName);
     }
   },
   deleteRow: function(tableName, rowType, row) {
@@ -123,6 +101,7 @@ var TableManager = {
       var index = rows.indexOf(row);
       rows.splice(index, 1);
       this.updateListeners();
+      this.writeTableToServer(tableName);
     }
   },
   hasRow: function(tableName, rowType, row) {
@@ -186,6 +165,68 @@ var TableManager = {
     return allRows.map(function(row) {
       return row.join("\t");
     }).join("\n");
+  },
+
+  deleteTableFromServer: function(tableName) {
+    if(!userEmail) throw "You have to sign in before deleting tables.";
+    xhr({
+      uri: '/api/tables/' + encodeURIComponent(userEmail) + "/" + encodeURIComponent(tableName),
+      method: 'DELETE'
+    }, function(err, response, body) {
+      if(response.statusCode !== 200) {
+        console.log("Unexpected response deleting a table: " + response);
+      }
+    });
+  },
+
+  writeTableToServer: function(tableName) {
+    if(!userEmail) throw "You have to sign in before creating or modifying tables.";
+    xhr({
+      uri: '/api/tables/' + encodeURIComponent(userEmail) + "/" + encodeURIComponent(tableName),
+      method: 'PUT',
+      json: tables[tableName]
+    }, function(err, response, body) {
+      if(response.statusCode !== 200) {
+        console.log("Unexpected response writing a table: " + response);
+      }
+    });
+  },
+
+  requestTableFromServer: function(tableName) {
+    if(!userEmail) throw "You have to sign in before retrieving tables.";
+    var self = this;
+    xhr({
+      uri: '/api/tables/' + encodeURIComponent(userEmail) + "/" + encodeURIComponent(tableName),
+      method: 'GET'
+    }, function(err, response, body) {
+      if(response.statusCode === 200) {
+        self.createTable(JSON.parse(body), true);
+      } else {
+        console.log("Unexpected response requesting a table: " + response);
+      }
+    });
+  },
+
+  loadTablesFromServer: function() {
+    if(!userEmail) throw "You have to sign in before retrieving tables.";
+
+    // delete old table storage from the browser
+    localStorage.removeItem('tables')
+
+    // load tables from server
+    var self = this;
+    xhr({
+      uri: '/api/tables/' + encodeURIComponent(userEmail),
+      method: 'GET'
+    }, function(err, response, body) {
+      if(response.statusCode === 200) {
+        if(body) {
+          body.split("\n").forEach(self.requestTableFromServer.bind(self))
+        }
+      } else {
+        console.log("Unexpected response requesting tables: " + response)
+      }
+    });
   },
 };
 module.exports = TableManager;
