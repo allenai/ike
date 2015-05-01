@@ -193,15 +193,16 @@ object CompoundQueryOp {
 
 /** Abstract class for classes that combine a set of QueryOps, while keeping track of the number
   * of required edits the collective operations made to each sentence
-  *
-  * @param ops set of query-token operations to apply to the query
-  * @param numEdits Map of (sentence index) -> (number of required edits this combined op
-  *          will have made towards that sentence)
   */
-abstract class CompoundQueryOp(
-    val ops: Set[TokenQueryOp],
-    val numEdits: IntMap[Int]
-) {
+abstract class CompoundQueryOp() {
+
+  /** @return set of query-token operations to apply to the query */
+  def ops: Set[TokenQueryOp]
+
+  /** @return  Map of (sentence index) -> (number of required edits this combined op
+    *         will have made towards that sentence)
+    */
+  def numEdits: IntMap[Int]
 
   def size: Int = ops.size
 

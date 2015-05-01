@@ -14,10 +14,10 @@ object OpConjunction {
 /** Class that combines operations that can be combined by ANDing them together
   */
 case class OpConjunction private (
-    override val ops: Set[TokenQueryOp],
-    override val numEdits: IntMap[Int],
+    ops: Set[TokenQueryOp],
+    numEdits: IntMap[Int],
     maxRemoves: Int
-) extends CompoundQueryOp(ops, numEdits) {
+) extends CompoundQueryOp() {
 
   override def canAdd(op: QueryOp): Boolean = op match {
     case rt: RemoveToken => !ops.exists(x => x.slot == rt.slot) && maxRemoves > 0

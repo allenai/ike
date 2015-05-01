@@ -21,17 +21,17 @@ object OpConjunctionOfDisjunctions {
   *
   * @param ops TokeQueryOps that this contains
   * @param numEdits maps sentence indices the number of required edits this has made to that
-  *         sentence
+  *        sentence
   * @param perSlotEdits Map slots -> maps of sentences indices number of edits made to that sentence
-  *             by operations that were applied to that slot.
+  *            by operations that were applied to that slot.
   * @param maxRemoves Maximum number of RemoveToken(1) operations that can be added to this
   */
 case class OpConjunctionOfDisjunctions private (
-    override val ops: Set[TokenQueryOp],
-    override val numEdits: IntMap[Int],
+    ops: Set[TokenQueryOp],
+    numEdits: IntMap[Int],
     perSlotEdits: Map[Slot, IntMap[Int]],
     maxRemoves: Int
-) extends CompoundQueryOp(ops, numEdits) {
+) extends CompoundQueryOp() {
 
   override def canAdd(op: QueryOp): Boolean = op match {
     case re: RemoveEdge =>
