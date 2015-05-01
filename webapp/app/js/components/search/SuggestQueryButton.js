@@ -16,6 +16,7 @@ var SuggestQueryButton = React.createClass({
   getInitialState: function() {
     return {
       suggestions: [],
+      sampleSize: 0,
       narrow: false,
       waiting: false
     };
@@ -24,8 +25,11 @@ var SuggestQueryButton = React.createClass({
   suggestQueryCallBack: function(err, resp, body) {
     this.setState({waiting: false})
     if (resp.statusCode == 200) {
-      var newSuggestions = JSON.parse(body).scoredQueries
-      this.setState({suggestions: newSuggestions})
+      var newSuggestions = JSON.parse(body)
+      this.setState({
+        suggestions: newSuggestions.scoredQueries,
+        sampleSize: newSuggestions.samplePercent
+      })
     } else {
       alert('Got Error: ' + err + '\n<' + body + '>')
     }
@@ -156,7 +160,8 @@ var SuggestQueryButton = React.createClass({
        hover>
         <thead>
           <tr>
-            <th className="queryHeader">Query</th>
+            <th className="queryHeader">{"Query (Sample Size: " +
+                Math.max((this.state.sampleSize * 100).toFixed(2), 0.01) + "%)"}</th>
             <th className="queryHeader">Positive Score</th>
             <th className="queryHeader">Negative Score</th>
             <th className="queryHeader">Unlabelled Score</th>

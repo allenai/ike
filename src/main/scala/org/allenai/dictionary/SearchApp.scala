@@ -14,7 +14,7 @@ case class SuggestQueryConfig(beamSize: Int, depth: Int, maxSampleSize: Int, pWe
   nWeight: Double, uWeight: Double, allowDisjunctions: Boolean, allowClusters: Boolean = true)
 case class ScoredStringQuery(query: String, score: Double, positiveScore: Double,
   negativeScore: Double, unlabelledScore: Double)
-case class SuggestQueryResponse(scoredQueries: Seq[ScoredStringQuery])
+case class SuggestQueryResponse(scoredQueries: Seq[ScoredStringQuery], samplePercent: Double)
 case class WordInfoRequest(word: String, config: SearchConfig)
 case class WordInfoResponse(word: String, clusterId: Option[String], posTags: Map[String, Int])
 case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1)
@@ -36,17 +36,20 @@ case class SearchApp(config: Config) extends Logging {
   def semantics(query: QExpr): Try[TextPattern] = Try(BlackLabSemantics.blackLabQuery(query))
   def suggestQuery(request: SuggestQueryRequest): Try[SuggestQueryResponse] = for {
     query <- QueryLanguage.parse(request.query)
-    suggestion <- Try(
+    suggestions <- Try(
       QuerySuggester.suggestQuery(searcher, query, request.tables, request.target,
         request.narrow, request.config)
     )
     stringQueries <- Try(
-      suggestion.map(x => {
+      suggestions.scoredQueries.map(x => {
         ScoredStringQuery(QueryLanguage.getQueryString(x.query), x.score, x.positiveScore,
           x.negativeScore, x.unlabelledScore)
       })
     )
-    response = SuggestQueryResponse(stringQueries)
+    response = SuggestQueryResponse(
+      stringQueries,
+      suggestions.docsSampledFrom / searcher.getIndexReader.numDocs().toDouble
+    )
   } yield response
   def parse(r: SearchRequest): Try[QExpr] = r.query match {
     case Left(queryString) => QueryLanguage.parse(queryString)

@@ -106,7 +106,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val startingQuery = QueryLanguage.parse("blarg (PRP)").get
     val suggestions =
       QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
-      "test",  false, SuggestQueryConfig(5, 2, 100, 1, 0, 0, false))
+      "test",  false, SuggestQueryConfig(5, 2, 100, 1, 0, 0, false)).scoredQueries
     assertResult(suggestions(0).query)(QNamed(QPos("PRP"), "c1"))
   }
 
@@ -122,7 +122,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val startingQuery = QueryLanguage.parse("(?<c1> {I, like, hate, it}+)").get
     val suggestions =
       QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
-        "test",  true, SuggestQueryConfig(5, 2, 100, 1, -5, 0, false))
+        "test",  true, SuggestQueryConfig(5, 2, 100, 1, -5, 0, false)).scoredQueries
     val bestScore = suggestions.head.score
     val bestSuggetions = suggestions.filter(_.score == bestScore)
     assert(suggestions.take(3).map(_.query).toSet contains
@@ -142,9 +142,9 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val suggestions =
       QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
         "test",  true, SuggestQueryConfig(5, 1, 100, 1, -5, -5, false))
-    val bestScore = suggestions.head.score
+    val bestScore = suggestions.scoredQueries.head.score
     // Fuzzy match to 1 to account for size penalities and the like
-    val bestSuggestions = suggestions.filter(_.score == bestScore).map(_.query)
+    val bestSuggestions = suggestions.scoredQueries.filter(_.score == bestScore).map(_.query)
     assert(bestSuggestions contains
         QueryLanguage.parse("(?<c1> RB+) {mango, those, great}").get)
   }
@@ -159,7 +159,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val startingQuery = QueryLanguage.parse("^01 ({like, hate})").get
     val suggestions =
       QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
-        "test",  false, SuggestQueryConfig(5, 1, 100, 1, -5, 0, true))
+        "test",  false, SuggestQueryConfig(5, 1, 100, 1, -5, 0, true)).scoredQueries
     val seq = suggestions(0).query.asInstanceOf[QSeq].qexprs
     assertResult(QCluster("01"))(seq(0))
     assertResult(Set("like", "hate", "taste").map(QWord(_)))(
@@ -177,7 +177,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val startingQuery = QueryLanguage.parse("blah blah ({I, like})").get
     val suggestions =
       QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
-        "test",  false, SuggestQueryConfig(5, 2, 100, 1, -5, 0, true))
+        "test",  false, SuggestQueryConfig(5, 2, 100, 1, -5, 0, true)).scoredQueries
     val q = suggestions(0).query.asInstanceOf[QNamed]
     assertResult(q.name)("c1")
     assertResult(q.qexpr.asInstanceOf[QDisj].qexprs.toSet)(Set(QWord("I"), QWord("like")))

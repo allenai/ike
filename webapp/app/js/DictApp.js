@@ -38,10 +38,10 @@ var DictApp = React.createClass({
         hideAdded: false,
         groupsPerPage: 25,
         ml: {
-           disable: true,
+           disable: false,
            depth: 3,
            beamSize: 35,
-           maxSampleSize: 10000,
+           maxSampleSize: 12000,
            pWeight: 1.0,
            nWeight: -2.0,
            uWeight: 0.05,

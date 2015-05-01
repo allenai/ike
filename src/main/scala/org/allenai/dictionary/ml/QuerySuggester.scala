@@ -14,6 +14,7 @@ import com.typesafe.config.ConfigFactory
 import scala.collection.JavaConverters._
 import scala.collection.immutable.IntMap
 
+case class Suggestions(scoredQueries: Seq[ScoredQuery], docsSampledFrom: Int)
 case class ScoredOps(ops: CompoundQueryOp, score: Double, positiveScore: Double,
   negativeScore: Double, unlabelledScore: Double)
 case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
@@ -23,9 +24,9 @@ case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
   *
   * @param label label of the hit
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
-  *             this hit (see the ml/README.md)
+  *            this hit (see the ml/README.md)
   * @param captureStrings the string we captured, as a Sequence of capture groups of sequences of
-  *              words
+  *             words
   * @param doc the document number this Example came from
   * @param str String of hit, kept only for debugging purposes
   */
@@ -49,7 +50,7 @@ object QuerySuggester extends Logging {
     * @param opBuilder Builder function for CompoundQueryOps
     * @param beamSize Size of the beam to use in the search
     * @param depth Depth to run the search to, corresponds the to maximum size
-    *  of a CompoundQueryOp that can be proposed
+    * of a CompoundQueryOp that can be proposed
     * @param query optional query, only used when printing query ops
     * @return Sequence of CompoundQueryOps, together with their score and a string
     * message about some statistics about that op of at most beamSize size
@@ -149,7 +150,7 @@ object QuerySuggester extends Logging {
     * @param tables Tables to use when building the query
     * @param target Name of the table to optimize the suggested queries for
     * @param narrow Whether the suggestions should narrow or broaden the starting
-    *   query
+    *  query
     * @param config Configuration details to use when suggesting the new queries
     * @return Suggested queries, along with their scores and a String msg details some
     * statistics about each query
@@ -161,7 +162,7 @@ object QuerySuggester extends Logging {
     target: String,
     narrow: Boolean,
     config: SuggestQueryConfig
-  ): Seq[ScoredQuery] = {
+  ): Suggestions = {
     val percentUnlabelled = querySuggestionConf.getDouble("percentUnlabelled")
     val targetTable = tables.get(target) match {
       case Some(table) => table
@@ -274,7 +275,7 @@ object QuerySuggester extends Logging {
       s"and $totalNegativeHits negative with ${hitAnalysis.operatorHits.size} possible operators")
     if (totalPositiveHits == 0) {
       logger.info("Not enough data found")
-      return Seq()
+      return Suggestions(Seq(), 0)
     }
     val lastDoc = if (labelledSize > 0) {
       labelledHits.get(labelledSize - 1).doc
@@ -327,6 +328,6 @@ object QuerySuggester extends Logging {
     }.take(querySuggestionConf.getInt("numToReturn"))
     logger.info(s"Done suggesting query for " +
       "${QueryLanguage.getQueryString(queryWithNamedCaptures)}")
-    scoredOps
+    Suggestions(scoredOps, lastDoc)
   }
 }
