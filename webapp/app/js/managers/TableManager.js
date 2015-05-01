@@ -12,6 +12,9 @@ var TableManager = {
 
     if(userEmail) this.loadTablesFromServer();
   },
+  userEmail: function() {
+    return userEmail;
+  },
 
   valueString: function(value) {
     var qwords = value.qwords;
@@ -55,6 +58,7 @@ var TableManager = {
     return tableName in tables;
   },
   createTable: function(table, dontWriteToServer) {
+    if(!userEmail) throw "You have to sign in before creating tables.";
     if (!this.hasTable(table.name)) {
       var positive = 'positive' in table ? table.positive : [];
       var negative = 'negative' in table ? table.negative : [];
@@ -70,6 +74,7 @@ var TableManager = {
     }
   },
   deleteTable: function(tableName) {
+    if(!userEmail) throw "You have to sign in before deleting tables.";
     var posRows = this.getRows(tableName, "positive");
     var negRows = this.getRows(tableName, "negative");
     if (this.hasTable(tableName)) {
@@ -161,6 +166,7 @@ var TableManager = {
   },
 
   deleteTableFromServer: function(tableName) {
+    if(!userEmail) throw "You have to sign in before deleting tables.";
     xhr({
       uri: '/api/tables/' + encodeURIComponent(userEmail) + "/" + encodeURIComponent(tableName),
       method: 'DELETE'
@@ -172,6 +178,7 @@ var TableManager = {
   },
 
   writeTableToServer: function(tableName) {
+    if(!userEmail) throw "You have to sign in before creating or modifying tables.";
     xhr({
       uri: '/api/tables/' + encodeURIComponent(userEmail) + "/" + encodeURIComponent(tableName),
       method: 'PUT',
@@ -184,6 +191,7 @@ var TableManager = {
   },
 
   requestTableFromServer: function(tableName) {
+    if(!userEmail) throw "You have to sign in before retrieving tables.";
     var self = this;
     xhr({
       uri: '/api/tables/' + encodeURIComponent(userEmail) + "/" + encodeURIComponent(tableName),
@@ -198,6 +206,8 @@ var TableManager = {
   },
 
   loadTablesFromServer: function() {
+    if(!userEmail) throw "You have to sign in before retrieving tables.";
+
     // delete old table storage from the browser
     localStorage.removeItem('tables')
 
