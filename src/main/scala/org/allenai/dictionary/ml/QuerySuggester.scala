@@ -28,9 +28,9 @@ case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
   *
   * @param label label of the hit
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
-  *          this hit (see the ml/README.md)
+  *        this hit (see the ml/README.md)
   * @param captureStrings the string we captured, as a Sequence of capture groups of sequences of
-  *           words
+  *         words
   * @param doc the document number this Example came from
   * @param str String of hit, kept only for debugging purposes
   */
@@ -65,13 +65,83 @@ object QuerySuggester extends Logging {
     opBuilder: EvaluatedOp => Option[CompoundQueryOp],
     beamSize: Int,
     depth: Int,
+    maxOpOccurances: Int,
     query: Option[TokenizedQuery] = None
   ): Seq[(CompoundQueryOp, Double)] = {
 
-    // Reverse ordering so the smallest scoring operators are at the head
+    // Counts the number of time each TokenQueryOp occurs in our queue, used to promote diversity
+    // within the queue by trying to avoid overusing the same op
+    val opsUsed = scala.collection.mutable.Map[TokenQueryOp, Int]().withDefaultValue(0)
+
+    // Best ops so far, reverse ordering so the smallest scoring operators are at the head
     val priorityQueue = scala.collection.mutable.PriorityQueue()(
-      Ordering.by[(CompoundQueryOp, Double), Double](_._2)
-    ).reverse
+      Ordering.by[(CompoundQueryOp, Double), Double](_._2).reverse
+    )
+    priorityQueue.sizeHint(depth)
+
+    // Which set of Ops we have already found, used so we do not arrive at the same set of ops
+    // while following different paths
+    val alreadyFound = scala.collection.mutable.Set[Set[TokenQueryOp]]()
+
+    // Remove the counts of the operators in op from opsUsed
+    def removeCounts(op: CompoundQueryOp): Unit = {
+      op.ops.foreach { tokenOp =>
+        val current = opsUsed(tokenOp)
+        if (current == 1) {
+          opsUsed.remove(tokenOp)
+        } else {
+          opsUsed.update(tokenOp, current - 1)
+        }
+      }
+    }
+
+    // Trys to add the given operator with given score to the queue
+    def addOp(cop: CompoundQueryOp, score: Double): Boolean = {
+      val queueFull = priorityQueue.size >= beamSize
+      val opAdded = if (!queueFull || priorityQueue.head._2 < score) {
+        val repeatedOps = cop.ops.filter(opsUsed(_) >= maxOpOccurances)
+        if (!repeatedOps.isEmpty) {
+          // Adding would result in overusing an op, so we try to find an element in the queue
+          // that is lowering scoring and that we can remove to allow us to add this op
+          val candidatesForRemoval = priorityQueue.filter {
+            case (op, __) => repeatedOps.forall(op.ops.contains(_))
+          }
+          if (candidatesForRemoval.nonEmpty) {
+            val min = candidatesForRemoval.minBy(_._2)
+            if (min._2 < score) {
+              // Overly expensive way to remove since we re-sort the entire queue, but there is no
+              // remove API for queues as far as I can see
+              removeCounts(min._1)
+              val newElements = priorityQueue.filter(_ != min).toSeq
+              priorityQueue.clear()
+              newElements.foreach(priorityQueue.enqueue(_))
+              cop.ops.foreach(tokenOp => opsUsed.update(tokenOp, opsUsed(tokenOp) + 1))
+              priorityQueue.enqueue((cop, score))
+              true
+            } else {
+              false
+            }
+          } else {
+            false
+          }
+        } else if (queueFull) {
+          val removed = priorityQueue.dequeue()
+          removeCounts(removed._1)
+          cop.ops.foreach(tokenOp => opsUsed.update(tokenOp, opsUsed(tokenOp) + 1))
+          priorityQueue.enqueue((cop, score))
+          true
+        } else {
+          cop.ops.foreach(tokenOp => opsUsed.update(tokenOp, opsUsed(tokenOp) + 1))
+          priorityQueue.enqueue((cop, score))
+          true
+        }
+      } else {
+        false
+      }
+      // assert(priorityQueue.map(_._1.ops).flatten.groupBy(x => x).mapValues(_.size) == opsUsed)
+      // assert(opsUsed.values.forall(_ <= maxOpOccurances), opsUsed)
+      opAdded
+    }
 
     // Add length1 operators to the queue
     hitAnalysis.operatorHits.foreach {
@@ -79,33 +149,26 @@ object QuerySuggester extends Logging {
         val op = opBuilder(EvaluatedOp(operator, matches))
         if (op.isDefined) {
           val score = evaluationFunction.evaluate(op.get, 1)
-          if (priorityQueue.size < beamSize) {
-            priorityQueue.enqueue((op.get, score))
-          } else if (priorityQueue.head._2 < score) {
-            priorityQueue.dequeue()
-            priorityQueue.enqueue((op.get, score))
-          }
+          addOp(op.get, score)
         }
     }
 
-    def printQueue(depth: Int): Unit = {
-      priorityQueue.foreach {
+    def logQueue(depth: Int): Unit = {
+      priorityQueue.clone().dequeueAll.foreach {
         case (op, score) =>
           val opStr = if (query.isEmpty) op.toString() else op.toString(query.get)
           logger.debug(s"$opStr\n${evaluationFunction.evaluationMsg(op, depth)}")
       }
     }
 
-    val alreadyFound = scala.collection.mutable.Set[Set[TokenQueryOp]]()
-
     // Start the beam search, note this search follows a breadth-first pattern where we keep a fixed
     // number of nodes at each depth rather then the more typical depth-first style of beam search.
     for (i <- 1 until depth) {
       logger.debug(s"********* Depth $i *********")
-      printQueue(i + 1)
+      logQueue(i + 1)
 
       if (evaluationFunction.usesDepth()) {
-        // Now the depth has changed, rescore the old queries
+        // Now the depth has changes, rescore the old queries so their scores are up-to-date
         val withNewScores = priorityQueue.map {
           case (x, _) => (x, evaluationFunction.evaluate(x, i + 1))
         }
@@ -119,7 +182,7 @@ object QuerySuggester extends Logging {
         // expanding them. Note this assumes that the children of this node, when re-evaluated at
         // a lower depth, will not have a higher scores then they did previously.
         case (operator, score) => operator.size == i
-      }.to[Seq].foreach { // iterate over a copy so we do not re-expand nodes
+      }.to[Seq].foreach { // iterate over a copy so we do not expand we added in this loop
         case (operator, score) =>
           hitAnalysis.operatorHits.
             // Filter our unusable operators
@@ -130,20 +193,14 @@ object QuerySuggester extends Logging {
                 val newOperator = operator.add(EvaluatedOp(newOp, opMatches))
                 if (!alreadyFound.contains(newOperator.ops)) {
                   val newScore = evaluationFunction.evaluate(newOperator, 1 + i)
-                  if (priorityQueue.size < beamSize) {
-                    priorityQueue.enqueue((newOperator, newScore))
-                  } else if (newScore > priorityQueue.head._2) {
-                    priorityQueue.dequeue()
-                    priorityQueue.enqueue((newOperator, newScore))
-                  }
-                  alreadyFound.add(newOperator.ops)
+                  if (addOp(newOperator, newScore)) alreadyFound.add(newOperator.ops)
                 }
             }
       }
     }
 
     logger.debug("******* DONE ************")
-    printQueue(depth)
+    logQueue(depth)
     priorityQueue.dequeueAll.reverse.toSeq
   }
 
@@ -307,6 +364,15 @@ object QuerySuggester extends Logging {
 
     val operators = if (totalPositiveHits > 0) {
       logger.debug("Selecting query...")
+      val maxOpReuse =
+        if (narrow) {
+          math.max(
+            querySuggestionConf.getInt("maxOpReusePercentOfBeamSize") * config.beamSize,
+            querySuggestionConf.getInt("minMaxOpReuse")
+          )
+        } else {
+          config.beamSize
+        }
       val (operators, searchTime) = Timing.time {
         QuerySuggester.selectOperator(
           hitAnalysis,
@@ -314,6 +380,7 @@ object QuerySuggester extends Logging {
           opCombiner,
           config.beamSize,
           config.depth,
+          maxOpReuse,
           Some(tokenizedQuery)
         )
       }
@@ -324,17 +391,6 @@ object QuerySuggester extends Logging {
       Seq()
     }
 
-    val scoredOps = operators.flatMap {
-      case (op, score) =>
-        val query = op.applyOps(tokenizedQuery).getQuery
-        val (p, n, u) = QueryEvaluator.countOccurrences(op.numEdits, hitAnalysis.examples)
-        if (score > Double.NegativeInfinity) {
-          Some(ScoredQuery(query, score, p, n, u * unlabelledBiasCorrection))
-        } else {
-          None
-        }
-    }.take(querySuggestionConf.getInt("numToReturn"))
-
     val original = {
       val edits = IntMap(Range(0, hitAnalysis.examples.size).map((_, 0)): _*)
       val score = evalFunction.evaluate(NullOp(edits), config.depth)
@@ -343,6 +399,40 @@ object QuerySuggester extends Logging {
         hitAnalysis.examples
       )
       ScoredQuery(startingQuery, score, p, n, u * unlabelledBiasCorrection)
+    }
+    logger.info(s"Done suggesting query for " +
+      "${QueryLanguage.getQueryString(queryWithNamedCaptures)}")
+
+    // Remove queries the appear to be completely worthless, don't return
+    val operatorsPrunedByScore = operators.filter(_._2 > Double.NegativeInfinity)
+
+    val maxToSuggest = querySuggestionConf.getInt("numToSuggest")
+
+    // Remove queries that fail our diversity check
+    val operatorsPruneByRepetition = if (narrow) {
+      var opsUsedCounts = operators.map(_._1.ops).flatten.groupBy(identity).mapValues(_.size)
+      val maxReturnOpReuse = querySuggestionConf.getInt("maxOpReuseReturn")
+      val maxToRemove = operatorsPrunedByScore.size - maxToSuggest
+      // Remove the lowest scoring ops that fail our diversity check
+      var removed = 0
+      operatorsPrunedByScore.reverse.filter {
+        case (op, _) => if (!op.ops.forall(opsUsedCounts(_) < maxReturnOpReuse)) {
+          removed += 1
+          op.ops.foreach(tokenOp =>
+            opsUsedCounts = opsUsedCounts.updated(tokenOp, opsUsedCounts(tokenOp) - 1))
+          removed > maxToRemove
+        } else {
+          true
+        }
+      }.reverse
+    } else {
+      operatorsPrunedByScore
+    }
+    val scoredOps = operatorsPruneByRepetition.take(maxToSuggest).map {
+      case (op, score) =>
+        val query = op.applyOps(tokenizedQuery).getQuery
+        val (p, n, u) = QueryEvaluator.countOccurrences(op.numEdits, hitAnalysis.examples)
+        ScoredQuery(query, score, p, n, u * unlabelledBiasCorrection)
     }
     logger.info(s"Done suggesting query for " +
       "${QueryLanguage.getQueryString(queryWithNamedCaptures)}")
