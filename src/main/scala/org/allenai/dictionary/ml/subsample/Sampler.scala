@@ -1,10 +1,9 @@
 package org.allenai.dictionary.ml.subsample
 
-import org.allenai.common.Logging
-import org.allenai.dictionary.ml.TokenizedQuery
-
 import nl.inl.blacklab.search.{ Hits, Searcher }
+import org.allenai.common.Logging
 import org.allenai.dictionary._
+import org.allenai.dictionary.ml.TokenizedQuery
 
 object Sampler {
 
@@ -36,7 +35,7 @@ object Sampler {
     * to matching entities in a table.
     *
     * @throws IllegalArgumentException if there were not positive rows of the right length
-    *                                 to filter capture groups of qexpr with
+    *                                to filter capture groups of qexpr with
     */
   def limitQueryToTable(query: TokenizedQuery, table: Table): QExpr = {
     QAnd(query.getQuery, getLabelledExampleQuery(query, table))

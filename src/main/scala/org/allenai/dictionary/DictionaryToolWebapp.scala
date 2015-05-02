@@ -6,19 +6,20 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.allenai.common.Logging
+import org.allenai.dictionary.persistence.Tablestore
 import spray.can.Http
-import spray.http.{ CacheDirectives, HttpHeaders, StatusCodes }
+import spray.http.{ HttpMethods, CacheDirectives, HttpHeaders, StatusCodes }
 import spray.httpx.SprayJsonSupport
 import spray.routing.{ ExceptionHandler, HttpService }
 import spray.util.LoggingContext
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{ Await, Future }
+import scala.language.postfixOps
 import scala.util.control.NonFatal
 import scala.xml.NodeSeq
-import scala.language.postfixOps
 
 object DictionaryToolWebapp {
   lazy val config = ConfigFactory.load().getConfig("DictionaryToolWebapp")
@@ -40,8 +41,8 @@ object DictionaryToolWebapp {
 }
 
 class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport with Logging {
-  import JsonSerialization._
   import DictionaryToolWebapp.FutureWithGet
+  import JsonSerialization._
 
   logger.debug("Starting DictionaryToolActor") // this is just here to force logger initialization
 
@@ -49,6 +50,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   val searchApps = config.getConfigList("DictionaryToolWebapp.indices").asScala.map { config =>
     config.getString("name") -> Future { SearchApp(config) }
   }.toMap
+  def readySearchApps = searchApps.filter(_._2.isCompleted)
 
   val staticContentRoot = "public"
   val serviceRoutes = searchApps.map {
@@ -95,14 +97,15 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
             <div align="center">
               <img src="/assets/logo.260x260.png" alt="OkCorpus"/>
               <br/>
-              <div style="display: inline-block; font-size: 200%;" align="left">
-                <p>Pick your corpus:</p>
+              <div style="display: inline-block; font-size: 150%" align="left">
                 {
-                  NodeSeq.fromSeq(searchApps.keys.toList.flatMap { name =>
-                    NodeSeq.fromSeq(Seq(
-                      <a href={ name }>{ name }</a>,
-                      <br/>
-                    ))
+                  NodeSeq.fromSeq(readySearchApps.mapValues(_.get.description).toSeq.sorted.map {
+                    case (name: String, description: Option[String]) =>
+                      <p>
+                        <span style="font-size: 130%"><a href={ name }>{ name }</a></span>
+                        <br/>
+                        { description.getOrElse("") }
+                      </p>
                   })
                 }
               </div>
@@ -115,6 +118,44 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     unmatchedPath { p => getFromFile(staticContentRoot + p) }
   }
 
+  val tablesRoute = pathPrefix("api" / "tables") {
+    pathPrefix(Segment) { userEmail =>
+      path(Segment) { tableName =>
+        pathEnd {
+          get {
+            complete {
+              Tablestore.tables(userEmail).get(tableName) match {
+                case None => StatusCodes.NotFound
+                case Some(table) if table.name == tableName => table
+                case _ => StatusCodes.BadRequest
+              }
+            }
+          } ~ put {
+            entity(as[Table]) { table =>
+              complete {
+                if (table.name == tableName)
+                  Tablestore.put(userEmail, table)
+                else
+                  StatusCodes.BadRequest
+              }
+            }
+          } ~ delete {
+            complete {
+              Tablestore.delete(userEmail, tableName)
+              StatusCodes.OK
+            }
+          }
+        }
+      } ~ pathEndOrSingleSlash {
+        get {
+          complete {
+            Tablestore.tables(userEmail).keys.mkString("\n")
+          }
+        }
+      }
+    }
+  }
+
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
       case NonFatal(e) =>
@@ -125,5 +166,5 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
-  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoutes)
+  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoutes ~ tablesRoute)
 }

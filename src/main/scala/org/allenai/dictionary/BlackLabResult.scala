@@ -1,11 +1,9 @@
 package org.allenai.dictionary
 
-import scala.collection.JavaConverters._
+import nl.inl.blacklab.search.{ Hit, Hits, Kwic, Span }
 import org.allenai.common.immutable.Interval
-import nl.inl.blacklab.search.Hit
-import nl.inl.blacklab.search.Hits
-import nl.inl.blacklab.search.Kwic
-import nl.inl.blacklab.search.Span
+
+import scala.collection.JavaConverters._
 
 case class BlackLabResult(wordData: Seq[WordData], matchOffset: Interval,
     captureGroups: Map[String, Interval]) {
@@ -42,7 +40,7 @@ case object BlackLabResult {
   /** Converts a hit to a BlackLabResult. Returns None if the dreaded BlackLab NPE is returned
     * when computing the capture groups.
     */
-  def fromHit(hits: Hits, hit: Hit, kwicSize: Int = 10): Option[BlackLabResult] = {
+  def fromHit(hits: Hits, hit: Hit, kwicSize: Int = 40): Option[BlackLabResult] = {
     val kwic = hits.getKwic(hit, kwicSize)
     val data = wordData(hits, kwic)
     val offset = Interval.open(kwic.getHitStart, kwic.getHitEnd)

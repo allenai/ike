@@ -1,9 +1,10 @@
 package org.allenai.dictionary
 
-import scala.util.parsing.combinator.RegexParsers
-import java.util.regex.Pattern
-import scala.util.{ Try, Failure, Success }
 import java.text.ParseException
+import java.util.regex.Pattern
+
+import scala.util.parsing.combinator.RegexParsers
+import scala.util.{ Failure, Success, Try }
 
 sealed trait QExpr
 sealed trait QLeaf extends QExpr
@@ -29,6 +30,7 @@ case class QUnnamed(qexpr: QExpr) extends QCapture
 case class QNonCap(qexpr: QExpr) extends QAtom
 case class QStar(qexpr: QExpr) extends QAtom
 case class QPlus(qexpr: QExpr) extends QAtom
+case class QRepetition(qexpr: QExpr, min: Int, max: Int) extends QAtom
 case class QSeq(qexprs: Seq[QExpr]) extends QExpr
 case object QSeq {
   def fromSeq(seq: Seq[QExpr]): QExpr = seq match {
@@ -52,7 +54,7 @@ object QExprParser extends RegexParsers {
   val posTagRegex = posTagSet.map(Pattern.quote).mkString("|").r
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
-  def word = """[^|\^$(){}\s*+,]+""".r ^^ QWord
+  def word = """[^|\]\[\^$(){}\s*+,]+""".r ^^ QWord
   def cluster = """\^[01]+""".r ^^ { s => QCluster(s.tail) }
   def pos = posTagRegex ^^ QPos
   def dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
@@ -64,10 +66,14 @@ object QExprParser extends RegexParsers {
   def nonCap = "(?:" ~> expr <~ ")" ^^ QNonCap
   def curlyDisj = "{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq
   def operand = named | nonCap | unnamed | curlyDisj | atom
+  def integer = """-?[0-9]+""".r ^^ { _.toInt }
+  def repetition = (operand <~ "[") ~ ((integer <~ ",") ~ (integer <~ "]")) ^^ { x =>
+    QRepetition(x._1, x._2._1, x._2._2)
+  }
   def starred = operand <~ "*" ^^ QStar
   def plussed = operand <~ "+" ^^ QPlus
-  def modified = starred | plussed
-  def piece: Parser[QExpr] = (modified | operand)
+  def modified = starred | plussed | repetition
+  def piece: Parser[QExpr] = modified | operand
   def branch = rep1(piece) ^^ QSeq.fromSeq
   def expr = repsep(branch, "|") ^^ QDisj.fromSeq
   def parse(s: String) = parseAll(expr, s)
@@ -110,6 +116,7 @@ object QueryLanguage {
       case QStar(expr) => QStar(recurse(expr))
       case QUnnamed(expr) => QUnnamed(recurse(expr))
       case QAnd(expr1, expr2) => QAnd(recurse(expr1), recurse(expr2))
+      case QRepetition(expr, min, max) => QRepetition(recurse(expr), min, max)
     }
     Try(recurse(expr))
   }
@@ -120,22 +127,33 @@ object QueryLanguage {
     * @return String representation of the query
     * @throws NotImplementedError if the query contains QAnd, QPosFromWord, or QClusterFromWord
     */
-  def getQueryString(query: QExpr): String = query match {
-    case QWord(value) => value
-    case QCluster(value) => "^" + value
-    case QPos(value) => value
-    case QDict(value) => value
-    case QWildcard() => "."
-    case QSeq(children) => children.map(getQueryString).mkString(" ")
-    case QDisj(children) => "{" + children.map(getQueryString).mkString(",") + "}"
-    case QNamed(expr, name) => "(?<" + name + ">" + getQueryString(expr) + ")"
-    case QNonCap(expr) => "(?:" + getQueryString(expr) + ")"
-    case QPlus(expr) => "(?:" + getQueryString(expr) + ")+"
-    case QStar(expr) => "(?:" + getQueryString(expr) + ")*"
-    case QUnnamed(expr) => "(" + getQueryString(expr) + ")"
-    case (QClusterFromWord(_, _, _) | QPosFromWord(_, _, _) | QAnd(_, _)) =>
-      throw new NotImplementedError("No implementation for " + query.getClass.getName)
-    case x: QSimilarPhrases => ???
+  def getQueryString(query: QExpr): String = {
+
+    def recurse(qexpr: QExpr): String = qexpr match {
+      case QWord(value) => value
+      case QCluster(value) => "^" + value
+      case QPos(value) => value
+      case QDict(value) => value
+      case QWildcard() => "."
+      case QSeq(children) => children.map(getQueryString).mkString(" ")
+      case QDisj(children) => "{" + children.map(getQueryString).mkString(",") + "}"
+      case QNamed(expr, name) => "(?<" + name + ">" + getQueryString(expr) + ")"
+      case QUnnamed(expr) => "(" + getQueryString(expr) + ")"
+      case QNonCap(expr) => "(?:" + getQueryString(expr) + ")"
+      case QPlus(expr) => modifiableString(expr) + "+"
+      case QStar(expr) => modifiableString(expr) + "*"
+      case QRepetition(expr, min, max) => s"${modifiableString(expr)}[$min,$max]"
+      case (QClusterFromWord(_, _, _) | QPosFromWord(_, _, _) | QAnd(_, _)) =>
+        throw new NotImplementedError("No implementation for " + query.getClass.getName)
+      case x: QSimilarPhrases => ???
+    }
+
+    def modifiableString(qexpr: QExpr): String = qexpr match {
+      case _: QLeaf | _: QCapture | _: QDisj => recurse(qexpr)
+      case _ => "(?:" + recurse(qexpr) + ")"
+    }
+
+    recurse(query)
   }
 
   /** @param qexpr query expression to evaluate
@@ -163,9 +181,14 @@ object QueryLanguage {
       val lengths = seq.map(getQueryLength)
       if (lengths.forall(_ != -1)) lengths.sum else -1
     }
-    case QDisj(seq) => {
+    case QDisj(seq) =>
       val lengths = seq.map(getQueryLength)
       if (lengths.forall(_ == lengths.head)) lengths.head else -1
+    case QRepetition(expr, min, max) => if (min == max) {
+      val exprLength = getQueryLength(expr)
+      if (exprLength == -1) -1 else exprLength * min
+    } else {
+      -1
     }
     case q: QAtom => getQueryLength(q.qexpr)
     case QAnd(q1, q2) => math.min(getQueryLength(q1), getQueryLength(q2))
@@ -193,11 +216,14 @@ object QueryLanguage {
         val name = tableCols(unnamedCounts)
         unnamedCounts += 1
         QNamed(recurse(q), name)
-      case q: QAtom => recurse(q.qexpr)
-      case q: QLeaf => q
+      case QStar(q) => QStar(recurse(q))
+      case QPlus(q) => QPlus(recurse(q))
+      case QNonCap(q) => QNonCap(recurse(q))
       case QSeq(children) => QSeq(children.map(recurse))
       case QDisj(children) => QDisj(children.map(recurse))
       case QAnd(expr1, expr2) => QAnd(recurse(expr1), recurse(expr2))
+      case QRepetition(expr, min, max) => QRepetition(expr, min, max)
+      case q: QLeaf => q
     }
     val output = recurse(qexpr)
     require(unnamedCounts == 0 || unnamedCounts == tableCols.size)

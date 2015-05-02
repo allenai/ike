@@ -1,8 +1,7 @@
 package org.allenai.dictionary
 
+import spray.json.DefaultJsonProtocol._
 import spray.json._
-import DefaultJsonProtocol._
-import org.allenai.common.immutable.Interval
 
 object JsonSerialization {
   implicit val qexprFormat = QExprJsonSerialization.QExprFormat
@@ -12,7 +11,7 @@ object JsonSerialization {
   implicit val groupedBlackLabResultFormat = jsonFormat3(GroupedBlackLabResult.apply)
   implicit val qwordFormat = jsonFormat1(QWord.apply)
   implicit val tableValueFormat = jsonFormat1(TableValue.apply)
-  implicit val tableRowForamt = jsonFormat1(TableRow.apply)
+  implicit val tableRowForamt = jsonFormat2(TableRow.apply)
   implicit val tableFormat = jsonFormat4(Table.apply)
   implicit val searchConfigFormat = jsonFormat2(SearchConfig.apply)
   implicit val searchRequestFormat = jsonFormat4(SearchRequest.apply)

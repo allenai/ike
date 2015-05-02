@@ -1,8 +1,6 @@
 package org.allenai.dictionary.index
 
-import scala.xml.Elem
-import scala.xml.Text
-import scala.xml.Node
+import scala.xml.{ Elem, Node, Text }
 
 object XmlSerialization {
   def xml(text: IndexableText): Elem = {

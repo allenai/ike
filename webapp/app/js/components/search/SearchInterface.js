@@ -59,6 +59,7 @@ var SearchInterface = React.createClass({
     results.value.groups = response.groups;
     this.props.results.value.errorMessage = null;
     results.requestChange(results.value);
+    this.refs.searchResults.pageTo(0)
     this.setState({qexpr: response.qexpr});
   },
   searchFailure: function(message) {
@@ -140,8 +141,10 @@ var SearchInterface = React.createClass({
         config={config}
         handleChange={handleChange}
         rootState={qexpr}/>;
+    // Keep a ref to this component so we can reset the page number when a search completes
     var searchResults =
       <SearchResults
+        ref="searchResults"
         target={target}
         query={query}
         results={results}

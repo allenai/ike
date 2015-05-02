@@ -1,7 +1,7 @@
 package org.allenai.dictionary
-import spray.json._
-import DefaultJsonProtocol._
 import org.allenai.common.json._
+import spray.json.DefaultJsonProtocol._
+import spray.json._
 
 object QExprJsonSerialization {
   implicit object QExprFormat extends RootJsonFormat[QExpr] {
@@ -22,6 +22,7 @@ object QExprJsonSerialization {
       case q: QPosFromWord => q.toJson
       case q: QAnd => q.toJson
       case q: QSimilarPhrases => q.toJson
+      case q: QRepetition => q.toJson
     }
     override def read(jsValue: JsValue): QExpr = jsValue.asJsObject.unpackAs[QExpr]
   }
@@ -39,6 +40,7 @@ object QExprJsonSerialization {
   implicit val qnonCapFormat = jsonFormat1(QNonCap.apply).pack("type" -> "QNonCap")
   implicit val qstarFormat = jsonFormat1(QStar.apply).pack("type" -> "QStar")
   implicit val qplusFormat = jsonFormat1(QPlus.apply).pack("type" -> "QPlus")
+  implicit val qrepetitionFormat = jsonFormat3(QRepetition.apply).pack("type" -> "QRepetition")
   implicit val qseqFormat = jsonFormat1(QSeq.apply).pack("type" -> "QSeq")
   implicit val qdisjFormat = jsonFormat1(QDisj.apply).pack("type" -> "QDisj")
   implicit val qcfwFormat = jsonFormat3(QClusterFromWord.apply).pack("type" -> "QClusterFromWord")
