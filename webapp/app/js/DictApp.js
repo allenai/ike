@@ -95,6 +95,7 @@ var DictApp = React.createClass({
       gapi.client.load('plus','v1', function() {
         var request = gapi.client.plus.people.get({ userId: "me" });
         request.execute(function(resp) {
+          console.log(resp);
           var userEmail = resp.emails[0].value;
           self.setState({
             userEmail: userEmail,
@@ -117,6 +118,7 @@ var DictApp = React.createClass({
   },
   signIn: function() {
     var additionalParams = {
+      scope: "email",
       callback: this.onSignIn,
       cookiepolicy: "single_host_origin",
       clientid: "793503486502-8q1pf7shj3jq7ak2q8ib1ca5hlufdfv7.apps.googleusercontent.com"
