@@ -117,6 +117,7 @@ var DictApp = React.createClass({
   },
   signIn: function() {
     var additionalParams = {
+      scope: "email",
       callback: this.onSignIn,
       cookiepolicy: "single_host_origin",
       clientid: "793503486502-8q1pf7shj3jq7ak2q8ib1ca5hlufdfv7.apps.googleusercontent.com"
