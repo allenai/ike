@@ -99,7 +99,6 @@ var DictApp = React.createClass({
       gapi.client.load('plus','v1', function() {
         var request = gapi.client.plus.people.get({ userId: "me" });
         request.execute(function(resp) {
-          console.log(resp);
           var userEmail = resp.emails[0].value;
           self.setState({
             userEmail: userEmail,
