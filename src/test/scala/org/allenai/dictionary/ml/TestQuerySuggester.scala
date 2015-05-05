@@ -206,9 +206,27 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val startingQuery = QueryLanguage.parse("blah blah ({I, like})").get
     val suggestions =
       QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
-        "test",  false, SuggestQueryConfig(5, 2, 100, 1, -5, 0, true)).suggestions
+        "test",  false, SuggestQueryConfig(10, 2, 100, 1, -5, 0, true)).suggestions
     val q = suggestions(0).query.asInstanceOf[QNamed]
     assertResult(q.name)("c1")
     assertResult(q.qexpr.asInstanceOf[QDisj].qexprs.toSet)(Set(QWord("I"), QWord("like")))
+  }
+
+  it should "suggest altering repeated op" in {
+    val table = Table("test", Seq("c1"),
+      Seq(Seq("I like mango"), Seq("I hate those"), Seq("It tastes great")).map { x =>
+        TableRow(x.map(y => TableValue(y.split(" ").map(word => QWord(word)))))
+      },
+      Seq()
+    )
+    val startingQuery = QueryLanguage.parse("(.[1,3])").get
+    val suggestions =
+      QuerySuggester.suggestQuery(searcher, startingQuery, Map("test" -> table),
+        "test",  true, SuggestQueryConfig(10, 2, 100, 100, -1, -1, true)).suggestions
+    val bestScore = suggestions(0).score
+    val bestQueries = suggestions.filter(_.score == bestScore)
+    val queries = bestQueries.map(x => x.query)
+    assert(queries contains QNamed(QSeq(Seq(QPos("PRP"), QPos("VBP"),
+      QRepetition(QWildcard(), 0, 1))), "c1"))
   }
 }

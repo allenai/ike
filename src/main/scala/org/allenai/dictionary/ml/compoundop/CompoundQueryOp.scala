@@ -65,10 +65,10 @@ object CompoundQueryOp {
   private def changeToken(
     tokenOps: Iterable[TokenQueryOp],
     current: QExpr
-  ): Option[QExpr] = {
+  ): Seq[QExpr] = {
     if (tokenOps.exists(_.isInstanceOf[RemoveToken])) {
       require(tokenOps.size == 1)
-      None
+      Seq()
     } else {
       val (leafOps, otherOps) = tokenOps.partition(_.isInstanceOf[ChangeLeaf])
       val leafOpsCast = leafOps.map(_.asInstanceOf[ChangeLeaf])
@@ -79,28 +79,51 @@ object CompoundQueryOp {
           case QRepetition(expr, min, max) => QRepetition(changeLeaf(leafOpsCast, expr), min, max)
           case _ => changeLeaf(leafOpsCast, current)
         }
-        Some(newOp)
+        Seq(newOp)
       } else {
-        require(otherOps.size <= 2) // At most a SetMin and a SetMax op
-        val newChild = current match {
-          case QStar(expr) => changeLeaf(leafOpsCast, expr)
-          case QPlus(expr) => changeLeaf(leafOpsCast, expr)
-          case QRepetition(expr, _, _) => changeLeaf(leafOpsCast, expr)
+        val repeatOp = current match {
+          case qr: QRepeating => qr
           case _ => throw new IllegalArgumentException()
         }
-        val repeatOp = current.asInstanceOf[QRepeating]
-        val (min, max) =
-          otherOps.foldLeft((repeatOp.min, repeatOp.max)) {
-            case ((_, curMax), op: SetMin) => (op.min, curMax)
-            case ((curMin, _), op: SetMax) => (curMin, op.max)
-            case _ => throw new RuntimeException("Should only have SetMin and SetMax ops left")
+        val (setRepeatedOps, setRepetitions) = otherOps.partition(_.isInstanceOf[SetRepeatedToken])
+        if (setRepeatedOps.nonEmpty) {
+          require(leafOps.size == 0)
+          require(setRepetitions.size <= 1)
+          require(setRepetitions.forall(_.isInstanceOf[SetMax]))
+          val castSetROps = setRepeatedOps.asInstanceOf[Iterable[SetRepeatedToken]]
+          val ropsMap = castSetROps.map(x => (x.index, x.qexpr)).toMap
+          val maxIndex = castSetROps.map(_.index).max
+          require(repeatOp.min <= maxIndex)
+          val newExpression = (1 to maxIndex).map(ropsMap.getOrElse(_, repeatOp.qexpr))
+          val newMax = if(setRepetitions.isEmpty) {
+            repeatOp.max
+          } else {
+            setRepetitions.head.asInstanceOf[SetMax].max
           }
-        (min, max, repeatOp) match {
-          case (0, 0, _) => None
-          case (1, 1, _) => Some(newChild)
-          case (0, -1, QPlus(_)) => Some(QStar(newChild))
-          case (1, -1, QStar(_)) => Some(QPlus(newChild))
-          case (_, _, qr: QRepeating) => Some(QRepetition(newChild, min, max))
+          val adjustedMax = Math.max(newMax - maxIndex, -1)
+          val adjustedMin = Math.max(repeatOp.min - maxIndex, 0)
+          newExpression ++
+              QueryLanguage.convertRepetition(QRepetition(repeatOp.qexpr, adjustedMin,
+                adjustedMax))
+        } else {
+          val newChild = repeatOp match {
+            case QStar(expr) => changeLeaf(leafOpsCast, expr)
+            case QPlus(expr) => changeLeaf(leafOpsCast, expr)
+            case QRepetition(expr, _, _) => changeLeaf(leafOpsCast, expr)
+          }
+          val (min, max) =
+            otherOps.foldLeft((repeatOp.min, repeatOp.max)) {
+              case ((_, curMax), op: SetMin) => (op.min, curMax)
+              case ((curMin, _), op: SetMax) => (curMin, op.max)
+              case _ => throw new RuntimeException("Should only have SetMin and SetMax ops left")
+            }
+          (min, max, repeatOp) match {
+            case (0, 0, _) => Seq()
+            case (1, 1, _) => Seq(newChild)
+            case (0, -1, QPlus(_)) => Seq(QStar(newChild))
+            case (1, -1, QStar(_)) => Seq(QPlus(newChild))
+            case (_, _, qr: QRepeating) => Seq(QRepetition(newChild, min, max))
+          }
         }
       }
     }
@@ -152,7 +175,8 @@ object CompoundQueryOp {
     // should be removed and not replaced
     var newSeq =
       query.getSeq.zipWithIndex.map {
-        case (qexpr, i) => modifierOps.getOrElse(i + 1, Some(qexpr))
+        case (qexpr, i) =>
+          modifierOps.getOrElse(i + 1, Seq(qexpr))
       }
 
     // Now split up our new token sequence into capture and non capture groups, this is
@@ -167,7 +191,10 @@ object CompoundQueryOp {
         val chunkSize = query.captures(onIndex).seq.size
         val (newCaptureSeq, nextSeq) = newSeq.splitAt(chunkSize)
         newSeq = nextSeq
-        val newCapture = CaptureSequence(newCaptureSeq.flatten, query.captures(onIndex).columnName)
+        val newCapture = CaptureSequence(newCaptureSeq.flatten,
+          query.captures
+            (onIndex)
+            .columnName)
         captures = newCapture :: captures
         onIndex += 1
       } else {

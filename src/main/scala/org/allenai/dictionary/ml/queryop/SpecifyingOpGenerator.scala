@@ -14,7 +14,8 @@ import scala.collection.immutable.IntMap
 case class SpecifyingOpGenerator(
     suggestPos: Boolean,
     suggestWord: Boolean,
-    clusterSizes: Seq[Int]
+    clusterSizes: Seq[Int],
+    setRepeatedOp: Boolean = false
 ) extends OpGenerator {
 
   private def getLeafGenerator(
@@ -70,13 +71,15 @@ case class SpecifyingOpGenerator(
           (SetMax(index, n), IntMap(editsWithSize.filter(_.repeats <= n).
             map(x => (x.index, x.required)): _*))
         }
-
-        val leafOps = OpGenerator.getSetTokenOps(matches, getLeafGenerator(
-          Some(repeatingOp.qexpr),
-          isCapture
-        )).asInstanceOf[Map[QueryOp, IntMap[Int]]]
-
-        (setMinOps ++ setMaxOps ++ removeOps ++ leafOps).toMap
+        val leafGenerator = getLeafGenerator(Some(repeatingOp.qexpr), isCapture)
+        val leafOps = OpGenerator.getSetTokenOps(matches, leafGenerator).
+            asInstanceOf[Map[QueryOp, IntMap[Int]]]
+        val repeatedOps = if (setRepeatedOp) {
+          OpGenerator.getRepeatedOpMatch(matches, leafGenerator)
+        } else {
+          Seq()
+        }
+        (setMinOps ++ setMaxOps ++ removeOps ++ leafOps ++ repeatedOps).toMap
       }
     }
   }

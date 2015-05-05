@@ -100,7 +100,7 @@ object QuerySuggester extends Logging {
       val queueFull = priorityQueue.size >= beamSize
       val opAdded = if (!queueFull || priorityQueue.head._2 < score) {
         val repeatedOps = cop.ops.filter(opsUsed(_) >= maxOpOccurances)
-        if (!repeatedOps.isEmpty) {
+        if (repeatedOps.nonEmpty) {
           // Adding would result in overusing an op, so we try to find an element in the queue
           // that is lowering scoring and that we can remove to allow us to add this op
           val candidatesForRemoval = priorityQueue.filter {
@@ -282,7 +282,8 @@ object QuerySuggester extends Logging {
         SpecifyingOpGenerator(
           selectConf.getBoolean("suggestPos"),
           selectConf.getBoolean("suggestWord"),
-          clusterSizes
+          clusterSizes,
+          selectConf.getBoolean("suggestSetRepeatedOp")
         )
       } else {
         val selectConf = querySuggestionConf.getConfig("broaden")
@@ -348,7 +349,14 @@ object QuerySuggester extends Logging {
         (x: EvaluatedOp) => OpConjunction.apply(x, maxRemoves)
       }
 
-    val unlabelledBiasCorrection = lastDoc / lastUnlabelledDoc.toDouble
+    val unlabelledBiasCorrection =
+      Math.min(
+        Math.max(if (lastUnlabelledDoc > 0) {
+          lastDoc / lastUnlabelledDoc.toDouble
+        } else {
+          lastDoc
+        }, 1), querySuggestionConf.getDouble("maxUnlabelledBiasCorrection")
+      )
     val evalFunction =
       if (narrow) {
         SumEvaluator(
@@ -428,6 +436,7 @@ object QuerySuggester extends Logging {
     } else {
       operatorsPrunedByScore
     }
+
     val scoredOps = operatorsPruneByRepetition.take(maxToSuggest).map {
       case (op, score) =>
         val query = op.applyOps(tokenizedQuery).getQuery

@@ -24,6 +24,29 @@ object OpGenerator {
     operatorMap.map { case (k, v) => k -> IntMap(v: _*) }.toMap
   }
 
+  /** @param matches to generate the operators for
+    * @param leafGenerator that determines what QLeaf op to suggest
+    * @return map of SetRepeatedToken to the edit map of that op
+    */
+  def getRepeatedOpMatch(
+    matches: QueryMatches,
+    leafGenerator: QLeafGenerator
+  ): Map[SetRepeatedToken, IntMap[Int]] = {
+    val operatorMap = scala.collection.mutable.Map[SetRepeatedToken, List[(Int, Int)]]()
+    matches.matches.zipWithIndex.foreach {
+      case (queryMatch, matchIndex) =>
+        val tokens = queryMatch.tokens
+        tokens.zipWithIndex.foreach { case(token, tokenIndex) =>
+          leafGenerator.generateLeaves(token).foreach { qLeaf =>
+            val op = SetRepeatedToken(matches.queryToken.slot, tokenIndex + 1, qLeaf)
+            val currentList = operatorMap.getOrElse(op, List[(Int, Int)]())
+            operatorMap.put(op, (matchIndex, if (queryMatch.didMatch) 0 else 1) :: currentList)
+          }
+        }
+    }
+    operatorMap.map { case (k, v) => k -> IntMap(v: _*) }.toMap
+  }
+
   /** @param matches to generate the map for
     * @param leafGenerator that determines which ops to build
     * @return map of SetToken ops to the edit map of that op

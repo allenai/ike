@@ -238,4 +238,26 @@ object QueryLanguage {
     require(unnamedCounts == 0 || unnamedCounts == tableCols.size)
     output
   }
+
+  /** Convert a QRepetition to a QStar or QPlus if possible, None if it can be deleted */
+  def convertRepetition(qexpr: QRepetition): Option[QExpr] = qexpr match {
+    case QRepetition(expr, 0, -1) => Some(QStar(expr))
+    case QRepetition(expr, 1, -1) => Some(QPlus(expr))
+    case QRepetition(expr, 1, 1) => Some(expr)
+    case QRepetition(expr, 0, 0) => None
+    case _ => Some(qexpr)
+  }
+
+  /** @return If qexpr is a QSeq an equivalent QSeq that has no QSeq as children, otherwise qexpr */
+  def flatten(qexpr: QExpr): QExpr = qexpr match {
+    case QSeq(seq) => if (seq.size == 1) {
+        flatten(seq.head)
+      } else {
+        QSeq(seq.map {
+          case QSeq(childSeq) => childSeq.map(flatten)
+          case child => Seq(child)
+        }.flatten)
+    }
+    case _ => qexpr
+  }
 }

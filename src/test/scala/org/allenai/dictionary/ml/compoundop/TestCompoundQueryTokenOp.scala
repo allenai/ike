@@ -84,6 +84,35 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     }
   }
 
+  "CompoundOp" should "work for set repetition token" in {
+    val startingQuery = QueryLanguage.parse("NN* NNS[2,4] (?<capture> c1)").get
+    val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
+    val max1 = SetMax(1, 5)
+    val set10 = SetRepeatedToken(1, 1, QWord("the"))
+    val set13 = SetRepeatedToken(1, 3, QWord("cat"))
+    val set22 = SetRepeatedToken(2, 2, QWord("cat"))
+    val set24 = SetRepeatedToken(2, 4, QWord("cat"))
+    val set23 = SetRepeatedToken(2, 3, QWord("cat"))
+
+    assertResult(QueryLanguage.parse("the NN* NNS[2,4] (?<capture> c1)").get) {
+      CompoundQueryOp.applyOps(tokenized, Set(set10)).getQuery
+    }
+    assertResult(QueryLanguage.parse("the NN cat NN* NNS[2,4] (?<capture> c1)").get) {
+      CompoundQueryOp.applyOps(tokenized, Set(set10, set13)).getQuery
+    }
+    assertResult(QueryLanguage.parse("the NN cat NN[0,2] NNS[2,4] (?<capture> c1)").get) {
+      CompoundQueryOp.applyOps(tokenized, Set(set10, set13, max1)).getQuery
+    }
+    assertResult(QueryLanguage.parse("NN* NNS cat NNS[0,2] (?<capture> c1)").get) {
+      CompoundQueryOp.applyOps(tokenized, Set(set22)).getQuery
+    }
+    assertResult(QueryLanguage.parse("NN* NNS NNS NNS cat (?<capture> c1)").get) {
+      CompoundQueryOp.applyOps(tokenized, Set(set24)).getQuery
+    }
+    assertResult(QueryLanguage.parse("NN* NNS cat cat NNS[0,1] (?<capture> c1)").get) {
+      CompoundQueryOp.applyOps(tokenized, Set(set22, set23)).getQuery
+    }
+  }
 
   it should "apply disjunction of ops correctly" in {
     implicit def opToEvaluatedOp(x: TokenQueryOp): EvaluatedOp = EvaluatedOp(x, IntMap())

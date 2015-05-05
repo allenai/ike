@@ -55,6 +55,7 @@ abstract class ChangeLeaf extends TokenQueryOp {
     case cl: ChangeLeaf => if (other == this) NONE else OR
     case cm: ChangeRepetition => AND
     case rt: RemoveToken => NONE
+    case str: SetRepeatedToken => NONE
   }
 }
 
@@ -69,6 +70,7 @@ case class SetMin(slot: Slot, min: Int) extends ChangeRepetition {
     case cm: SetMax => if (cm.max >= min) AND else NONE
     case cm: SetMin => NONE
     case rt: RemoveToken => NONE
+    case str: SetRepeatedToken => NONE
   }
 }
 
@@ -84,6 +86,23 @@ case class SetMax(slot: Slot, max: Int) extends ChangeRepetition {
     case cm: SetMin => if (cm.min <= max) AND else NONE
     case cm: SetMax => NONE
     case rt: RemoveToken => NONE
+    case str: SetRepeatedToken => if (max >= str.index) AND else NONE
+  }
+}
+
+object SetRepeatedToken {
+  def apply(slotIndex: Int, repetitionIndex: Int, qexpr: QExpr): SetRepeatedToken = {
+    SetRepeatedToken(QueryToken(slotIndex), repetitionIndex, qexpr)
+  }
+}
+/** Sets a single token within a QRepetition (ex. ".[1,4]" -> ". NN .[0,2]" */
+case class SetRepeatedToken(slot: Slot, index: Int, qexpr: QExpr) extends TokenQueryOp {
+  override def combinable(other: TokenQueryOp): TokenCombination = other match {
+    case cl: ChangeLeaf => NONE
+    case cm: SetMin => NONE
+    case cm: SetMax => if (cm.max >= index) AND else NONE
+    case rt: RemoveToken => NONE
+    case str: SetRepeatedToken => if (str.index == index) NONE else AND
   }
 }
 
