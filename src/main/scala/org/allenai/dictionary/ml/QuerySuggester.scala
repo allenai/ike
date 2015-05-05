@@ -282,7 +282,7 @@ object QuerySuggester extends Logging {
             ReplaceTokenGenerator.specifyTokens(
               tokenizedQuery.getSeq,
               Range(1, tokenSeq.size + 1),
-              Seq("pos"), Seq(2, 4, 6)
+              Seq("pos")
             )
           )
         } else {
@@ -290,7 +290,7 @@ object QuerySuggester extends Logging {
           val targetCaptureNames = SpansFuzzySequence.getMissesCaptureGroupNames(tokenSeq.size)
           val targetIndices = targetCaptureNames.map(x => captureNames.indexOf(x))
           Seq(RequiredEditsGenerator(
-            QLeafGenerator(Set("pos"), Set(4)),
+            QLeafGenerator(Set("pos")),
             QLeafGenerator(Set("pos")),
             targetIndices
           ))

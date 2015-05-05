@@ -9,23 +9,20 @@ object ReplaceTokenGenerator {
     * that make the given query strictly more specific.
     */
   def specifyTokens(queryAsTokens: Seq[QExpr], indices: Seq[Int],
-    properties: Seq[String],
-    clusterSizes: Seq[Int] = Seq()): ReplaceTokenGenerator = {
+    properties: Seq[String]): ReplaceTokenGenerator = {
     require(indices.max <= queryAsTokens.size)
-    require(clusterSizes.size == 0 || clusterSizes.min >= 1)
     val indexLeafMap = indices.flatMap(index => {
       val qexpr = queryAsTokens(index - 1)
-      val (props, clusters) = qexpr match {
-        case QWildcard() => (Seq("pos", "word"), clusterSizes)
-        case QPos(_) => (Seq("word"), Seq())
-        case QCluster(cluster) => (Seq("word"), clusterSizes.filter(_ > cluster.length))
-        case _ => (Seq(), Seq())
+      val props = qexpr match {
+        case QWildcard() => Seq("pos", "word")
+        case QPos(_) => Seq("word")
+        case _ => Seq()
       }
       val propsToKeep = props.filter(properties contains _).toSet
-      if (propsToKeep.size + clusters.size == 0) {
+      if (propsToKeep.size == 0) {
         None
       } else {
-        Some((index, QLeafGenerator(propsToKeep, clusters.toSet)))
+        Some((index, QLeafGenerator(propsToKeep)))
       }
     })
     new ReplaceTokenGenerator(indexLeafMap)
