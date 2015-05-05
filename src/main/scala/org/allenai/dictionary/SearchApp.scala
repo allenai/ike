@@ -2,6 +2,7 @@ package org.allenai.dictionary
 
 import com.typesafe.config.Config
 import nl.inl.blacklab.search.{ HitsWindow, Searcher, TextPattern }
+import org.allenai.common.Config.EnhancedConfig
 import org.allenai.common.Logging
 import org.allenai.dictionary.ml.QuerySuggester
 
@@ -22,15 +23,16 @@ case class SearchResponse(qexpr: QExpr, groups: Seq[GroupedBlackLabResult])
 
 case class SearchApp(config: Config) extends Logging {
   logger.debug(s"Building SearchApp for ${config.getString("name")}")
+  val description = config.get[String]("description")
   val indexDir = DataFile.fromConfig(config)
   val searcher = Searcher.open(indexDir)
   def blackLabHits(textPattern: TextPattern, limit: Int): Try[HitsWindow] = Try {
     searcher.find(textPattern).window(0, limit)
   }
   def fromHits(hits: HitsWindow): Try[Seq[BlackLabResult]] = Try {
-    BlackLabResult.fromHits(hits).toSeq.map(HackyBlackLabSemantics.removeConstToken)
+    BlackLabResult.fromHits(hits).toSeq
   }
-  def semantics(query: QExpr): Try[TextPattern] = Try(HackyBlackLabSemantics.blackLabQuery(query))
+  def semantics(query: QExpr): Try[TextPattern] = Try(BlackLabSemantics.blackLabQuery(query))
   def suggestQuery(request: SuggestQueryRequest): Try[SuggestQueryResponse] = for {
     query <- QueryLanguage.parse(request.query)
     suggestion <- Try(

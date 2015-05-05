@@ -40,7 +40,7 @@ case object BlackLabResult {
   /** Converts a hit to a BlackLabResult. Returns None if the dreaded BlackLab NPE is returned
     * when computing the capture groups.
     */
-  def fromHit(hits: Hits, hit: Hit, kwicSize: Int = 10): Option[BlackLabResult] = {
+  def fromHit(hits: Hits, hit: Hit, kwicSize: Int = 40): Option[BlackLabResult] = {
     val kwic = hits.getKwic(hit, kwicSize)
     val data = wordData(hits, kwic)
     val offset = Interval.open(kwic.getHitStart, kwic.getHitEnd)
