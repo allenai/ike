@@ -21,7 +21,7 @@ class TestOpGenerator extends UnitSpec {
     assertResult(IntMap(0 -> 0))(rOps(SetRepeatedToken(1, 1, QWord("b"))))
     assertResult(IntMap(1 -> 0))(rOps(SetRepeatedToken(1, 1, QWord("a"))))
     assertResult(IntMap(0 -> 0))(rOps(SetRepeatedToken(1, 2, QWord("b"))))
-    assertResult(IntMap(0 -> 0, 0 -> 0))(rOps(SetRepeatedToken(1, 2, QPos("NN"))))
+    assertResult(IntMap(0 -> 0, 1 -> 0))(rOps(SetRepeatedToken(1, 1, QPos("NN"))))
     assertResult(IntMap(0 -> 0))(rOps(SetRepeatedToken(1, 2, QPos("NN"))))
     assertResult(rOps.size)(5)
   }
