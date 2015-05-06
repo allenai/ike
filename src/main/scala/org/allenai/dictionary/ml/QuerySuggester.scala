@@ -236,7 +236,7 @@ object QuerySuggester extends Logging {
 
   /** Return a set of suggested queries given a starting query and a Table
     *
-    * @param searcher Searcher to the corpus to use when suggesting new queries
+    * @param searchers Searchers to the corpora to use when suggesting new queries
     * @param startingQuery Starting query to build suggestion from
     * @param tables Tables to use when building the query
     * @param target Name of the table to optimize the suggested queries for
@@ -247,7 +247,7 @@ object QuerySuggester extends Logging {
     *     statistics about each query
     */
   def suggestQuery(
-    searcher: Searcher,
+    searchers: Seq[Searcher],
     startingQuery: QExpr,
     tables: Map[String, Table],
     target: String,
@@ -309,22 +309,27 @@ object QuerySuggester extends Logging {
 
     logger.debug(s"Retrieving labelled documents...")
     val (labelledHitAnalysis, labelledRetrieveTime) = Timing.time {
-      val hits = hitGatherer.getLabelledSample(queryWithNamedCaptures, searcher, targetTable).
-        window(0, config.maxSampleSize)
-      val analysis = parseHits(hits.window(
-        0,
-        config.maxSampleSize - (config.maxSampleSize * numUnlabelled).toInt
-      ))
-      Some(analysis)
+      Some {
+        searchers.par.map { searcher =>
+          val hits = hitGatherer.getLabelledSample(queryWithNamedCaptures, searcher, targetTable).
+            window(0, config.maxSampleSize)
+          parseHits(hits.window(
+            0,
+            (config.maxSampleSize - (config.maxSampleSize * numUnlabelled) / searchers.length).toInt
+          ))
+        }.reduce(_ ++ _)
+      }
     }
     logger.debug(s"Document retrieval took ${labelledRetrieveTime.toMillis / 1000.0} seconds")
 
     logger.debug(s"Retrieving unlabelled documents...")
     val (unprunnedHitAnalysis, unlabelledRetrieveTime) = Timing.time {
-      val hits = hitGatherer.getSample(queryWithNamedCaptures, searcher, targetTable)
-      val window = hits.window(0, (config.maxSampleSize * numUnlabelled).toInt)
-      val analysis = parseHits(window)
-      if (labelledHitAnalysis.isEmpty) analysis else labelledHitAnalysis.get ++ analysis
+      searchers.par.map { searcher =>
+        val hits = hitGatherer.getSample(queryWithNamedCaptures, searcher, targetTable)
+        val window = hits.window(0, (config.maxSampleSize * numUnlabelled / searchers.length).toInt)
+        val analysis = parseHits(window)
+        if (labelledHitAnalysis.isEmpty) analysis else labelledHitAnalysis.get ++ analysis
+      }.reduce(_ ++ _)
     }
     logger.debug(s"Retrieval took ${unlabelledRetrieveTime.toMillis / 1000.0} seconds")
 

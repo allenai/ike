@@ -6,9 +6,10 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.allenai.common.Logging
+import org.allenai.dictionary.ml.QuerySuggester
 import org.allenai.dictionary.persistence.Tablestore
 import spray.can.Http
-import spray.http.{ HttpMethods, CacheDirectives, HttpHeaders, StatusCodes }
+import spray.http.{ CacheDirectives, HttpHeaders, StatusCodes }
 import spray.httpx.SprayJsonSupport
 import spray.routing.{ ExceptionHandler, HttpService }
 import spray.util.LoggingContext
@@ -18,6 +19,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
+import scala.util.{ Try, Success }
 import scala.util.control.NonFatal
 import scala.xml.NodeSeq
 
@@ -84,6 +86,64 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
       }
   }.reduce(_ ~ _)
 
+  val serviceRoute = pathPrefix("api") {
+    parameters('corpora.?) { corpora =>
+      val searchers = (corpora match {
+        case None => searchApps.values
+        case Some(searcherKeys) => searcherKeys.split('+').map(searchApps).toIterable
+      }).map(_.get)
+
+      path("groupedSearch") {
+        post {
+          entity(as[SearchRequest]) { req =>
+            complete {
+              val results = searchers.par.flatMap(_.search(req).get).seq
+
+              val grouped = req.target match {
+                case Some(target) => SearchResultGrouper.groupResults(req, results)
+                case None => SearchResultGrouper.identityGroupResults(req, results)
+              }
+              val qexpr = SearchApp.parse(req).get
+              SearchResponse(qexpr, grouped)
+            }
+          }
+        }
+      } ~
+        path("wordInfo") {
+          post {
+            entity(as[WordInfoRequest]) { req =>
+              complete {
+                val results = searchers.par.map(_.wordInfo(req).get)
+
+                // find the word
+                val word = results.head.word
+                require(results.forall(_.word == word))
+
+                // combine the pos tags
+                def combineCountMaps[T](left: Map[T, Int], right: Map[T, Int]) =
+                  left.foldLeft(right) {
+                    case (map, newPair) =>
+                      map.updated(newPair._1, map.getOrElse(newPair._1, 0) + newPair._2)
+                  }
+                val posTags = results.map(_.posTags).reduce(combineCountMaps[String])
+
+                WordInfoResponse(word, posTags)
+              }
+            }
+          }
+        } ~
+        path("suggestQuery") {
+          post {
+            entity(as[SuggestQueryRequest]) { req =>
+              complete {
+                SearchApp.suggestQuery(searchers.toSeq, req)
+              }
+            }
+          }
+        }
+    }
+  }
+
   val mainPageRoute = pathEndOrSingleSlash {
     get {
       complete {
@@ -133,10 +193,11 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
           } ~ put {
             entity(as[Table]) { table =>
               complete {
-                if (table.name == tableName)
+                if (table.name == tableName) {
                   Tablestore.put(userEmail, table)
-                else
+                } else {
                   StatusCodes.BadRequest
+                }
               }
             }
           } ~ delete {
@@ -156,6 +217,12 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   }
 
+  val corporaRoute = path("api" / "corpora") {
+    complete {
+      searchApps.keys.mkString("\n")
+    }
+  }
+
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
       case NonFatal(e) =>
@@ -166,5 +233,5 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
-  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoutes ~ tablesRoute)
+  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoutes ~ serviceRoute ~ tablesRoute ~ corporaRoute)
 }
