@@ -43,6 +43,8 @@ object DictionaryToolWebapp {
 class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport with Logging {
   import DictionaryToolWebapp.FutureWithGet
   import JsonSerialization._
+  import spray.json._
+  import spray.json.DefaultJsonProtocol._
 
   logger.debug("Starting DictionaryToolActor") // this is just here to force logger initialization
 
@@ -217,9 +219,9 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
 
   val corporaRoute = path("api" / "corpora") {
     complete {
-      CorpusDescriptions(readySearchApps.map {
-        case (corpusName, app) => CorpusDescription(corpusName, app.get.description)
-      }.toSeq)
+      JsArray(readySearchApps.map {
+        case (corpusName, app) => CorpusDescription(corpusName, app.get.description).toJson
+      }.toSeq: _*)
     }
   }
 

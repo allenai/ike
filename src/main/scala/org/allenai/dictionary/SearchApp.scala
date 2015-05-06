@@ -21,7 +21,6 @@ case class SearchRequest(query: Either[String, QExpr], target: Option[String],
   tables: Map[String, Table], config: SearchConfig)
 case class SearchResponse(qexpr: QExpr, groups: Seq[GroupedBlackLabResult])
 case class CorpusDescription(name: String, description: Option[String])
-case class CorpusDescriptions(descriptions: Seq[CorpusDescription])
 
 case class SearchApp(config: Config) extends Logging {
   logger.debug(s"Building SearchApp for ${config.getString("name")}")
