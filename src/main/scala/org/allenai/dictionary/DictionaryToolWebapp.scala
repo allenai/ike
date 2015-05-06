@@ -219,7 +219,9 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
 
   val corporaRoute = path("api" / "corpora") {
     complete {
-      searchApps.keys.mkString("\n")
+      searchApps.map {
+        case (corpusName, app) => s"$corpusName\t${app.get.description}"
+      }.mkString("\n")
     }
   }
 
