@@ -90,7 +90,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     parameters('corpora.?) { corpora =>
       val searchers = (corpora match {
         case None => searchApps.values
-        case Some(searcherKeys) => searcherKeys.split('+').map(searchApps).toIterable
+        case Some(searcherKeys) => searcherKeys.split(' ').map(searchApps).toIterable
       }).map(_.get)
 
       path("groupedSearch") {
