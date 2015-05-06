@@ -6,7 +6,6 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.allenai.common.Logging
-import org.allenai.dictionary.ml.QuerySuggester
 import org.allenai.dictionary.persistence.Tablestore
 import spray.can.Http
 import spray.http.{ CacheDirectives, HttpHeaders, StatusCodes }
@@ -19,7 +18,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
-import scala.util.{ Try, Success }
 import scala.util.control.NonFatal
 import scala.xml.NodeSeq
 
@@ -89,7 +87,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   val serviceRoute = pathPrefix("api") {
     parameters('corpora.?) { corpora =>
       val searchers = (corpora match {
-        case None => searchApps.values
+        case None => readySearchApps.values
         case Some(searcherKeys) => searcherKeys.split(' ').map(searchApps).toIterable
       }).map(_.get)
 
@@ -219,9 +217,9 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
 
   val corporaRoute = path("api" / "corpora") {
     complete {
-      searchApps.map {
-        case (corpusName, app) => s"$corpusName\t${app.get.description}"
-      }.mkString("\n")
+      CorpusDescriptions(readySearchApps.map {
+        case (corpusName, app) => CorpusDescription(corpusName, app.get.description)
+      }.toSeq)
     }
   }
 
