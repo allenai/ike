@@ -28,9 +28,9 @@ case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
   *
   * @param label label of the hit
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
-  *      this hit (see the ml/README.md)
+  *     this hit (see the ml/README.md)
   * @param captureStrings the string we captured, as a Sequence of capture groups of sequences of
-  *       words
+  *      words
   * @param doc the document number this Example came from
   * @param str String of hit, kept only for debugging purposes
   */
@@ -255,7 +255,10 @@ object QuerySuggester extends Logging {
     }
     logger.debug(s"Read $unlabelledSize unlabelled hits " +
       s"in ${unlabelledReadTime.toMillis / 1000.0} seconds")
-
+    if (unlabelledSize == 0) {
+      logger.info("No unlabelled documents found")
+      return Suggestions(ScoredQuery(startingQuery, 0, 0, 0, 0), Seq(), 0)
+    }
     val lastUnlabelledDoc = unlabelledHits.get(unlabelledSize - 1).doc
     logger.debug(s"Reading labelled hits, starting from doc $lastUnlabelledDoc")
     val ((labelledHits, labelledSize), labelledReadTime) = Timing.time {
