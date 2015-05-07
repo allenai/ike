@@ -91,10 +91,20 @@ object CompoundQueryOp {
           require(setRepetitions.size <= 1)
           require(setRepetitions.forall(_.isInstanceOf[SetMax]))
           val castSetROps = setRepeatedOps.asInstanceOf[Iterable[SetRepeatedToken]]
-          val ropsMap = castSetROps.map(x => (x.index, x.qexpr)).toMap
           val maxIndex = castSetROps.map(_.index).max
-          require(repeatOp.min <= maxIndex)
-          val newExpression = (1 to maxIndex).map(ropsMap.getOrElse(_, repeatOp.qexpr))
+          var prev = 0
+          val newExpression = castSetROps.toSeq.sortBy(_.index).map { op =>
+            val nextTokens = if (prev == op.index - 1) {
+              Seq(op.qexpr)
+            } else if (prev == op.index - 2) {
+              Seq(repeatOp.qexpr, op.qexpr)
+            } else {
+              val repeats = op.index - prev - 1
+              Seq(QRepetition(repeatOp.qexpr, repeats, repeats), op.qexpr)
+            }
+            prev = op.index
+            nextTokens
+          }.flatten
           val newMax = if (setRepetitions.isEmpty) {
             repeatOp.max
           } else {

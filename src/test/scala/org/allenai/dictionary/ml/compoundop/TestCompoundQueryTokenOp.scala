@@ -106,7 +106,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     assertResult(QueryLanguage.parse("NN* NNS cat NNS[0,2] (?<capture> c1)").get) {
       CompoundQueryOp.applyOps(tokenized, Set(set22)).getQuery
     }
-    assertResult(QueryLanguage.parse("NN* NNS NNS NNS cat (?<capture> c1)").get) {
+    assertResult(QueryLanguage.parse("NN* NNS[3,3] cat (?<capture> c1)").get) {
       CompoundQueryOp.applyOps(tokenized, Set(set24)).getQuery
     }
     assertResult(QueryLanguage.parse("NN* NNS cat cat NNS[0,1] (?<capture> c1)").get) {
