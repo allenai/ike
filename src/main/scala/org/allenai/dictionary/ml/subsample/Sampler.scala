@@ -11,7 +11,7 @@ import org.apache.lucene.search.spans.SpanQuery
 object Sampler extends Logging {
 
   /** @return the rows within a table that the given query might match, rows are returned as a
-    *     sequence of phrases, each phrase is a sequence of QWords
+    *    sequence of phrases, each phrase is a sequence of QWords
     */
   def getFilteredRows(query: TokenizedQuery, table: Table): Seq[Seq[Seq[QWord]]] = {
     val captureSizes = query.captures.map {
@@ -55,7 +55,7 @@ object Sampler extends Logging {
       val rowCaptures = row.zip(captureNames).map {
         case (phrase, columnName) => QNamed(QSeq(phrase), columnName)
       }
-      // TODO we could also limit the starting query to only match a lenght that could match a row
+      // TODO we could also limit the starting query to only match a length that could match a row
       // For each row, build a query of the form
       // "phraseInColumn1 . . . phraseInColumn2 .* phraseInColumn2"
       val withWildCards = distanceBetweenCaptures.zip(rowCaptures).map {
@@ -91,25 +91,29 @@ abstract class Sampler {
     *
     * @param qexpr Query to sample for
     * @param searcher Searcher to get samples from
-    * @param table Table the query is targeting
+    * @param targetTable Table the query is targeting
+    * @param tables map of string->Table, used for interpolating queries
     * @return Hits object containing the samples
     */
-  def getSample(qexpr: TokenizedQuery, searcher: Searcher, table: Table): Hits
+  def getSample(qexpr: TokenizedQuery, searcher: Searcher, targetTable: Table,
+    tables: Map[String, Table]): Hits
 
   /** Gets a sample of hits from a corpus that are 'close' to a given query, and that are
     * also limited to hits that capture terms from a particular table
     *
     * @param qexpr Query to sample for
     * @param searcher Searcher to get samples from
-    * @param table Table to limit queries to
+    * @param targetTable Table to limit queries to
+    * @param tables map of string->Table, used for interpolating queries
     * @param startFromDoc document to start collecting hits from, returned hits will not have doc
-    *                   smaller than startFromDoc
+    *                  smaller than startFromDoc
     * @return Hits object containing the samples
     */
   def getLabelledSample(
     qexpr: TokenizedQuery,
     searcher: Searcher,
-    table: Table,
+    targetTable: Table,
+    tables: Map[String, Table],
     startFromDoc: Int
   ): Hits
 }

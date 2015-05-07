@@ -60,10 +60,10 @@ class TestMatchesSampler extends UnitSpec with ScratchDirectory {
       Seq("It", "great")
     )
     assertResult(expectedResults)(hitToAllCaptures(MatchesSampler().getLabelledSample(
-      tokenized, searcher, table, 0
+      tokenized, searcher, table, Map(), 0
     ), table.cols))
     assertResult(expectedResults.drop(1))(hitToAllCaptures(MatchesSampler().getLabelledSample(
-      tokenized, searcher, table, 1
+      tokenized, searcher, table, Map(), 1
     ), table.cols))
   }
 }

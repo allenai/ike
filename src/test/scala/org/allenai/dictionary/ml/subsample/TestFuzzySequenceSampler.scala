@@ -45,7 +45,7 @@ class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
     ))
     val tokenized = TokenizedQuery.buildFromQuery(testQuery, Seq("c1"))
     val hits = FuzzySequenceSampler(0, 1).getSample(tokenized, searcher,
-      Table("", Seq("c1"), Seq(), Seq()))
+      Table("", Seq("c1"), Seq(), Seq()), Map())
     // Match I like mango
     assertResult(Seq((2,3), (0,1), (1,2), (-2,-3)))(
       hits.getCapturedGroups(hits.get(0)).map(span2tuple))
@@ -76,7 +76,7 @@ class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
       "hate those bananas"
     )
     assertResult(expectedResults)(hitsToStrings(FuzzySequenceSampler(0, 1).getLabelledSample(
-      tokenized, searcher, table, 0
+      tokenized, searcher, table, Map(), 0
     )))
   }
 }

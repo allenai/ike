@@ -8,21 +8,29 @@ import org.allenai.dictionary.ml.TokenizedQuery
   */
 case class MatchesSampler() extends Sampler() {
 
-  override def getSample(qexpr: TokenizedQuery, searcher: Searcher, table: Table): Hits = {
-    searcher.find(BlackLabSemantics.blackLabQuery(qexpr.getNamedQuery))
+  override def getSample(
+    qexpr: TokenizedQuery,
+    searcher: Searcher,
+    targetTable: Table,
+    tables: Map[String, Table]
+  ): Hits = {
+    val query = QueryLanguage.interpolateTables(qexpr.getNamedQuery, tables).get
+    searcher.find(BlackLabSemantics.blackLabQuery(query))
   }
 
   override def getLabelledSample(
     qexpr: TokenizedQuery,
     searcher: Searcher,
-    table: Table,
+    targetTable: Table,
+    tables: Map[String, Table],
     startFromDoc: Int
   ): Hits = {
-    val rowQuery = Sampler.buildLabelledQuery(qexpr, table)
-    val spanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(qexpr.getNamedQuery))
+    val rowQuery = Sampler.buildLabelledQuery(qexpr, targetTable)
+    val query = QueryLanguage.interpolateTables(qexpr.getNamedQuery, tables).get
+    val spanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(query))
     val rowSpanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(rowQuery))
     val filteredQuery = new SpanQueryFilterByCaptureGroups(spanQuery, rowSpanQuery,
-      table.cols, startFromDoc)
+      targetTable.cols, startFromDoc)
     searcher.find(filteredQuery)
   }
 }

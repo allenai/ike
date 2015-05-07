@@ -114,7 +114,7 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
       },
       Seq()
     )
-    val hits = FuzzySequenceSampler(1, 1).getLabelledSample(tokenized, searcher, table, 0)
+    val hits = FuzzySequenceSampler(1, 1).getLabelledSample(tokenized, searcher, table, Map(), 0)
 
     val hitAnalysis = HitAnalyzer.buildHitAnalysis(
       Seq(hits),

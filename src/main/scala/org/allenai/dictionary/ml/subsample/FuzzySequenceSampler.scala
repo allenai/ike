@@ -17,11 +17,13 @@ case class FuzzySequenceSampler(minEdits: Int, maxEdits: Int)
   require(minEdits >= 0)
   require(maxEdits >= minEdits)
 
-  def buildFuzzySequenceQuery(tokenizedQuery: TokenizedQuery, searcher: Searcher): SpanQuery = {
+  def buildFuzzySequenceQuery(tokenizedQuery: TokenizedQuery, searcher: Searcher,
+    tables: Map[String, Table]): SpanQuery = {
     require(QueryLanguage.getQueryLength(tokenizedQuery.getQuery)._2 > 0)
-    val asSpanQueries = tokenizedQuery.getSeq.map(
-      q => searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(q))
-    )
+    val asSpanQueries = tokenizedQuery.getSeq.map { queryToken =>
+      val query = QueryLanguage.interpolateTables(queryToken, tables).get
+      searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(query))
+    }
 
     // Figure out what subsequence we should record as capture group.
     var onIndex = 0
@@ -38,20 +40,22 @@ case class FuzzySequenceSampler(minEdits: Int, maxEdits: Int)
       searcher.getIndexStructure.alwaysHasClosingToken(), captureList)
   }
 
-  override def getSample(qexpr: TokenizedQuery, searcher: Searcher, table: Table): Hits = {
-    searcher.find(buildFuzzySequenceQuery(qexpr, searcher))
+  override def getSample(qexpr: TokenizedQuery, searcher: Searcher,
+    targetTable: Table, tables: Map[String, Table]): Hits = {
+    searcher.find(buildFuzzySequenceQuery(qexpr, searcher, tables))
   }
 
   override def getLabelledSample(
     qexpr: TokenizedQuery,
     searcher: Searcher,
-    table: Table,
+    targetTable: Table,
+    tables: Map[String, Table],
     startFromDoc: Int
   ): Hits = {
-    val rowQuery = Sampler.buildLabelledQuery(qexpr, table)
-    val sequenceQuery = buildFuzzySequenceQuery(qexpr, searcher)
+    val rowQuery = Sampler.buildLabelledQuery(qexpr, targetTable)
+    val sequenceQuery = buildFuzzySequenceQuery(qexpr, searcher, tables)
     val rowSpanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(rowQuery))
     searcher.find(new SpanQueryFilterByCaptureGroups(sequenceQuery, rowSpanQuery,
-      table.cols, startFromDoc))
+      targetTable.cols, startFromDoc))
   }
 }
