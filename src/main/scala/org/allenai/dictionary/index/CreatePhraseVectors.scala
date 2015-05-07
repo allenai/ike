@@ -9,7 +9,7 @@ import com.medallia.word2vec.neuralnetwork.NeuralNetworkType
 import com.medallia.word2vec.util.Format
 import org.allenai.common.{ Resource, Logging }
 import org.allenai.common.ParIterator._
-import org.allenai.nlpstack.segment.{ defaultSegmenter => segmenter }
+import org.allenai.nlpstack.segment.{ StanfordSegmenter => segmenter }
 import org.allenai.nlpstack.tokenize.{ defaultTokenizer => tokenizer }
 
 import java.net.URI
@@ -19,7 +19,9 @@ import org.apache.thrift.TSerializer
 
 import scala.collection.immutable.TreeSet
 import scala.collection.mutable
+import scala.collection.concurrent
 import scala.concurrent.ExecutionContext.Implicits.global
+
 import scala.collection.JavaConverters._
 import Ordering.Implicits._
 
@@ -140,26 +142,52 @@ object CreatePhraseVectors extends App with Logging {
       * @return two maps, one with unigram counts, and one with bigram counts
       */
     def phraseCounts(phrases: OrderedPrefixSet) = {
-      val unigramCounts = mutable.Map[Phrase, Int]()
-      val bigramCounts = mutable.Map[(Phrase, Phrase), Int]()
-      def bumpCount[T](map: mutable.Map[T, Int], key: T): Unit = {
-        val count = map.getOrElse(key, 0) + 1
-        map.update(key, count)
+      val bigUnigramCounts = new concurrent.TrieMap[Phrase, Int]
+      val bigBigramCounts = new concurrent.TrieMap[(Phrase, Phrase), Int]
+      def bumpBigCount[T](map: concurrent.Map[T, Int], key: T, increase: Int): Unit = {
+        val prev = map.putIfAbsent(key, 1)
+        prev match {
+          case Some(count) =>
+            val success = map.replace(key, count, count + increase)
+            if (!success) bumpBigCount(map, key, increase)
+          case None => // yay!
+        }
       }
 
-      phrasifiedSentences(phrases).foreach { sentence =>
-        sentence.foreach(bumpCount(unigramCounts, _))
-        if (sentence.length >= 2) {
-          sentence.sliding(2).foreach {
-            case Seq(left, right) =>
-              bumpCount(bigramCounts, (left, right))
+      phrasifiedSentences(phrases).grouped(1024).parForeach {
+        sentences =>
+          {
+            val unigramCounts = mutable.Map[Phrase, Int]()
+            val bigramCounts = mutable.Map[(Phrase, Phrase), Int]()
+            def bumpCount[T](map: mutable.Map[T, Int], key: T): Unit = {
+              val count = map.getOrElse(key, 0) + 1
+              map.update(key, count)
+            }
+
+            sentences.foreach { sentence =>
+              sentence.foreach(bumpCount(unigramCounts, _))
+              if (sentence.length >= 2) {
+                sentence.sliding(2).foreach {
+                  case Seq(left, right) =>
+                    bumpCount(bigramCounts, (left, right))
+                }
+              }
+            }
+
+            unigramCounts.foreach {
+              case (unigram, count) =>
+                bumpBigCount(bigUnigramCounts, unigram, count)
+            }
+            bigramCounts.foreach {
+              case (bigram, count) =>
+                bumpBigCount(bigBigramCounts, bigram, count)
+            }
           }
-        }
       }
 
       def applyMinWordCount[T](map: mutable.Map[T, Int]) =
         map.filter { case (_, count) => count >= minWordCount }
-      (applyMinWordCount(unigramCounts), applyMinWordCount(bigramCounts))
+      (applyMinWordCount(bigUnigramCounts), applyMinWordCount(bigBigramCounts))
     }
 
     /** Given a set of phrases and a threshold, returns a new set of longer phrases.
