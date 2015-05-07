@@ -28,9 +28,9 @@ case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
   *
   * @param label label of the hit
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
-  *        this hit (see the ml/README.md)
+  *       this hit (see the ml/README.md)
   * @param captureStrings the string we captured, as a Sequence of capture groups of sequences of
-  *         words
+  *        words
   * @param doc the document number this Example came from
   * @param str String of hit, kept only for debugging purposes
   */
@@ -231,7 +231,10 @@ object QuerySuggester extends Logging {
     }
     require(QueryLanguage.getCaptureGroups(startingQuery).size == targetTable.cols.size)
 
-    val queryWithNamedCaptures = QueryLanguage.nameCaptureGroups(startingQuery, targetTable.cols)
+    val queryWithNamedCaptures = QueryLanguage.nameCaptureGroups(
+      startingQuery,
+      targetTable.cols
+    )
     val tokenizedQuery = TokenizedQuery.buildFromQuery(queryWithNamedCaptures)
 
     logger.info(s"Making ${if (narrow) "narrowing" else "broadening"} " +
@@ -409,7 +412,7 @@ object QuerySuggester extends Logging {
       ScoredQuery(startingQuery, score, p, n, u * unlabelledBiasCorrection)
     }
     logger.info(s"Done suggesting query for " +
-      "${QueryLanguage.getQueryString(queryWithNamedCaptures)}")
+      s"${QueryLanguage.getQueryString(queryWithNamedCaptures)}")
 
     // Remove queries the appear to be completely worthless, don't return
     val operatorsPrunedByScore = operators.filter(_._2 > Double.NegativeInfinity)

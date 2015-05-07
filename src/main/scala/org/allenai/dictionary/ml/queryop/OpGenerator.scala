@@ -36,12 +36,13 @@ object OpGenerator {
     matches.matches.zipWithIndex.foreach {
       case (queryMatch, matchIndex) =>
         val tokens = queryMatch.tokens
-        tokens.zipWithIndex.foreach { case(token, tokenIndex) =>
-          leafGenerator.generateLeaves(token).foreach { qLeaf =>
-            val op = SetRepeatedToken(matches.queryToken.slot, tokenIndex + 1, qLeaf)
-            val currentList = operatorMap.getOrElse(op, List[(Int, Int)]())
-            operatorMap.put(op, (matchIndex, if (queryMatch.didMatch) 0 else 1) :: currentList)
-          }
+        tokens.zipWithIndex.foreach {
+          case (token, tokenIndex) =>
+            leafGenerator.generateLeaves(token).foreach { qLeaf =>
+              val op = SetRepeatedToken(matches.queryToken.slot, tokenIndex + 1, qLeaf)
+              val currentList = operatorMap.getOrElse(op, List[(Int, Int)]())
+              operatorMap.put(op, (matchIndex, if (queryMatch.didMatch) 0 else 1) :: currentList)
+            }
         }
     }
     operatorMap.map { case (k, v) => k -> IntMap(v: _*) }.toMap

@@ -95,7 +95,7 @@ object CompoundQueryOp {
           val maxIndex = castSetROps.map(_.index).max
           require(repeatOp.min <= maxIndex)
           val newExpression = (1 to maxIndex).map(ropsMap.getOrElse(_, repeatOp.qexpr))
-          val newMax = if(setRepetitions.isEmpty) {
+          val newMax = if (setRepetitions.isEmpty) {
             repeatOp.max
           } else {
             setRepetitions.head.asInstanceOf[SetMax].max
@@ -103,8 +103,8 @@ object CompoundQueryOp {
           val adjustedMax = Math.max(newMax - maxIndex, -1)
           val adjustedMin = Math.max(repeatOp.min - maxIndex, 0)
           newExpression ++
-              QueryLanguage.convertRepetition(QRepetition(repeatOp.qexpr, adjustedMin,
-                adjustedMax))
+            QueryLanguage.convertRepetition(QRepetition(repeatOp.qexpr, adjustedMin,
+              adjustedMax))
         } else {
           val newChild = repeatOp match {
             case QStar(expr) => changeLeaf(leafOpsCast, expr)
@@ -191,10 +191,11 @@ object CompoundQueryOp {
         val chunkSize = query.captures(onIndex).seq.size
         val (newCaptureSeq, nextSeq) = newSeq.splitAt(chunkSize)
         newSeq = nextSeq
-        val newCapture = CaptureSequence(newCaptureSeq.flatten,
-          query.captures
-            (onIndex)
-            .columnName)
+        val newCapture = CaptureSequence(
+          newCaptureSeq.flatten,
+          query.captures(onIndex)
+          .columnName
+        )
         captures = newCapture :: captures
         onIndex += 1
       } else {
@@ -227,7 +228,7 @@ abstract class CompoundQueryOp() {
   def ops: Set[TokenQueryOp]
 
   /** @return  Map of (sentence index) -> (number of required edits this combined op
-    *         will have made towards that sentence)
+    *        will have made towards that sentence)
     */
   def numEdits: IntMap[Int]
 

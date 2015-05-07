@@ -73,7 +73,7 @@ case class SpecifyingOpGenerator(
         }
         val leafGenerator = getLeafGenerator(Some(repeatingOp.qexpr), isCapture)
         val leafOps = OpGenerator.getSetTokenOps(matches, leafGenerator).
-            asInstanceOf[Map[QueryOp, IntMap[Int]]]
+          asInstanceOf[Map[QueryOp, IntMap[Int]]]
         val repeatedOps = if (setRepeatedOp) {
           OpGenerator.getRepeatedOpMatch(matches, leafGenerator)
         } else {
