@@ -142,7 +142,7 @@ object QueryLanguage {
       case QWord(value) => value
       case QCluster(value) => "^" + value
       case QPos(value) => value
-      case QDict(value) => value
+      case QDict(value) => "$" + value
       case QWildcard() => "."
       case QSeq(children) => children.map(getQueryString).mkString(" ")
       case QDisj(children) => "{" + children.map(getQueryString).mkString(",") + "}"
