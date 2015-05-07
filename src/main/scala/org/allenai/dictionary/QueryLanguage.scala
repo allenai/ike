@@ -178,7 +178,7 @@ object QueryLanguage {
 
   /** @param qexpr query to evaluate
     * @return range of tokens the query will match, ends with -1 if the query
-    *   can match a variable number of tokens'
+    *  can match a variable number of tokens'
     */
   def getQueryLength(qexpr: QExpr): (Int, Int) = qexpr match {
     case QDict(_) => (0, -1)
@@ -209,21 +209,23 @@ object QueryLanguage {
     *
     * @param qexpr Query expression to name capture groups within
     * @param tableCols Sequence of the columns in a table to be used to name unnamed capture
-    *             groups
+    *            groups
     * @throws IllegalArgumentException if QExpr contains a mix of named and unnamed capture groups,
-    *                             if the name capture group do not have names corresponding
-    *                             to the columns in tableCols, or if the query has the wrong
-    *                             number of capture groups
+    *                            if the name capture group do not have names corresponding
+    *                            to the columns in tableCols, or if the query has the wrong
+    *                            number of capture groups
     */
   def nameCaptureGroups(qexpr: QExpr, tableCols: Seq[String]): QExpr = {
-    var unnamedCounts = 0
+    var columnsLeft = tableCols
     def recurse(qexpr: QExpr): QExpr = qexpr match {
       case QNamed(q, name) =>
+        require(columnsLeft contains name)
+        columnsLeft = columnsLeft.filter(_ != name)
         require(tableCols contains name)
         QNamed(recurse(q), name)
       case QUnnamed(q) =>
-        val name = tableCols(unnamedCounts)
-        unnamedCounts += 1
+        val name = columnsLeft.head
+        columnsLeft = columnsLeft.drop(1)
         QNamed(recurse(q), name)
       case QStar(q) => QStar(recurse(q))
       case QPlus(q) => QPlus(recurse(q))
@@ -235,7 +237,6 @@ object QueryLanguage {
       case q: QLeaf => q
     }
     val output = recurse(qexpr)
-    require(unnamedCounts == 0 || unnamedCounts == tableCols.size)
     output
   }
 
