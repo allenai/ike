@@ -14,8 +14,8 @@ var xhr = require('xhr');
 var DictApp = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
   componentDidMount: function() {
-    var target = this.linkState('target');
     TableManager.addChangeListener(function(tables) {
+      var target = this.linkState('target');
       this.setState({tables: tables});
       if(target.value == null && tables) {
         for(var tableName in tables) {

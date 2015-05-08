@@ -96,18 +96,18 @@ var TableManager = {
     }
   },
   deleteRow: function(tableName, rowType, row) {
-    if (this.hasRow(tableName, rowType, row)) {
-      var rows = tables[tableName][rowType];
-      var index = rows.indexOf(row);
+    var rows = tables[tableName][rowType];
+    var index = this.getRowIndex(tableName, rowType, row);
+    if (index >= 0) {
       rows.splice(index, 1);
       this.updateListeners();
       this.writeTableToServer(tableName);
     }
   },
-  hasRow: function(tableName, rowType, row) {
+  getRowIndex: function(tableName, rowType, row) {
     var table = tables[tableName];
     if(!table)
-      return false;
+      return -1;
 
     var rows;
     if(rowType === "positive") {
@@ -115,7 +115,7 @@ var TableManager = {
     } else if(rowType === "negative") {
       rows = table.negative;
     } else {
-      return false;
+      return -1;
     }
 
     var rowString = function(row) {
@@ -124,7 +124,10 @@ var TableManager = {
       return valueStrings.join("|");
     };
 
-    return rows.map(rowString).indexOf(rowString(row)) >= 0;
+    return rows.map(rowString).indexOf(rowString(row));
+  },
+  hasRow: function(tableName, rowType, row) {
+    return this.getRowIndex(tableName, rowType, row) >= 0;
   },
   hasPositiveRow: function(tableName, row) {
     return this.hasRow(tableName, "positive", row);
