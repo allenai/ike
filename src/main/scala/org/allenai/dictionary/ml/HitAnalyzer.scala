@@ -166,14 +166,16 @@ object HitAnalyzer extends Logging {
 
     val captureGroups = hits.getCapturedGroupNames
 
-    val tokenMatches = query.getNamedTokens.map {
+    // For each queryToken, Either the capture group that token's matches are stored
+    // in or the number of tokens that queryToken will have match
+    val queryTokenMatchLocations = query.getNamedTokens.map {
       case (name, token) =>
         if (captureGroups.contains(name)) {
-          (captureGroups.indexOf(name), true)
+          Right(captureGroups.indexOf(name))
         } else {
           val size = QueryLanguage.getQueryLength(token)
           require(size._2 != -1 && size._1 == size._2)
-          (size._2, false)
+          Left(size._2)
         }
     }
     val allQueryMatches = hits.asScala.map { hit =>
@@ -182,26 +184,21 @@ object HitAnalyzer extends Logging {
       val hitQueryMatches = {
         var tokens = props.map(prop => kwic.getMatch(prop).asScala).
           transpose.map(x => Token(x(0), x(1), x(2)))
-        tokenMatches.map {
-          case (num, useCapture) =>
-            if (useCapture) {
-              // Get the span from the capture groups
-              val span = captureGroups(num)
-              val length =
-                if (span == null) {
-                  0
-                } else {
-                  math.abs(span.end) - math.abs(span.start)
-                }
-              val (matchedTokens, rest) = tokens.splitAt(length)
-              tokens = rest
-              QueryMatch(matchedTokens, didMatch = span != null && span.end >= 0)
-            } else {
-              // Infer the span matches using the QExpr length
-              val (matchedTokens, rest) = tokens.splitAt(num)
+        queryTokenMatchLocations.map {
+          case Right(captureGroupIndex) =>
+            val span = captureGroups(captureGroupIndex)
+            val length = if (span == null) {
+                0
+              } else {
+                math.abs(span.end) - math.abs(span.start)
+              }
+            val (matchedTokens, rest) = tokens.splitAt(length)
+            tokens = rest
+            QueryMatch(matchedTokens, didMatch = span != null && span.end >= 0)
+          case Left(numTokens) =>
+              val (matchedTokens, rest) = tokens.splitAt(numTokens)
               tokens = rest
               QueryMatch(matchedTokens, didMatch = true)
-            }
         }
       }
 
