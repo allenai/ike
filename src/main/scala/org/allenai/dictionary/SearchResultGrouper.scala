@@ -52,7 +52,7 @@ object SearchResultGrouper {
   }
   def createGroups(
     req: SearchRequest,
-    keyed: Seq[KeyedBlackLabResult]
+    keyed: Iterable[KeyedBlackLabResult]
   ): Seq[GroupedBlackLabResult] = {
     val grouped = keyed groupBy keyString map {
       case (keyString, group) =>
@@ -64,7 +64,7 @@ object SearchResultGrouper {
   /** Groups the given results. The groups are keyed using the match groups corresponding to the
     * target table's columns.
     */
-  def groupResults(req: SearchRequest, results: Seq[BlackLabResult]): Seq[GroupedBlackLabResult] = {
+  def groupResults(req: SearchRequest, results: Iterable[BlackLabResult]): Seq[GroupedBlackLabResult] = {
     val withColumnNames = results.map(inferCaptureGroupNames(req, _))
     val keyed = withColumnNames.map(keyResult(req, _))
     createGroups(req, keyed)
@@ -73,7 +73,7 @@ object SearchResultGrouper {
     */
   def identityGroupResults(
     req: SearchRequest,
-    results: Seq[BlackLabResult]
+    results: Iterable[BlackLabResult]
   ): Seq[GroupedBlackLabResult] = {
     val keyed = results map { r => KeyedBlackLabResult(r.matchOffset :: Nil, r) }
     createGroups(req, keyed)

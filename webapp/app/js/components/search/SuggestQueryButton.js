@@ -13,6 +13,7 @@ var SuggestQueryButton = React.createClass({
   getInitialState: function() {
     return {
       suggestions: [],
+      disabled: false,
       narrow: false,
       waiting: false
     };
@@ -54,7 +55,7 @@ var SuggestQueryButton = React.createClass({
     }
 
     var tables = TableManager.getTables()
-
+    var uri = this.props.makeUri('suggestQuery');
     var requestData = {
       body: JSON.stringify({
         query: queryValue,
@@ -63,7 +64,7 @@ var SuggestQueryButton = React.createClass({
         narrow: this.state.narrow,
         config: requestConfig
       }),
-      uri: 'api/suggestQuery',
+      uri: uri,
       method: 'POST',
       headers: {'Content-Type': 'application/json'}
     };
@@ -101,11 +102,12 @@ var SuggestQueryButton = React.createClass({
           <DropdownButton
             style={{fontSize: 'small'}}
             pullRight
-            title="Suggestions">
+            title="Suggestions"
+            disabled={this.props.disabled}>
               {this.state.suggestions.map(this.createMenuItem)}
           </DropdownButton>
           <Button
-            disabled={this.state.waiting}
+            disabled={this.state.waiting || this.props.disabled}
             style={{fontSize: 'small'}}
             onClick={this.suggestQuery}
             >
@@ -117,7 +119,8 @@ var SuggestQueryButton = React.createClass({
           style={{fontSize: 'small'}}
           label='Narrow'
           onChange={this.checkBoxChange}
-          defaultChecked={this.state.narrow}/>
+          defaultChecked={this.state.narrow}
+          disabled={this.props.disabled}/>
       </div>
     </div>
     );

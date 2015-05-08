@@ -28,20 +28,11 @@ class TestSpanQueryFuzzySequence extends UnitSpec with ScratchDirectory {
     assertResult(Seq("I like mango", "I hate those")) {
       runNoisySeqQuery(searcher, Seq(QWord("I"), QWord("like"), QWord("mango")), 1, 3)
     }
-    assertResult(Seq("I like mango .", "hate those bananas .")) {
-      runNoisySeqQuery(searcher, Seq(QWord("I"), QWord("those"), QCluster("00"), QWord(".")), 3, 4)
-    }
     assertResult(Seq()) {
       runNoisySeqQuery(searcher, Seq(QWildcard(), QWord("I"), QWord("like")), 2, 3)
     }
     assertResult(Seq()) {
       runNoisySeqQuery(searcher, Seq(QWord("mango"), QWord("."), QWildcard()), 2, 3)
-    }
-    assertResult(Seq("I like mango", "I hate those")) {
-      runNoisySeqQuery(searcher, Seq(QWord("I"), QCluster("10"), QWord("mango")), 2, 3)
-    }
-    assertResult(Seq("I hate those")) {
-      runNoisySeqQuery(searcher, Seq(QWord("I"), QCluster("10"), QWord("mango")), 2, 2)
     }
     assertResult(Seq("I like mango", "like mango .", "taste not great")) {
       runNoisySeqQuery(searcher, Seq(

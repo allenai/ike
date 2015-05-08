@@ -17,13 +17,12 @@ import nl.inl.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
 
 class BlackLabExample extends UnitSpec with ScratchDirectory {
 
-  val clusters = Map.empty[String, String]
   val text = "A teacher is a person who teaches students ."
   val annotated = NlpAnnotate.annotate(text)
   val tokenSentences = for {
     sentence <- annotated
     indexableTokens = sentence.map { t =>
-      IndexableToken(t.token.string, t.token.postag, t.lemma, "")
+      IndexableToken(t.token.string, t.token.postag, t.lemma)
     }
   } yield indexableTokens
   val doc = IndexableText(IdText("doc1", text), tokenSentences)
@@ -69,7 +68,7 @@ class BlackLabExample extends UnitSpec with ScratchDirectory {
 
   val limit = 1000
   val hits = searcher.find(textPattern).window(0, limit)
-  val transformedHits = BlackLabResult.fromHits(hits).toSeq
+  val transformedHits = BlackLabResult.fromHits(hits, "testCorpus").toSeq
 
   for (hit <- transformedHits) {
     println("Here is the word data:")

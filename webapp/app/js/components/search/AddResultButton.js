@@ -15,7 +15,13 @@ var AddResultButton = React.createClass({
         var words = resultObject.result.wordData;
         var fragment = words.map(function(word) { return word.word; }).join(" ");
         var matchOffset = resultObject.result.matchOffset;
-        return {"fragment": fragment, "words": words, "matchOffset": matchOffset};
+        var corpus = resultObject.result.corpusName;
+        return {
+          "fragment": fragment,
+          "words": words,
+          "matchOffset": matchOffset,
+          "corpus": corpus
+        };
       }),
     };
 

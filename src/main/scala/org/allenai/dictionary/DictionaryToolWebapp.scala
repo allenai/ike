@@ -8,7 +8,7 @@ import com.typesafe.config.ConfigFactory
 import org.allenai.common.Logging
 import org.allenai.dictionary.persistence.Tablestore
 import spray.can.Http
-import spray.http.{ HttpMethods, CacheDirectives, HttpHeaders, StatusCodes }
+import spray.http.{ CacheDirectives, HttpHeaders, StatusCodes }
 import spray.httpx.SprayJsonSupport
 import spray.routing.{ ExceptionHandler, HttpService }
 import spray.util.LoggingContext
@@ -43,6 +43,8 @@ object DictionaryToolWebapp {
 class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport with Logging {
   import DictionaryToolWebapp.FutureWithGet
   import JsonSerialization._
+  import spray.json._
+  import spray.json.DefaultJsonProtocol._
 
   logger.debug("Starting DictionaryToolActor") // this is just here to force logger initialization
 
@@ -52,70 +54,62 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   }.toMap
   def readySearchApps = searchApps.filter(_._2.isCompleted)
 
-  val staticContentRoot = "public"
-  val serviceRoutes = searchApps.map {
-    case (name, searcher) =>
-      pathPrefix(name) {
-        pathSingleSlash {
-          get {
-            getFromFile(staticContentRoot + "/index.html")
-          }
-        } ~ pathEnd {
-          redirect(s"/$name/", StatusCodes.PermanentRedirect)
-        }
-      } ~ pathPrefix(name / "api" / "groupedSearch") {
+  val serviceRoute = pathPrefix("api") {
+    parameters('corpora.?) { corpora =>
+      val searchers = (corpora match {
+        case None => readySearchApps.values
+        case Some(searcherKeys) => searcherKeys.split(' ').map(searchApps).toIterable
+      }).map(_.get)
+
+      path("groupedSearch") {
         post {
           entity(as[SearchRequest]) { req =>
-            complete(searcher.get.groupedSearch(req))
-          }
-        }
-      } ~ pathPrefix(name / "api" / "wordInfo") {
-        post {
-          entity(as[WordInfoRequest]) { req =>
-            complete(searcher.get.wordInfo(req))
-          }
-        }
-      } ~ pathPrefix(name / "api" / "suggestQuery") {
-        post {
-          entity(as[SuggestQueryRequest]) { req =>
-            complete(searcher.get.suggestQuery(req))
-          }
-        }
-      }
-  }.reduce(_ ~ _)
+            complete {
+              val results = searchers.par.flatMap(_.search(req).get).seq
 
-  val mainPageRoute = pathEndOrSingleSlash {
-    get {
-      complete {
-        <html>
-          <head>
-            <title>OkCorpus</title>
-            <meta charset="utf-8"/>
-            <link href="/main.css" rel="stylesheet"/>
-          </head>
-          <body>
-            <div align="center">
-              <img src="/assets/logo.260x260.png" alt="OkCorpus"/>
-              <br/>
-              <div style="display: inline-block; font-size: 150%" align="left">
-                {
-                  NodeSeq.fromSeq(readySearchApps.mapValues(_.get.description).toSeq.sorted.map {
-                    case (name: String, description: Option[String]) =>
-                      <p>
-                        <span style="font-size: 130%"><a href={ name }>{ name }</a></span>
-                        <br/>
-                        { description.getOrElse("") }
-                      </p>
-                  })
-                }
-              </div>
-            </div>
-          </body>
-        </html>
-      }
+              val grouped = req.target match {
+                case Some(target) => SearchResultGrouper.groupResults(req, results)
+                case None => SearchResultGrouper.identityGroupResults(req, results)
+              }
+              val qexpr = SearchApp.parse(req).get
+              SearchResponse(qexpr, grouped)
+            }
+          }
+        }
+      } ~
+        path("wordInfo") {
+          post {
+            entity(as[WordInfoRequest]) { req =>
+              complete {
+                val results = searchers.par.map(_.wordInfo(req).get)
+
+                // find the word
+                val word = results.head.word
+                require(results.forall(_.word == word))
+
+                // combine the pos tags
+                def combineCountMaps[T](left: Map[T, Int], right: Map[T, Int]) =
+                  left.foldLeft(right) {
+                    case (map, newPair) =>
+                      map.updated(newPair._1, map.getOrElse(newPair._1, 0) + newPair._2)
+                  }
+                val posTags = results.map(_.posTags).reduce(combineCountMaps[String])
+
+                WordInfoResponse(word, posTags)
+              }
+            }
+          }
+        } ~
+        path("suggestQuery") {
+          post {
+            entity(as[SuggestQueryRequest]) { req =>
+              complete {
+                SearchApp.suggestQuery(searchers.toSeq, req)
+              }
+            }
+          }
+        }
     }
-  } ~ get {
-    unmatchedPath { p => getFromFile(staticContentRoot + p) }
   }
 
   val tablesRoute = pathPrefix("api" / "tables") {
@@ -133,10 +127,11 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
           } ~ put {
             entity(as[Table]) { table =>
               complete {
-                if (table.name == tableName)
+                if (table.name == tableName) {
                   Tablestore.put(userEmail, table)
-                else
+                } else {
                   StatusCodes.BadRequest
+                }
               }
             }
           } ~ delete {
@@ -156,6 +151,20 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   }
 
+  val corporaRoute = path("api" / "corpora") {
+    complete {
+      JsArray(readySearchApps.map {
+        case (corpusName, app) => CorpusDescription(corpusName, app.get.description).toJson
+      }.toSeq: _*)
+    }
+  }
+
+  val mainPageRoute = pathEndOrSingleSlash {
+    getFromFile("public/index.html")
+  } ~ get {
+    unmatchedPath { p => getFromFile("public" + p) }
+  }
+
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
       case NonFatal(e) =>
@@ -166,5 +175,5 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
-  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoutes ~ tablesRoute)
+  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoute ~ tablesRoute ~ corporaRoute)
 }

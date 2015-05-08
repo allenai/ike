@@ -15,14 +15,16 @@ case class SuggestQueryConfig(beamSize: Int, depth: Int, maxSampleSize: Int,
 case class ScoredStringQuery(query: String, score: Double, msg: String)
 case class SuggestQueryResponse(scoredQueries: Seq[ScoredStringQuery])
 case class WordInfoRequest(word: String, config: SearchConfig)
-case class WordInfoResponse(word: String, clusterId: Option[String], posTags: Map[String, Int])
+case class WordInfoResponse(word: String, posTags: Map[String, Int])
 case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1)
 case class SearchRequest(query: Either[String, QExpr], target: Option[String],
   tables: Map[String, Table], config: SearchConfig)
 case class SearchResponse(qexpr: QExpr, groups: Seq[GroupedBlackLabResult])
+case class CorpusDescription(name: String, description: Option[String])
 
 case class SearchApp(config: Config) extends Logging {
-  logger.debug(s"Building SearchApp for ${config.getString("name")}")
+  val name = config.getString("name")
+  logger.debug(s"Building SearchApp for $name")
   val description = config.get[String]("description")
   val indexDir = DataFile.fromConfig(config)
   val searcher = Searcher.open(indexDir)
@@ -30,28 +32,13 @@ case class SearchApp(config: Config) extends Logging {
     searcher.find(textPattern).window(0, limit)
   }
   def fromHits(hits: HitsWindow): Try[Seq[BlackLabResult]] = Try {
-    BlackLabResult.fromHits(hits).toSeq
+    BlackLabResult.fromHits(hits, name).toSeq
   }
   def semantics(query: QExpr): Try[TextPattern] = Try(BlackLabSemantics.blackLabQuery(query))
-  def suggestQuery(request: SuggestQueryRequest): Try[SuggestQueryResponse] = for {
-    query <- QueryLanguage.parse(request.query)
-    suggestion <- Try(
-      QuerySuggester.suggestQuery(searcher, query, request.tables, request.target,
-        request.narrow, request.config)
-    )
-    stringQueries <- Try(
-      suggestion.map(x => {
-        ScoredStringQuery(QueryLanguage.getQueryString(x.query), x.score, x.msg)
-      })
-    )
-    response = SuggestQueryResponse(stringQueries)
-  } yield response
-  def parse(r: SearchRequest): Try[QExpr] = r.query match {
-    case Left(queryString) => QueryLanguage.parse(queryString)
-    case Right(qexpr) => Success(qexpr)
-  }
+  def suggestQuery(request: SuggestQueryRequest): Try[SuggestQueryResponse] =
+    SearchApp.suggestQuery(Seq(this), request)
   def search(r: SearchRequest): Try[Seq[BlackLabResult]] = for {
-    qexpr <- parse(r)
+    qexpr <- SearchApp.parse(r)
     interpolated <- QueryLanguage.interpolateTables(qexpr, r.tables)
     textPattern <- semantics(interpolated)
     hits <- blackLabHits(textPattern, r.config.limit)
@@ -63,7 +50,7 @@ case class SearchApp(config: Config) extends Logging {
       case Some(target) => SearchResultGrouper.groupResults(req, results)
       case None => SearchResultGrouper.identityGroupResults(req, results)
     }
-    qexpr <- parse(req)
+    qexpr <- SearchApp.parse(req)
     resp = SearchResponse(qexpr, grouped)
   } yield resp
   def wordAttributes(req: WordInfoRequest): Try[Seq[(String, String)]] = for {
@@ -90,10 +77,30 @@ case class SearchApp(config: Config) extends Logging {
     attrs <- wordAttributes(req)
     histogram = attrHist(attrs)
     modes = attrModes(attrs)
-    clusterId = modes.get("cluster")
     posTags = histogram.filterKeys(_._1 == "pos").map {
       case (a, b) => (a._2, b)
     }
-    res = WordInfoResponse(req.word, clusterId, posTags)
+    res = WordInfoResponse(req.word, posTags)
   } yield res
+}
+
+object SearchApp {
+  def parse(r: SearchRequest): Try[QExpr] = r.query match {
+    case Left(queryString) => QueryLanguage.parse(queryString)
+    case Right(qexpr) => Success(qexpr)
+  }
+
+  def suggestQuery(searchApps: Seq[SearchApp], request: SuggestQueryRequest): Try[SuggestQueryResponse] = for {
+    query <- QueryLanguage.parse(request.query)
+    suggestion <- Try(
+      QuerySuggester.suggestQuery(searchApps.map(_.searcher), query, request.tables, request.target,
+        request.narrow, request.config)
+    )
+    stringQueries <- Try(
+      suggestion.map(x => {
+        ScoredStringQuery(QueryLanguage.getQueryString(x.query), x.score, x.msg)
+      })
+    )
+    response = SuggestQueryResponse(stringQueries)
+  } yield response
 }
