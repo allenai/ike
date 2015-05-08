@@ -54,38 +54,6 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   }.toMap
   def readySearchApps = searchApps.filter(_._2.isCompleted)
 
-  val staticContentRoot = "public"
-  val serviceRoutes = searchApps.map {
-    case (name, searcher) =>
-      pathPrefix(name) {
-        pathSingleSlash {
-          get {
-            getFromFile(staticContentRoot + "/index.html")
-          }
-        } ~ pathEnd {
-          redirect(s"/$name/", StatusCodes.PermanentRedirect)
-        }
-      } ~ pathPrefix(name / "api" / "groupedSearch") {
-        post {
-          entity(as[SearchRequest]) { req =>
-            complete(searcher.get.groupedSearch(req))
-          }
-        }
-      } ~ pathPrefix(name / "api" / "wordInfo") {
-        post {
-          entity(as[WordInfoRequest]) { req =>
-            complete(searcher.get.wordInfo(req))
-          }
-        }
-      } ~ pathPrefix(name / "api" / "suggestQuery") {
-        post {
-          entity(as[SuggestQueryRequest]) { req =>
-            complete(searcher.get.suggestQuery(req))
-          }
-        }
-      }
-  }.reduce(_ ~ _)
-
   val serviceRoute = pathPrefix("api") {
     parameters('corpora.?) { corpora =>
       val searchers = (corpora match {
@@ -144,40 +112,6 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   }
 
-  val mainPageRoute = pathEndOrSingleSlash {
-    get {
-      complete {
-        <html>
-          <head>
-            <title>OkCorpus</title>
-            <meta charset="utf-8"/>
-            <link href="/main.css" rel="stylesheet"/>
-          </head>
-          <body>
-            <div align="center">
-              <img src="/assets/logo.260x260.png" alt="OkCorpus"/>
-              <br/>
-              <div style="display: inline-block; font-size: 150%" align="left">
-                {
-                  NodeSeq.fromSeq(readySearchApps.mapValues(_.get.description).toSeq.sorted.map {
-                    case (name: String, description: Option[String]) =>
-                      <p>
-                        <span style="font-size: 130%"><a href={ name }>{ name }</a></span>
-                        <br/>
-                        { description.getOrElse("") }
-                      </p>
-                  })
-                }
-              </div>
-            </div>
-          </body>
-        </html>
-      }
-    }
-  } ~ get {
-    unmatchedPath { p => getFromFile(staticContentRoot + p) }
-  }
-
   val tablesRoute = pathPrefix("api" / "tables") {
     pathPrefix(Segment) { userEmail =>
       path(Segment) { tableName =>
@@ -225,6 +159,12 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   }
 
+  val mainPageRoute = pathEndOrSingleSlash {
+    getFromFile("public/index.html")
+  } ~ get {
+    unmatchedPath { p => getFromFile("public" + p) }
+  }
+
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
       case NonFatal(e) =>
@@ -235,5 +175,5 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
-  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoutes ~ serviceRoute ~ tablesRoute ~ corporaRoute)
+  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoute ~ tablesRoute ~ corporaRoute)
 }
