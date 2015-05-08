@@ -14,6 +14,7 @@ var QueryViewer = React.createClass({
     var rootState = this.props.rootState;
     var handleChange = this.props.handleChange;
     var config = this.props.config;
+    var makeUri = this.props.makeUri;
     if (rootState == null || rootState.value == null) {
       return <div/>;
     } else {
@@ -24,6 +25,7 @@ var QueryViewer = React.createClass({
               <Node>
                 <QExpr
                   config={config}
+                  makeUri={makeUri}
                   qexpr={rootState.value}
                   rootState={rootState}
                   handleChange={handleChange}/>

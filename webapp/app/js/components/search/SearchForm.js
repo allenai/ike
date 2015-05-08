@@ -52,6 +52,7 @@ var SearchForm = React.createClass({
     var target = this.props.target;
     var query = this.props.query;
     var config = this.props.config;
+    var makeUri = this.props.makeUri;
     var selector = <TargetSelector target={target}/>;
     if (config.value.ml.disable) {
       var queryForm =
@@ -69,6 +70,7 @@ var SearchForm = React.createClass({
                 config={config}
                 target={target}
                 query={query}
+                makeUri={makeUri}
               ></SuggestQueryButton>
             </Col>
           </Row>

@@ -34,8 +34,8 @@ var SearchInterface = React.createClass({
       target: this.props.target.value
     };
   },
-  makeUri: function() {
-    var uri = '/api/groupedSearch?corpora=';
+  makeUri: function(endpoint) {
+    var uri = '/api/' + endpoint + '?corpora=';
     var selectedCorpora = this.props.corpora.value.filter(function(corpus) {
       return corpus.selected;
     });
@@ -51,7 +51,7 @@ var SearchInterface = React.createClass({
   },
   makeRequestData: function(queryValue) {
     var query = this.makeQuery(queryValue);
-    var uri = this.makeUri();
+    var uri = this.makeUri('groupedSearch');
     return {
       body: JSON.stringify(query),
       uri: uri,
@@ -146,6 +146,7 @@ var SearchInterface = React.createClass({
     var handleSubmit = this.handleSubmit;
     var handleChange = this.search;
     var toggleCorpora = this.props.toggleCorpora;
+    var makeUri = this.makeUri;
     var qexpr = this.linkStateCallback('qexpr');
     var form = 
       <SearchForm
@@ -154,11 +155,13 @@ var SearchInterface = React.createClass({
         config={config}
         query={query}
         corpora={corpora}
-        toggleCorpora={toggleCorpora}/>;
+        toggleCorpora={toggleCorpora}
+        makeUri={makeUri}/>;
     var queryViewer =
       <QueryViewer
         target={target}
         config={config}
+        makeUri={makeUri}
         handleChange={handleChange}
         rootState={qexpr}/>;
     // Keep a ref to this component so we can reset the page number when a search completes
