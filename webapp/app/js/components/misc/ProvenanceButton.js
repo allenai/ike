@@ -35,7 +35,7 @@ var ProvenanceButton = React.createClass({
             }
           });
           if(c.corpus)
-            tags.push(<i>({c.corpus})</i>);
+            tags.push(<i key="corpus">({c.corpus})</i>);
           return <p key={i}>{tags}</p>;
         });
       }
