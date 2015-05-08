@@ -71,6 +71,7 @@ var QExprMixin = {
     var handleChange = this.props.handleChange;
     var rootState = this.props.rootState;
     var config = this.props.config;
+    var makeUri = this.props.makeUri;
     childPath.push(attr);
     if (attr == 'qexprs') {
       childPath.push(index);
@@ -81,6 +82,7 @@ var QExprMixin = {
           qexpr={childExpr}
           path={childPath}
           config={config}
+          makeUri={makeUri}
           handleChange={handleChange}
           rootState={rootState}/>
       </Node>
@@ -128,9 +130,10 @@ var QWord = React.createClass({
       word: word,
       config: config
     };
+    var uri = this.props.makeUri('wordInfo');
     var requestData = {
       body: JSON.stringify(query),
-      uri: 'api/wordInfo',
+      uri: uri,
       method: 'POST',
       headers: {'Content-Type': 'application/json'}
     };
@@ -274,13 +277,15 @@ var QExpr = React.createClass({
       var rootState = this.props.rootState;
       var handleChange = this.props.handleChange;
       var config = this.props.config;
+      var makeUri = this.props.makeUri;
       var path = this.props.path;
       var implProps = {
         qexpr: qexpr,
         path: path,
         rootState: rootState,
         handleChange: handleChange,
-        config: config
+        config: config,
+        makeUri: makeUri
       };
       return React.createElement(component, implProps);
     } else {

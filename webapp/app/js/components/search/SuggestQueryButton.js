@@ -54,7 +54,7 @@ var SuggestQueryButton = React.createClass({
     }
 
     var tables = TableManager.getTables()
-
+    var uri = this.props.makeUri('suggestQuery');
     var requestData = {
       body: JSON.stringify({
         query: queryValue,
@@ -63,7 +63,7 @@ var SuggestQueryButton = React.createClass({
         narrow: this.state.narrow,
         config: requestConfig
       }),
-      uri: 'api/suggestQuery',
+      uri: uri,
       method: 'POST',
       headers: {'Content-Type': 'application/json'}
     };
