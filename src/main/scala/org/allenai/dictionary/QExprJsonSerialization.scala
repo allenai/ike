@@ -7,7 +7,6 @@ object QExprJsonSerialization {
   implicit object QExprFormat extends RootJsonFormat[QExpr] {
     override def write(qexpr: QExpr): JsValue = qexpr match {
       case q: QWord => q.toJson
-      case q: QCluster => q.toJson
       case q: QPos => q.toJson
       case q: QDict => q.toJson
       case q: QWildcard => q.toJson
@@ -18,7 +17,6 @@ object QExprJsonSerialization {
       case q: QPlus => q.toJson
       case q: QSeq => q.toJson
       case q: QDisj => q.toJson
-      case q: QClusterFromWord => q.toJson
       case q: QPosFromWord => q.toJson
       case q: QAnd => q.toJson
       case q: QRepetition => q.toJson
@@ -26,7 +24,6 @@ object QExprJsonSerialization {
     override def read(jsValue: JsValue): QExpr = jsValue.asJsObject.unpackAs[QExpr]
   }
   implicit val qwordFormat = jsonFormat1(QWord.apply).pack("type" -> "QWord")
-  implicit val qclusterFormat = jsonFormat1(QCluster.apply).pack("type" -> "QCluster")
   implicit val qposFormat = jsonFormat1(QPos.apply).pack("type" -> "QPos")
   implicit val qdictFormat = jsonFormat1(QDict.apply).pack("type" -> "QDict")
   implicit val qandFormat = jsonFormat2(QAnd.apply).pack("type" -> "QAnd")
@@ -42,9 +39,8 @@ object QExprJsonSerialization {
   implicit val qrepetitionFormat = jsonFormat3(QRepetition.apply).pack("type" -> "QRepetition")
   implicit val qseqFormat = jsonFormat1(QSeq.apply).pack("type" -> "QSeq")
   implicit val qdisjFormat = jsonFormat1(QDisj.apply).pack("type" -> "QDisj")
-  implicit val qcfwFormat = jsonFormat3(QClusterFromWord.apply).pack("type" -> "QClusterFromWord")
   implicit val qpfwFormat = jsonFormat3(QPosFromWord.apply).pack("type" -> "QPosFromWord")
-  implicit val unpackers = Seq(qwordFormat, qclusterFormat, qposFormat, qdictFormat,
+  implicit val unpackers = Seq(qwordFormat, qposFormat, qdictFormat,
     qwildcardFormat, qnamedFormat, qunnamedFormat, qnonCapFormat, qstarFormat,
-    qplusFormat, qseqFormat, qdisjFormat, qcfwFormat, qpfwFormat)
+    qplusFormat, qseqFormat, qdisjFormat, qpfwFormat)
 }

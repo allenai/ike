@@ -9,7 +9,6 @@ object BlackLabSemantics {
     var unnamedCnt = 0
     def blqHelper(qexpr: QExpr): TextPattern = qexpr match {
       case QWord(w) => new TextPatternTerm(w)
-      case QCluster(c) => new TextPatternProperty("cluster", new TextPatternPrefix(c))
       case QPos(p) => new TextPatternProperty("pos", new TextPatternTerm(p))
       case QDict(d) => throw notImplemented
       case QWildcard() => new TextPatternAnyToken(1, 1)
@@ -25,12 +24,6 @@ object BlackLabSemantics {
       case QSeq(es: Seq[QExpr]) => new TextPatternSequence(es.map(blqHelper): _*)
       case QDisj(es: Seq[QExpr]) => new TextPatternOr(es.map(blqHelper): _*)
       case QAnd(expr1, expr2) => new TextPatternAnd(blqHelper(expr1), blqHelper(expr2))
-      case QClusterFromWord(value, word, clusterId) =>
-        if (value < clusterId.size) {
-          blqHelper(QCluster(clusterId.slice(0, value)))
-        } else {
-          blqHelper(QWord(word))
-        }
       case QPosFromWord(value, word, posTags) => value match {
         case Some(string) => blqHelper(QPos(string))
         case None => blqHelper(QWord(word))

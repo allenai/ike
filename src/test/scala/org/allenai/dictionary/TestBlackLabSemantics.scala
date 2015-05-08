@@ -45,11 +45,6 @@ class TestBlackLabSemantics extends UnitSpec with ScratchDirectory {
     assert(search("PRP VBP") == Set("I like", "I hate", "It tastes", "They taste"))
   }
 
-  it should "handle cluster prefix queries" in {
-    assert(search("^0") == Set("I", "mango", "It", "bananas", "They"))
-    assert(search("^00") == Set("mango", "bananas"))
-  }
-
   it should "handle wildcard queries" in {
     assert(search("I .") == Set("I like", "I hate"))
   }

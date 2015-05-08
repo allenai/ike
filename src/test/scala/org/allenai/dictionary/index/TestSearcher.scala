@@ -12,7 +12,7 @@ class TestSearcher extends UnitSpec with ScratchDirectory {
   def search(s: String): Iterator[BlackLabResult] = {
     val query = CorpusQueryLanguageParser.parse(s)
     val hits = searcher.find(query)
-    BlackLabResult.fromHits(hits)
+    BlackLabResult.fromHits(hits, "testCorpus")
   }
   def groups(s: String): Iterator[String] = for {
     r <- search(s)

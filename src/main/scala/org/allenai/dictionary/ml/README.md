@@ -21,7 +21,7 @@ Currently only the following changes can be made to a user's query
 3. Replace a token in the original query (ex. "fat cat" => "fat NN")
 4. Replacing a token with a disjunction (ex. "fat cat" => "{fat, lazy} cat")
 
-prefixes, suffixes, or new tokens can be words, clusters, or part of speech tags.
+prefixes, suffixes, or new tokens can be words or part of speech tags.
 
 ## Implementation
 We view the task of suggesting queries as the task of finding 'Query Operators', or functions that takes as 
