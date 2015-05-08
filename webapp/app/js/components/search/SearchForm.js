@@ -10,12 +10,15 @@ var Corpora = require('../corpora/Corpora.js');
 var TargetSelector = require('./TargetSelector.js');
 var SuggestQueryButton = require('./SuggestQueryButton.js');
 var SearchForm = React.createClass({
+  selectedCorpora: function() {
+    return this.props.corpora.value.filter(function(corpus) {
+      return corpus.selected;
+    });
+  },
   renderCorporaLabel: function() {
     // Get the number of selected corpora
     var corpora = this.props.corpora.value;
-    var selectedCorpora = corpora.filter(function(corpus) {
-      return corpus.selected;
-    });
+    var selectedCorpora = this.selectedCorpora();
     var corporaLabel = 'Searching ';
     if (selectedCorpora.length === corpora.length) {
       corporaLabel += ' All ';
@@ -43,7 +46,8 @@ var SearchForm = React.createClass({
                type="text"
                placeholder="Enter Query"
                label="Query"
-               valueLink={query}>
+               valueLink={query}
+               disabled={this.selectedCorpora().length == 0}>
              </Input>
            </Col>
   },
@@ -71,6 +75,7 @@ var SearchForm = React.createClass({
                 target={target}
                 query={query}
                 makeUri={makeUri}
+                disabled={this.selectedCorpora().length == 0}
               ></SuggestQueryButton>
             </Col>
           </Row>
