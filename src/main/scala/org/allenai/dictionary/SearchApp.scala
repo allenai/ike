@@ -23,7 +23,8 @@ case class SearchResponse(qexpr: QExpr, groups: Seq[GroupedBlackLabResult])
 case class CorpusDescription(name: String, description: Option[String])
 
 case class SearchApp(config: Config) extends Logging {
-  logger.debug(s"Building SearchApp for ${config.getString("name")}")
+  val name = config.getString("name")
+  logger.debug(s"Building SearchApp for $name")
   val description = config.get[String]("description")
   val indexDir = DataFile.fromConfig(config)
   val searcher = Searcher.open(indexDir)
@@ -31,7 +32,7 @@ case class SearchApp(config: Config) extends Logging {
     searcher.find(textPattern).window(0, limit)
   }
   def fromHits(hits: HitsWindow): Try[Seq[BlackLabResult]] = Try {
-    BlackLabResult.fromHits(hits).toSeq
+    BlackLabResult.fromHits(hits, name).toSeq
   }
   def semantics(query: QExpr): Try[TextPattern] = Try(BlackLabSemantics.blackLabQuery(query))
   def suggestQuery(request: SuggestQueryRequest): Try[SuggestQueryResponse] =

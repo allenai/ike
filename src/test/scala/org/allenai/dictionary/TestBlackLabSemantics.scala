@@ -12,7 +12,7 @@ class TestBlackLabSemantics extends UnitSpec with ScratchDirectory {
     val e = QExprParser.parse(s).get
     val q = BlackLabSemantics.blackLabQuery(e)
     val hits = searcher.find(q)
-    BlackLabResult.fromHits(hits)
+    BlackLabResult.fromHits(hits, "testCorpus")
   }
   def search(s: String): Set[String] = {
     for {
