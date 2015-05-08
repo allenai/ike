@@ -34,6 +34,8 @@ var ProvenanceButton = React.createClass({
               return <span key={j} title={word.attributes.pos}>{word.word} </span>
             }
           });
+          if(c.corpus)
+            tags.push(<i>({c.corpus})</i>);
           return <p key={i}>{tags}</p>;
         });
       }
