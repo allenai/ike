@@ -19,11 +19,10 @@ object QLeafGenerator {
   *
   * @param pos whether to generate QPos
   * @param word whether to generate QWord
-  * @param clusterSizes what kinds of QCluster to generate
   * @param avoidSuggesting a specific QLeaf this should never suggest
   */
 case class QLeafGenerator(pos: Boolean, word: Boolean,
-    clusterSizes: Seq[Int], avoidSuggesting: Set[QLeaf] = Set()) {
+    avoidSuggesting: Set[QLeaf] = Set()) {
 
   def generateLeaves(tokens: Seq[Token]): Iterable[QLeaf] = {
     if (tokens.isEmpty) {
@@ -37,13 +36,6 @@ case class QLeafGenerator(pos: Boolean, word: Boolean,
   }
 
   def generateLeaves(token: Token): Iterable[QLeaf] = {
-    val clusterOps = if (clusterSizes.isEmpty) {
-      Seq()
-    } else {
-      val cluster = token.cluster
-      clusterSizes.filter(_ <= cluster.length).map(backoff =>
-        QCluster(cluster.substring(0, backoff)))
-    }
     val posOp = if (pos && QLeafGenerator.validPos(token.pos)) {
       Some(QPos(token.pos))
     } else {
@@ -56,7 +48,7 @@ case class QLeafGenerator(pos: Boolean, word: Boolean,
       None
     }
 
-    val allOps = clusterOps ++ posOp ++ wordOp
+    val allOps = posOp ++ wordOp
     if (avoidSuggesting.isEmpty) {
       allOps
     } else {

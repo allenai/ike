@@ -48,7 +48,6 @@ var DictApp = React.createClass({
            pWeightNarrow: 2.0,
            nWeightNarrow: -1.0,
            uWeightNarrow: -0.03,
-           allowClusters: false,
            allowDisjunctions: false
         }
       },

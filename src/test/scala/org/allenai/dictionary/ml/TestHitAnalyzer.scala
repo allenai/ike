@@ -30,7 +30,7 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
   def buildToken(word: String): Token = {
     val pos = TestData.posTags(word)
     val cluster = TestData.clusters(word)
-    Token(word, pos, cluster)
+    Token(word, pos)
   }
 
   "getMatchData" should "test correctly" in {
@@ -87,7 +87,7 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
     // Get the hits
     val hitAnalysis = HitAnalyzer.buildHitAnalysis(
       Seq(hits), TokenizedQuery.buildFromQuery(query),
-      1, 0, SpecifyingOpGenerator(false, false, Seq(2)),
+      1, 0, SpecifyingOpGenerator(true, false),
       table
     )
 
@@ -97,8 +97,8 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
     assertResult(WeightedExample(Positive, 0, 1.0, 2))(hitAnalysis.examples(2).copy(str=""))
     assertResult(3)(hitAnalysis.examples.size)
 
-    val op10 = SetToken(Prefix(1), QCluster("10"))
-    val op11 = SetToken(Prefix(1), QCluster("11"))
+    val op10 = SetToken(Prefix(1), QPos("VBP"))
+    val op11 = SetToken(Prefix(1), QPos("DT"))
 
     assertResult(Set(op10, op11))(hitAnalysis.operatorHits.keySet)
     assertResult(Set(0, 1))(hitAnalysis.operatorHits.get(op10).get.keySet)
@@ -119,7 +119,7 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
     val hitAnalysis = HitAnalyzer.buildHitAnalysis(
       Seq(hits),
       TokenizedQuery.buildFromQuery(query),
-      0, 0, GeneralizingOpGenerator(true, true, Seq(), false, tokenized.size, true), table
+      0, 0, GeneralizingOpGenerator(true, true, false, tokenized.size, true), table
     )
     assertResult(IndexedSeq(WeightedExample(Positive, 1, 1.0, 0)))(
       hitAnalysis.examples.map(_.copy(str="")))

@@ -16,7 +16,7 @@ object Label extends Enumeration {
 import Label._
 
 /** A token within a sentence and some of its annotations */
-case class Token(word: String, pos: String, cluster: String)
+case class Token(word: String, pos: String)
 
 /** A sequence of tokens that are associated with a QExpr, if didMatch is true the QExpr matched
   * these tokens, if didMatch is false the QExpr did not match these tokens, but it needs to for the
@@ -159,7 +159,7 @@ object HitAnalyzer extends Logging {
   ): Seq[QueryMatches] = {
 
     // Set up our hits object, call .get(0) so it initializes captureGroupsNames
-    val props = List("word", "pos", "cluster")
+    val props = List("word", "pos")
     hits.setContextField(props.asJava)
     hits.setContextSize(math.max(prefixCounts, suffixCounts))
     hits.get(0)
@@ -183,7 +183,7 @@ object HitAnalyzer extends Logging {
       val captureGroups = hits.getCapturedGroups(hit)
       val hitQueryMatches = {
         var tokens = props.map(prop => kwic.getMatch(prop).asScala).
-          transpose.map(x => Token(x(0), x(1), x(2)))
+          transpose.map(x => Token(x(0), x(1)))
         queryTokenMatchLocations.map {
           case Right(captureGroupIndex) =>
             val span = captureGroups(captureGroupIndex)
@@ -205,7 +205,7 @@ object HitAnalyzer extends Logging {
       val prefixQueryMatches = {
         val prefixTokens = props.map(prop => kwic.getLeft(prop).asScala).transpose.
           reverse.take(prefixCounts).map(x =>
-            QueryMatch(Seq(Token(x(0), x(1), x(2))), didMatch = true))
+            QueryMatch(Seq(Token(x(0), x(1))), didMatch = true))
         prefixTokens.toSeq.padTo(prefixCounts, QueryMatch(Seq(), didMatch = true)).reverse
       }
 
@@ -213,7 +213,7 @@ object HitAnalyzer extends Logging {
         // == "" to filter out blank ending tokens BlackLab sometime inserts
         val suffixTokens = props.map(prop => kwic.getRight(prop).asScala).transpose.
           take(suffixCounts).filter(x => x.forall(_ != "")).map(
-            x => QueryMatch(Seq(Token(x(0), x(1), x(2))), didMatch = true)
+            x => QueryMatch(Seq(Token(x(0), x(1))), didMatch = true)
           )
         suffixTokens.toSeq.padTo(suffixCounts, QueryMatch(Seq(), didMatch = true))
       }
@@ -266,7 +266,7 @@ object HitAnalyzer extends Logging {
     table: Table
   ): HitAnalysis = {
 
-    val props = List("word", "pos", "cluster")
+    val props = List("word", "pos")
     hits.foreach(_.setContextField(props.asJava))
     hits.foreach(_.setContextSize(math.max(prefixCounts, suffixCounts)))
 

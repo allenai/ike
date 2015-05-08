@@ -27,7 +27,7 @@ particular number of tokens. For this queries we support:
 2. Removing tokens from the start or end the query (ex "the (cat)" => "(cat)")
 3. Adding a token to make a disjunction within the query (ex "cat" => "{cat, dog}")
 
-prefixes, suffixes, or new tokens can be words, clusters, or part of speech tags.
+prefixes, suffixes, or new tokens can be words or part of speech tags.
 
 ## Implementation
 We view the task of suggesting queries as the task of finding 'Query Operators', or functions that takes as 

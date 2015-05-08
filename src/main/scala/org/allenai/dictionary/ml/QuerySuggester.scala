@@ -280,28 +280,16 @@ object QuerySuggester extends Logging {
     val (unprunnedHitAnalysis, analysisTime) = Timing.time {
       val generator = if (narrow) {
         val selectConf = querySuggestionConf.getConfig("narrow")
-        val clusterSizes = if (config.allowClusters) {
-          selectConf.getIntList("clusterSizes").asScala.map(_.toInt)
-        } else {
-          Seq()
-        }
         SpecifyingOpGenerator(
           selectConf.getBoolean("suggestPos"),
           selectConf.getBoolean("suggestWord"),
-          clusterSizes,
           selectConf.getBoolean("suggestSetRepeatedOp")
         )
       } else {
         val selectConf = querySuggestionConf.getConfig("broaden")
-        val clusterSizes = if (config.allowClusters) {
-          selectConf.getIntList("clusterSizes").asScala.map(_.toInt)
-        } else {
-          Seq()
-        }
         GeneralizingOpGenerator(
           selectConf.getBoolean("suggestPos"),
           selectConf.getBoolean("suggestWord"),
-          clusterSizes,
           selectConf.getBoolean("suggestAddWords"),
           tokenizedQuery.size,
           selectConf.getBoolean("generalizationPruning"),

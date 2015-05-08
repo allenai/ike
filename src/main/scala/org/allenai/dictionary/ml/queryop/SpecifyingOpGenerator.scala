@@ -9,12 +9,10 @@ import scala.collection.immutable.IntMap
   *
   * @param suggestPos whether to build operators that add QPos
   * @param suggestWord whether to build operators that add QWord
-  * @param clusterSizes what sizes of clusters to suggest adding to the query
   */
 case class SpecifyingOpGenerator(
     suggestPos: Boolean,
     suggestWord: Boolean,
-    clusterSizes: Seq[Int],
     setRepeatedOp: Boolean = false
 ) extends OpGenerator {
 
@@ -22,14 +20,11 @@ case class SpecifyingOpGenerator(
     qexprOption: Option[QExpr],
     isCapture: Boolean
   ): QLeafGenerator = qexprOption match {
-    case None => QLeafGenerator(suggestPos, suggestWord, clusterSizes) // Prefix/Suffix slot
+    case None => QLeafGenerator(suggestPos, suggestWord) // Prefix/Suffix slot
     case Some(qexpr) => qexpr match {
-      case QPos(_) => QLeafGenerator(pos = false, suggestWord && !isCapture, Seq())
-      case QCluster(cluster) =>
-        QLeafGenerator(pos = false, suggestWord && !isCapture,
-          clusterSizes.filter(_ > cluster.length))
-      case QWildcard() => QLeafGenerator(suggestPos, suggestWord && !isCapture, clusterSizes)
-      case _ => QLeafGenerator(pos = false, word = false, Seq())
+      case QPos(_) => QLeafGenerator(pos = false, suggestWord && !isCapture)
+      case QWildcard() => QLeafGenerator(suggestPos, suggestWord && !isCapture)
+      case _ => QLeafGenerator(pos = false, word = false)
     }
   }
 

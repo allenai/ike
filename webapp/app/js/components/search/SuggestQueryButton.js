@@ -71,8 +71,7 @@ var SuggestQueryButton = React.createClass({
       pWeight: scoring.p,
       nWeight: scoring.n,
       uWeight: scoring.u,
-      allowDisjunctions: config.allowDisjunctions,
-      allowClusters: config.allowClusters
+      allowDisjunctions: config.allowDisjunctions
     }
 
     var tables = TableManager.getTables()

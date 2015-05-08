@@ -44,7 +44,6 @@ var ConfigInterface = React.createClass({
     var nWeightChangeNarrow = this.onChange('nWeightNarrow', parseFloat, 'ml')
     var uWeightChangeNarrow = this.onChange('uWeightNarrow', parseFloat, 'ml')
     var allowDisjunctionChange = this.toggleCheckbox('allowDisjunctions', 'ml')
-    var changeAllowClusters = this.toggleCheckbox('allowClusters', 'ml')
     var disable = this.toggleCheckbox('disable', 'ml')
     return (
       <div>
@@ -90,12 +89,6 @@ var ConfigInterface = React.createClass({
                 label='Suggest Disjunctions'
                 checked={config.ml.allowDisjunctions}
                 onChange={allowDisjunctionChange}>
-              </Input>
-              <Input
-                type='checkbox'
-                label='Suggest Brown Clusters'
-                checked={config.ml.allowClusters}
-                onChange={changeAllowClusters}>
               </Input>
               <Input
                   type='select'
