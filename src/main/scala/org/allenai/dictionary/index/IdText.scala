@@ -2,7 +2,7 @@ package org.allenai.dictionary.index
 
 import java.io.File
 import java.nio.charset.MalformedInputException
-import org.allenai.common.Logging
+import org.allenai.common.{ Resource, Logging }
 
 import scala.io.Source
 import com.typesafe.config.Config
@@ -22,8 +22,8 @@ case object IdText extends Logging {
   }
 
   def fromFlatFile(file: File): Iterator[IdText] = for {
-    (line, i) <- Source.fromFile(file).getLines.zipWithIndex
-    id = s"${file.getAbsolutePath}.${i}"
+    (line, i) <- Source.fromFile(file).getLines().zipWithIndex
+    id = s"${file.getAbsolutePath}.$i"
     idText = IdText(id, line)
   } yield idText
 
@@ -41,7 +41,9 @@ case object IdText extends Logging {
   }
 
   def safeLinesFromFile(file: File): Option[String] = try {
-    Some(Source.fromFile(file).getLines.mkString("\n"))
+    Resource.using(Source.fromFile(file)) { source =>
+      Some(source.getLines().mkString("\n"))
+    }
   } catch {
     case _: MalformedInputException =>
       logger.warn(s"Skipping unreadable file ${file.getName}")
