@@ -206,7 +206,7 @@ object QuerySuggester extends Logging {
 
   /** Return a set of suggested queries given a starting query and a Table
     *
-    * @param searcher Searcher to the corpus to use when suggesting new queries
+    * @param searchers Searchers to use when suggesting new queries
     * @param startingQuery Starting query to build suggestion from
     * @param tables Tables to use when building the query
     * @param target Name of the table to optimize the suggested queries for
@@ -217,7 +217,7 @@ object QuerySuggester extends Logging {
     * statistics about each query
     */
   def suggestQuery(
-    searcher: Searcher,
+    searchers: Seq[Searcher],
     startingQuery: QExpr,
     tables: Map[String, Table],
     target: String,
@@ -249,9 +249,10 @@ object QuerySuggester extends Logging {
 
     logger.debug("Reading unlabelled hits")
     val ((unlabelledHits, unlabelledSize), unlabelledReadTime) = Timing.time {
-      val hits = hitGatherer.getSample(tokenizedQuery, searcher, targetTable, tables).
-        window(0, (config.maxSampleSize * percentUnlabelled).toInt)
-      (hits, hits.size())
+      val hits = searchers.map(searcher =>
+        hitGatherer.getSample(tokenizedQuery, searcher, targetTable, tables).
+        window(0, (config.maxSampleSize * percentUnlabelled).toInt / searchers.size))
+      (hits, hits.map(_.size).sum)
     }
     logger.debug(s"Read $unlabelledSize unlabelled hits " +
       s"in ${unlabelledReadTime.toMillis / 1000.0} seconds")
@@ -259,12 +260,18 @@ object QuerySuggester extends Logging {
       logger.info("No unlabelled documents found")
       return Suggestions(ScoredQuery(startingQuery, 0, 0, 0, 0), Seq(), 0)
     }
-    val lastUnlabelledDoc = unlabelledHits.get(unlabelledSize - 1).doc
-    logger.debug(s"Reading labelled hits, starting from doc $lastUnlabelledDoc")
+    val lastUnlabelledDocs = unlabelledHits.map { hits =>
+      hits.get(hits.last()).doc
+    }
+    val numUnlabelledDocs = lastUnlabelledDocs.sum
+    logger.debug(s"Reading labelled hits")
     val ((labelledHits, labelledSize), labelledReadTime) = Timing.time {
-      val hits = hitGatherer.getLabelledSample(tokenizedQuery, searcher, targetTable,
-        tables, lastUnlabelledDoc).window(0, (config.maxSampleSize * (1 - percentUnlabelled)).toInt)
-      (hits, hits.size)
+      val hits = searchers.zip(lastUnlabelledDocs).map {
+        case (searcher, lastDoc) =>
+          hitGatherer.getLabelledSample(tokenizedQuery, searcher, targetTable,
+            tables, lastDoc).window(0, (config.maxSampleSize * (1 - percentUnlabelled)).toInt)
+      }
+      (hits, hits.map(_.size).sum)
     }
     logger.debug(s"Read $labelledSize labelled hits in" +
       s" ${labelledReadTime.toMillis / 1000.0} seconds")
@@ -304,7 +311,7 @@ object QuerySuggester extends Logging {
       } else {
         (0, 0)
       }
-      buildHitAnalysis(Seq(labelledHits, unlabelledHits), tokenizedQuery,
+      buildHitAnalysis(labelledHits ++ unlabelledHits, tokenizedQuery,
         prefixCounts, suffixCounts, generator, targetTable)
     }
     logger.debug(s"Done Analyzing hits in ${analysisTime.toMillis / 1000.0} seconds")
@@ -330,11 +337,9 @@ object QuerySuggester extends Logging {
     logger.info(s"Found $totalPositiveHits positive " +
       s"and $totalNegativeHits negative with ${hitAnalysis.operatorHits.size} possible operators")
 
-    val lastDoc = if (labelledSize > 0) {
-      labelledHits.get(labelledSize - 1).doc
-    } else {
-      lastUnlabelledDoc
-    }
+    val numDocs = labelledHits.map { hits =>
+      hits.get(hits.last()).doc
+    }.sum
 
     val opCombiner =
       if (config.allowDisjunctions) {
@@ -345,10 +350,10 @@ object QuerySuggester extends Logging {
 
     val unlabelledBiasCorrection =
       Math.min(
-        Math.max(if (lastUnlabelledDoc > 0) {
-          lastDoc / lastUnlabelledDoc.toDouble
+        Math.max(if (numUnlabelledDocs > 0) {
+          numUnlabelledDocs / numDocs.toDouble
         } else {
-          lastDoc
+          numDocs.toDouble
         }, 1), querySuggestionConf.getDouble("maxUnlabelledBiasCorrection")
       )
     val evalFunction =
@@ -439,6 +444,6 @@ object QuerySuggester extends Logging {
     }
     logger.info(s"Done suggesting query for " +
       "${QueryLanguage.getQueryString(queryWithNamedCaptures)}")
-    Suggestions(original, scoredOps, lastDoc)
+    Suggestions(original, scoredOps, numDocs)
   }
 }

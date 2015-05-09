@@ -71,6 +71,7 @@ var QExprMixin = {
     var handleChange = this.props.handleChange;
     var rootState = this.props.rootState;
     var config = this.props.config;
+    var makeUri = this.props.makeUri;
     childPath.push(attr);
     if (attr == 'qexprs') {
       childPath.push(index);
@@ -81,6 +82,7 @@ var QExprMixin = {
           qexpr={childExpr}
           path={childPath}
           config={config}
+          makeUri={makeUri}
           handleChange={handleChange}
           rootState={rootState}/>
       </Node>
@@ -128,9 +130,10 @@ var QWord = React.createClass({
       word: word,
       config: config
     };
+    var uri = this.props.makeUri('wordInfo');
     var requestData = {
       body: JSON.stringify(query),
-      uri: 'api/wordInfo',
+      uri: uri,
       method: 'POST',
       headers: {'Content-Type': 'application/json'}
     };
@@ -144,15 +147,6 @@ var QWord = React.createClass({
     };
     var request = xhr(requestData, xhrCallback);
   },
-  replaceWithClusterFromWord: function(wordInfo) {
-    var replacement = {
-      type: 'QClusterFromWord',
-      value: wordInfo.clusterId.length + 1,
-      wordValue: wordInfo.word,
-      clusterId: wordInfo.clusterId
-    };
-    this.updateSelf(replacement);
-  },
   replaceWithPosFromWord: function(wordInfo) {
     var replacement = {
       type: 'QPosFromWord',
@@ -160,10 +154,6 @@ var QWord = React.createClass({
       posTags: wordInfo.posTags
     };
     this.updateSelf(replacement);
-  },
-  toClusterFromWord: function() {
-    var replace = this.replaceWithClusterFromWord;
-    this.getWordInfo(replace);
   },
   toPosFromWord: function() {
     var replace = this.replaceWithPosFromWord;
@@ -174,7 +164,6 @@ var QWord = React.createClass({
     var button = (
       <div>
       <DropdownButton bsStyle="link" title={value}>
-        <MenuItem eventKey={1} onClick={this.toClusterFromWord}>Generalize to similar words...</MenuItem>
         <MenuItem eventKey={1} onClick={this.toPosFromWord}>Generalize by POS tag...</MenuItem>
       </DropdownButton>
       </div>
@@ -189,12 +178,6 @@ var QDict = React.createClass({
     var dollarized = '$' + value;
     var menu = <DropdownButton bsStyle="link" title={dollarized}></DropdownButton>;
     return menu;
-  }
-});
-var QCluster = React.createClass({
-  mixins: [QExprMixin],
-  render: function() {
-    return <div>Cluster<Tree><Node>{this.props.qexpr.value}</Node></Tree></div>;
   }
 });
 var QWildcard = React.createClass({
@@ -264,59 +247,6 @@ var QPosFromWord = React.createClass({
     );
   }
 });
-var QClusterFromWord = React.createClass({
-  mixins: [QExprMixin],
-  handleChange: function(e) {
-    var qexpr = this.props.qexpr;
-    var value = this.refs.slider.getDOMNode().value;
-    qexpr.value = parseInt(value);
-    this.updateSelf(qexpr);
-  },
-  convertToWord: function() {
-    var word = this.props.qexpr.wordValue;
-    var replacement = {
-      value: word,
-      type: "QWord"
-    };
-    this.updateSelf(replacement);
-  },
-  render: function() {
-    var qexpr = this.props.qexpr;
-    var value = qexpr.value;
-    var wordValue = qexpr.wordValue;
-    var clusterId = qexpr.clusterId;
-    var button = (
-      <Button
-        onClick={this.convertToWord}
-        bsSize="xsmall"
-        className="pull-right"
-        bsStyle="danger">
-        <Glyphicon glyph="remove"/>
-      </Button>
-    );
-    var slider =
-      <input
-        ref="slider"
-        type="range"
-        className="vslider"
-        min={1}
-        max={clusterId.length + 1}
-        step={1}
-        value={value}
-        onChange={this.handleChange}/>;
-    var header = 'Words similar to "' + wordValue + '"'
-    var headerValue = <div style={{fontSize: 'small'}}>{header}</div>;
-    return (
-      <Panel header={headerValue}>
-        <div>
-          More Similar
-          {slider}
-          Less Similar
-        </div>
-      </Panel>
-    );
-  }
-});
 var QExpr = React.createClass({
   mixins: [QExprMixin],
   getDefaultProps: function() {
@@ -329,7 +259,6 @@ var QExpr = React.createClass({
     QPos: QPos,
     QSeq: QSeq,
     QDict: QDict,
-    QCluster: QCluster,
     QWildcard: QWildcard,
     QNamed: QNamed,
     QUnnamed: QUnnamed,
@@ -338,7 +267,6 @@ var QExpr = React.createClass({
     QPlus: QPlus,
     QRepetition: QRepetition,
     QDisj: QDisj,
-    QClusterFromWord: QClusterFromWord,
     QPosFromWord: QPosFromWord
   },
   render: function() {
@@ -349,13 +277,15 @@ var QExpr = React.createClass({
       var rootState = this.props.rootState;
       var handleChange = this.props.handleChange;
       var config = this.props.config;
+      var makeUri = this.props.makeUri;
       var path = this.props.path;
       var implProps = {
         qexpr: qexpr,
         path: path,
         rootState: rootState,
         handleChange: handleChange,
-        config: config
+        config: config,
+        makeUri: makeUri
       };
       return React.createElement(component, implProps);
     } else {

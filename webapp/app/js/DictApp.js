@@ -10,10 +10,10 @@ var TablesInterface = require('./components/table/TablesInterface.js');
 var TableManager = require('./managers/TableManager.js');
 var ConfigInterface = require('./components/config/ConfigInterface.js');
 var HelpInterface = require('./components/help/HelpInterface.js');
+var xhr = require('xhr');
 var DictApp = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
   componentDidMount: function() {
-
     TableManager.addChangeListener(function(tables) {
       var target = this.linkState('target');
       this.setState({tables: tables});
@@ -25,13 +25,27 @@ var DictApp = React.createClass({
           }
         }
       }
-
     }.bind(this));
-
     TableManager.setUserEmail(localStorage["userEmail"]);
+
+    // Get the corpora via API request
+    xhr({
+      uri: '/api/corpora',
+      method: 'GET'
+    }, function(err, resp, body) {
+      var corpora = JSON.parse(body).map(function(corpus, i) {
+        return { 
+          name: corpus.name,
+          description: corpus.description,
+          selected: true 
+        }
+      });
+      this.setState({corpora: corpora});
+    }.bind(this));
   },
   getInitialState: function() {
     return {
+      corpora: [],
       config: {
         limit: 1000,
         evidenceLimit: 10,
@@ -68,10 +82,20 @@ var DictApp = React.createClass({
     var target = this.linkState('target');
     var results = this.linkState('results');
     var config = this.linkState('config');
+    var corpora = this.linkState('corpora');
     var searchInterface =
-      <SearchInterface config={config} results={results} target={target}/>;
+      <SearchInterface 
+          config={config} 
+          corpora={corpora}
+          toggleCorpora={this.toggleCorpora}
+          results={results} 
+          target={target}/>;
     var tablesInterface = <TablesInterface target={target}/>;
-    var configInterface = <ConfigInterface config={config}/>;
+    var configInterface = 
+      <ConfigInterface 
+          config={config} 
+          corpora={corpora}
+          toggleCorpora={this.toggleCorpora}/>;
     var helpInterface = <HelpInterface/>;
     return (
       <div>
@@ -137,6 +161,13 @@ var DictApp = React.createClass({
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userImageUrl");
   },
+  toggleCorpora: function(i) {
+    return function(e) {
+      var corpora = this.state.corpora.slice();
+      corpora[i].selected = e.target.checked;
+      this.setState({corpora: corpora});
+    }.bind(this);
+  },
   renderHeader: function() {
     window.onSignIn = this.onSignIn;
     var userImage = this.state.userEmail ? this.state.userEmail : "Please sign in!";
@@ -157,11 +188,11 @@ var DictApp = React.createClass({
         {authMenuOption}
       </DropdownButton>;
 
-    return (<div>
+    return (<header>
       <a href="/"><img src="/assets/logo.png" width="64"/></a>
       <em>&ldquo;The Pacific Northwest&#39;s Cutest Extraction Tool&rdquo;</em>
       <div className="pull-right">{authButtons}</div>
-    </div>);
+    </header>);
   },
   render: function() {
     var content = this.renderContent();

@@ -20,11 +20,12 @@ case class SuggestQueryResponse(
   samplePercent: Double
 )
 case class WordInfoRequest(word: String, config: SearchConfig)
-case class WordInfoResponse(word: String, clusterId: Option[String], posTags: Map[String, Int])
+case class WordInfoResponse(word: String, posTags: Map[String, Int])
 case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1)
 case class SearchRequest(query: Either[String, QExpr], target: Option[String],
   tables: Map[String, Table], config: SearchConfig)
 case class SearchResponse(qexpr: QExpr, groups: Seq[GroupedBlackLabResult])
+case class CorpusDescription(name: String, description: Option[String])
 
 case class SearchApp(config: Config) extends Logging {
   logger.debug(s"Building SearchApp for ${config.getString("name")}")
@@ -38,33 +39,10 @@ case class SearchApp(config: Config) extends Logging {
     BlackLabResult.fromHits(hits).toSeq
   }
   def semantics(query: QExpr): Try[TextPattern] = Try(BlackLabSemantics.blackLabQuery(query))
-  def suggestQuery(request: SuggestQueryRequest): Try[SuggestQueryResponse] = for {
-    query <- QueryLanguage.parse(request.query)
-    suggestions <- Try(
-      QuerySuggester.suggestQuery(searcher, query, request.tables, request.target,
-        request.narrow, request.config)
-    )
-    stringQueries <- Try(
-      suggestions.suggestions.map(x => {
-        ScoredStringQuery(QueryLanguage.getQueryString(x.query), x.score, x.positiveScore,
-          x.negativeScore, x.unlabelledScore)
-      })
-    )
-    originalQuery = suggestions.original
-    original = ScoredStringQuery(
-      QueryLanguage.getQueryString(originalQuery.query),
-      originalQuery.score, originalQuery.positiveScore, originalQuery.negativeScore,
-      originalQuery.unlabelledScore
-    )
-    response = SuggestQueryResponse(original, stringQueries,
-      suggestions.docsSampledFrom / searcher.getIndexReader.numDocs().toDouble)
-  } yield response
-  def parse(r: SearchRequest): Try[QExpr] = r.query match {
-    case Left(queryString) => QueryLanguage.parse(queryString)
-    case Right(qexpr) => Success(qexpr)
-  }
+  def suggestQuery(request: SuggestQueryRequest): Try[SuggestQueryResponse] =
+    SearchApp.suggestQuery(Seq(this), request)
   def search(r: SearchRequest): Try[Seq[BlackLabResult]] = for {
-    qexpr <- parse(r)
+    qexpr <- SearchApp.parse(r)
     interpolated <- QueryLanguage.interpolateTables(qexpr, r.tables)
     textPattern <- semantics(interpolated)
     hits <- blackLabHits(textPattern, r.config.limit)
@@ -76,7 +54,7 @@ case class SearchApp(config: Config) extends Logging {
       case Some(target) => SearchResultGrouper.groupResults(req, results)
       case None => SearchResultGrouper.identityGroupResults(req, results)
     }
-    qexpr <- parse(req)
+    qexpr <- SearchApp.parse(req)
     resp = SearchResponse(qexpr, grouped)
   } yield resp
   def wordAttributes(req: WordInfoRequest): Try[Seq[(String, String)]] = for {
@@ -103,10 +81,36 @@ case class SearchApp(config: Config) extends Logging {
     attrs <- wordAttributes(req)
     histogram = attrHist(attrs)
     modes = attrModes(attrs)
-    clusterId = modes.get("cluster")
     posTags = histogram.filterKeys(_._1 == "pos").map {
       case (a, b) => (a._2, b)
     }
-    res = WordInfoResponse(req.word, clusterId, posTags)
+    res = WordInfoResponse(req.word, posTags)
   } yield res
+}
+
+object SearchApp {
+  def parse(r: SearchRequest): Try[QExpr] = r.query match {
+    case Left(queryString) => QueryLanguage.parse(queryString)
+    case Right(qexpr) => Success(qexpr)
+  }
+
+  def suggestQuery(searchApps: Seq[SearchApp], request: SuggestQueryRequest): Try[SuggestQueryResponse] = for {
+    query <- QueryLanguage.parse(request.query)
+    suggestion <- Try(
+      QuerySuggester.suggestQuery(searchApps.map(_.searcher), query, request.tables, request.target,
+        request.narrow, request.config)
+    )
+    stringQueries <- Try(
+      suggestion.suggestions.map(x => {
+        ScoredStringQuery(QueryLanguage.getQueryString(x.query), x.score, x.positiveScore,
+          x.negativeScore, x.unlabelledScore)
+      })
+    )
+    original = suggestion.original
+    originalString = ScoredStringQuery(QueryLanguage.getQueryString(original.query), original.score,
+      original.positiveScore, original.negativeScore, original.unlabelledScore)
+    totalDocs = searchApps.map(_.searcher.getIndexReader.numDocs()).sum.toDouble
+    response = SuggestQueryResponse(originalString, stringQueries,
+      suggestion.docsSampledFrom / totalDocs)
+  } yield response
 }
