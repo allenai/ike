@@ -48,41 +48,28 @@ object CreatePhraseVectors extends App with Logging {
 
     /** Returns an iterator of documents in IdText format
       */
-    def idTexts: Iterator[IdText] = {
-      val path = CliUtils.pathFromUri(options.input)
-      if (Files.isDirectory(path)) {
-        IdText.fromDirectory(path.toFile)
-      } else {
-        IdText.fromFlatFile(path.toFile)
-      }
-    }
+    def idTexts: Iterator[IdText] = new Iterator[IdText] {
+      private val documentCount = new AtomicLong()
+      private var oldDocumentCount: Long = 0
+      private val byteCount = new AtomicLong()
+      private var oldByteCount: Long = 0
+      private val lastMessagePrinted = new AtomicLong(System.currentTimeMillis())
 
-    /** Turns the documents into an iterator of sentences
-      */
-    def sentences: Iterator[Seq[String]] = {
-      val documentCount = new AtomicLong()
-      var oldDocumentCount: Long = 0
-      val byteCount = new AtomicLong()
-      var oldByteCount: Long = 0
-      val lastMessagePrinted = new AtomicLong(System.currentTimeMillis())
-
-      idTexts.parMap { idText =>
-        val result = try {
-          segmenter.segment(idText.text).map { sentence =>
-            tokenizer.tokenize(sentence.text).map { token =>
-              token.string.toLowerCase
-            }
-          }
-        } catch {
-          case _: StackOverflowError =>
-            logger.warn("Stack overflow when tokenizing. Ignoring document.")
-            logger.info("Untokenizable text:")
-            logger.info(idText.text)
-            Seq()
+      private val inner = {
+        val path = CliUtils.pathFromUri(options.input)
+        if (Files.isDirectory(path)) {
+          IdText.fromDirectory(path.toFile)
+        } else {
+          IdText.fromFlatFile(path.toFile)
         }
+      }
+
+      override def hasNext: Boolean = inner.hasNext
+      override def next(): IdText = {
+        val result = inner.next
 
         val currentDocumentCount = documentCount.incrementAndGet()
-        val currentByteCount = byteCount.addAndGet(idText.text.length)
+        val currentByteCount = byteCount.addAndGet(result.text.length)
         val last = lastMessagePrinted.get()
         val now = System.currentTimeMillis()
         val elapsed = (now - last).toDouble / 1000
@@ -100,6 +87,26 @@ object CreatePhraseVectors extends App with Logging {
         }
 
         result
+      }
+    }
+
+    /** Turns the documents into an iterator of sentences
+      */
+    def sentences(docs: Iterator[IdText]): Iterator[Seq[String]] = {
+      docs.map { idText =>
+        try {
+          segmenter.segment(idText.text).map { sentence =>
+            tokenizer.tokenize(sentence.text).map { token =>
+              token.string.toLowerCase
+            }
+          }
+        } catch {
+          case _: StackOverflowError =>
+            logger.warn("Stack overflow when tokenizing. Ignoring document.")
+            logger.info("Untokenizable text:")
+            logger.info(idText.text)
+            Seq()
+        }
       }.flatten
     }
 
@@ -118,24 +125,25 @@ object CreatePhraseVectors extends App with Logging {
       *
       * @param phrases the phrases we know about
       */
-    def phrasifiedSentences(phrases: OrderedPrefixSet) = sentences.map { sentence =>
-      // phrasifies sentences greedily
-      def phrasesStartingWith(start: Phrase) = phrases.from(start).takeWhile(_.startsWith(start))
+    def phrasifiedSentences(phrases: OrderedPrefixSet, sentences: Iterator[Phrase]) =
+      sentences.map { sentence =>
+        // phrasifies sentences greedily
+        def phrasesStartingWith(start: Phrase) = phrases.from(start).takeWhile(_.startsWith(start))
 
-      val result = mutable.Buffer[Phrase]()
-      var prefix = Seq.empty[String]
-      for (token <- sentence) {
-        val newPrefix = prefix :+ token
-        if (phrasesStartingWith(newPrefix).isEmpty) {
-          if (prefix.nonEmpty) result += prefix
-          prefix = Seq(token)
-        } else {
-          prefix = newPrefix
+        val result = mutable.Buffer[Phrase]()
+        var prefix = Seq.empty[String]
+        for (token <- sentence) {
+          val newPrefix = prefix :+ token
+          if (phrasesStartingWith(newPrefix).isEmpty) {
+            if (prefix.nonEmpty) result += prefix
+            prefix = Seq(token)
+          } else {
+            prefix = newPrefix
+          }
         }
+        result += prefix
+        result.toSeq
       }
-      result += prefix
-      result.toSeq
-    }
 
     /** Counts phrases in the input
       * @param phrases the phrases we know about
@@ -154,35 +162,35 @@ object CreatePhraseVectors extends App with Logging {
         }
       }
 
-      phrasifiedSentences(phrases).grouped(1024).parForeach {
-        sentences =>
-          {
-            val unigramCounts = mutable.Map[Phrase, Int]()
-            val bigramCounts = mutable.Map[(Phrase, Phrase), Int]()
-            def bumpCount[T](map: mutable.Map[T, Int], key: T): Unit = {
-              val count = map.getOrElse(key, 0) + 1
-              map.update(key, count)
-            }
+      idTexts.grouped(1024).parForeach { docs =>
+        val unphrasified = sentences(docs.iterator)
+        val phrasified = phrasifiedSentences(phrases, unphrasified)
 
-            sentences.foreach { sentence =>
-              sentence.foreach(bumpCount(unigramCounts, _))
-              if (sentence.length >= 2) {
-                sentence.sliding(2).foreach {
-                  case Seq(left, right) =>
-                    bumpCount(bigramCounts, (left, right))
-                }
-              }
-            }
+        val unigramCounts = mutable.Map[Phrase, Int]()
+        val bigramCounts = mutable.Map[(Phrase, Phrase), Int]()
+        def bumpCount[T](map: mutable.Map[T, Int], key: T): Unit = {
+          val count = map.getOrElse(key, 0) + 1
+          map.update(key, count)
+        }
 
-            unigramCounts.foreach {
-              case (unigram, count) =>
-                bumpBigCount(bigUnigramCounts, unigram, count)
-            }
-            bigramCounts.foreach {
-              case (bigram, count) =>
-                bumpBigCount(bigBigramCounts, bigram, count)
+        phrasified.foreach { sentence =>
+          sentence.foreach(bumpCount(unigramCounts, _))
+          if (sentence.length >= 2) {
+            sentence.sliding(2).foreach {
+              case Seq(left, right) =>
+                bumpCount(bigramCounts, (left, right))
             }
           }
+        }
+
+        unigramCounts.foreach {
+          case (unigram, count) =>
+            bumpBigCount(bigUnigramCounts, unigram, count)
+        }
+        bigramCounts.foreach {
+          case (bigram, count) =>
+            bumpBigCount(bigBigramCounts, bigram, count)
+        }
       }
 
       def applyMinWordCount[T](map: mutable.Map[T, Int]) =
@@ -237,7 +245,8 @@ object CreatePhraseVectors extends App with Logging {
 
     val tokensIterable = new java.lang.Iterable[java.util.List[String]] {
       override def iterator = new java.util.Iterator[java.util.List[String]] {
-        private val inner = phrasifiedSentences(phrases)
+        private val unphrasified = sentences(idTexts)
+        private val inner = phrasifiedSentences(phrases, unphrasified)
 
         override def next(): java.util.List[String] =
           inner.next().map(_.mkString("_")).toList.asJava
