@@ -33,12 +33,12 @@ sealed trait QRepeating extends QAtom {
 }
 case class QRepetition(qexpr: QExpr, min: Int, max: Int) extends QRepeating
 case class QStar(qexpr: QExpr) extends QRepeating {
-  def min = 0
-  def max = -1
+  def min: Int = 0
+  def max: Int = -1
 }
 case class QPlus(qexpr: QExpr) extends QRepeating {
-  def min = 1
-  def max = -1
+  def min: Int = 1
+  def max: Int = -1
 }
 case object QSeq {
   def fromSeq(seq: Seq[QExpr]): QExpr = seq match {
@@ -178,7 +178,7 @@ object QueryLanguage {
 
   /** @param qexpr query to evaluate
     * @return range of tokens the query will match, ends with -1 if the query
-    *  can match a variable number of tokens'
+    * can match a variable number of tokens'
     */
   def getQueryLength(qexpr: QExpr): (Int, Int) = qexpr match {
     case QDict(_) => (0, -1)
@@ -209,11 +209,11 @@ object QueryLanguage {
     *
     * @param qexpr Query expression to name capture groups within
     * @param tableCols Sequence of the columns in a table to be used to name unnamed capture
-    *            groups
+    *           groups
     * @throws IllegalArgumentException if QExpr contains a mix of named and unnamed capture groups,
-    *                            if the name capture group do not have names corresponding
-    *                            to the columns in tableCols, or if the query has the wrong
-    *                            number of capture groups
+    *                           if the name capture group do not have names corresponding
+    *                           to the columns in tableCols, or if the query has the wrong
+    *                           number of capture groups
     */
   def nameCaptureGroups(qexpr: QExpr, tableCols: Seq[String]): QExpr = {
     var columnsLeft = tableCols

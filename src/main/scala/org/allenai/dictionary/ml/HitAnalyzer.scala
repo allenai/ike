@@ -30,7 +30,7 @@ case class QueryMatch(tokens: Seq[Token], didMatch: Boolean)
   *
   * @param queryToken The query-token
   * @param matches the Tokens this QExpr matched, or should have matched, within a sequence of
-  *           sentences the original TokenizedQuery matched, or nearly matched
+  *          sentences the original TokenizedQuery matched, or nearly matched
   */
 case class QueryMatches(
   queryToken: QuerySlotData,
@@ -41,9 +41,9 @@ case class QueryMatches(
   * sentences each primitive operation would allow the starting query to match
   *
   * @param operatorHits Maps primitive operations to map of (sentence index within Examples ->
-  *              number of required 'edit' that operator completes for that sentence
-  *              (can be 0)). If a sentence index is not included the starting query will no long
-  *              match the corresponding sentence if the query operaiton is applied to it
+  *             number of required 'edit' that operator completes for that sentence
+  *             (can be 0)). If a sentence index is not included the starting query will no long
+  *             match the corresponding sentence if the query operaiton is applied to it
   * @param examples List of examples, one for each sentence
   */
 case class HitAnalysis(
@@ -188,17 +188,17 @@ object HitAnalyzer extends Logging {
           case Right(captureGroupIndex) =>
             val span = captureGroups(captureGroupIndex)
             val length = if (span == null) {
-                0
-              } else {
-                math.abs(span.end) - math.abs(span.start)
-              }
+              0
+            } else {
+              math.abs(span.end) - math.abs(span.start)
+            }
             val (matchedTokens, rest) = tokens.splitAt(length)
             tokens = rest
             QueryMatch(matchedTokens, didMatch = span != null && span.end >= 0)
           case Left(numTokens) =>
-              val (matchedTokens, rest) = tokens.splitAt(numTokens)
-              tokens = rest
-              QueryMatch(matchedTokens, didMatch = true)
+            val (matchedTokens, rest) = tokens.splitAt(numTokens)
+            tokens = rest
+            QueryMatch(matchedTokens, didMatch = true)
         }
       }
 
@@ -248,14 +248,14 @@ object HitAnalyzer extends Logging {
     * @param hits sequence of hits to build the object from
     * @param query Query to use when deciding which primitive operations to generate
     * @param prefixCounts number of tokens before each to gather and pass to generator
-    *                  in a Prefix Slot.
+    *                 in a Prefix Slot.
     * @param suffixCounts number of tokens before each hit to gather and pass to generator
-    *                  in a Suffix Slot.
+    *                 in a Suffix Slot.
     * @param generator generator used to decide what primtive operations to generate for each
-    *               query-token within query
+    *              query-token within query
     * @param table table to use when labelling the hits as positive or negative
     * @return the HitAnalysis object containing one 'Example' for each hit in hits, in the same
-    *      order as was given
+    *     order as was given
     */
   def buildHitAnalysis(
     hits: Seq[Hits],

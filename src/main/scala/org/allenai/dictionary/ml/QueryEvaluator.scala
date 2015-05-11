@@ -83,7 +83,7 @@ abstract class QueryEvaluator() {
   /** Returns a score determining the general 'goodness' of a query operation
     *
     * @param op The operation to score, op.numEdits should specify the number of edits that
-    *  operation will make to each sentence in this.examples
+    * operation will make to each sentence in this.examples
     * @param depth Depth of the current search
     * @return score of the query
     */
@@ -107,7 +107,7 @@ abstract class PerLabelEvaluator(
 
   def getSubScores(op: CompoundQueryOp, depth: Int): (Double, Double, Double)
 
-  override def evaluate(op: CompoundQueryOp, depth: Int) = {
+  override def evaluate(op: CompoundQueryOp, depth: Int): Double = {
     val (p, n, u) = getSubScores(op, depth)
     if (p == 0) {
       Double.NegativeInfinity

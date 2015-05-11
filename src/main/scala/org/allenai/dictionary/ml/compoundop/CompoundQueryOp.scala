@@ -238,7 +238,7 @@ abstract class CompoundQueryOp() {
   def ops: Set[TokenQueryOp]
 
   /** @return  Map of (sentence index) -> (number of required edits this combined op
-    *        will have made towards that sentence)
+    *       will have made towards that sentence)
     */
   def numEdits: IntMap[Int]
 

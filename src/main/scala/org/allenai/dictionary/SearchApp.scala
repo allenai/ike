@@ -94,7 +94,10 @@ object SearchApp {
     case Right(qexpr) => Success(qexpr)
   }
 
-  def suggestQuery(searchApps: Seq[SearchApp], request: SuggestQueryRequest): Try[SuggestQueryResponse] = for {
+  def suggestQuery(
+    searchApps: Seq[SearchApp],
+    request: SuggestQueryRequest
+  ): Try[SuggestQueryResponse] = for {
     query <- QueryLanguage.parse(request.query)
     suggestion <- Try(
       QuerySuggester.suggestQuery(searchApps.map(_.searcher), query, request.tables, request.target,
