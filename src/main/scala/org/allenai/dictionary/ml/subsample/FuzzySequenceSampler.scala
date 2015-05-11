@@ -50,12 +50,13 @@ case class FuzzySequenceSampler(minEdits: Int, maxEdits: Int)
     searcher: Searcher,
     targetTable: Table,
     tables: Map[String, Table],
-    startFromDoc: Int
+    startFromDoc: Int,
+    startFromToken: Int
   ): Hits = {
     val rowQuery = Sampler.buildLabelledQuery(qexpr, targetTable)
     val sequenceQuery = buildFuzzySequenceQuery(qexpr, searcher, tables)
     val rowSpanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(rowQuery))
     searcher.find(new SpanQueryFilterByCaptureGroups(sequenceQuery, rowSpanQuery,
-      targetTable.cols, startFromDoc))
+      targetTable.cols, startFromDoc, startFromToken))
   }
 }

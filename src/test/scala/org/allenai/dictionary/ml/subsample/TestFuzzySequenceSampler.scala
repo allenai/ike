@@ -76,7 +76,7 @@ class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
       "hate those bananas"
     )
     assertResult(expectedResults)(hitsToStrings(FuzzySequenceSampler(0, 1).getLabelledSample(
-      tokenized, searcher, table, Map(), 0
+      tokenized, searcher, table, Map(), 0, 0
     )))
   }
 }

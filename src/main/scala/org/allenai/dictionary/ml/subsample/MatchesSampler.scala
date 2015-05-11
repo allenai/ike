@@ -23,14 +23,15 @@ case class MatchesSampler() extends Sampler() {
     searcher: Searcher,
     targetTable: Table,
     tables: Map[String, Table],
-    startFromDoc: Int
+    startFromDoc: Int,
+    startFromToken: Int
   ): Hits = {
     val rowQuery = Sampler.buildLabelledQuery(qexpr, targetTable)
     val query = QueryLanguage.interpolateTables(qexpr.getNamedQuery, tables).get
     val spanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(query))
     val rowSpanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(rowQuery))
     val filteredQuery = new SpanQueryFilterByCaptureGroups(spanQuery, rowSpanQuery,
-      targetTable.cols, startFromDoc)
+      targetTable.cols, startFromDoc, startFromToken)
     searcher.find(filteredQuery)
   }
 }

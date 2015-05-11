@@ -28,9 +28,9 @@ case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
   *
   * @param label label of the hit
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
-  *   this hit (see the ml/README.md)
+  *  this hit (see the ml/README.md)
   * @param captureStrings the string we captured, as a Sequence of capture groups of sequences of
-  *    words
+  *   words
   * @param doc the document number this Example came from
   * @param str String of hit, kept only for debugging purposes
   */
@@ -248,11 +248,13 @@ object QuerySuggester extends Logging {
     }
 
     logger.debug("Reading unlabelled hits")
+    val numUnlabelledPerSearcher = (config.maxSampleSize * percentUnlabelled).toInt / searchers.size
+    val numDocsPerSearcher = searchers.map(_.getIndexReader.numDocs())
     val ((unlabelledHits, unlabelledSize), unlabelledReadTime) = Timing.time {
       val hits = searchers.map(searcher =>
         hitGatherer.getSample(tokenizedQuery, searcher, targetTable, tables).
-          window(0, (config.maxSampleSize * percentUnlabelled).toInt / searchers.size))
-      (hits, hits.map(_.size).sum)
+          window(0, numUnlabelledPerSearcher))
+      (hits, hits.map(_.size()).sum)
     }
     logger.debug(s"Read $unlabelledSize unlabelled hits " +
       s"in ${unlabelledReadTime.toMillis / 1000.0} seconds")
@@ -260,21 +262,45 @@ object QuerySuggester extends Logging {
       logger.info("No unlabelled documents found")
       return Suggestions(ScoredQuery(startingQuery, 0, 0, 0, 0), Seq(), 0)
     }
-    val lastUnlabelledDocs = unlabelledHits.map { hits =>
-      hits.get(hits.last()).doc
+
+    // Number of documents we searched for unlabelled hits from
+    val numUnlabelledDocs = unlabelledHits.zip(numDocsPerSearcher).map {
+      case (hits, totalDocs) =>
+        if (hits.size() < numUnlabelledPerSearcher) {
+          totalDocs
+        } else {
+          hits.numberOfDocs()
+        }
+    }.sum
+    val unlabelledEndPoints = unlabelledHits.map { hits =>
+      if (hits.last() == -1) {
+        (0, 0)
+      } else {
+        (hits.get(hits.last()).doc, hits.get(hits.last()).start)
+      }
     }
-    val numUnlabelledDocs = lastUnlabelledDocs.sum
     logger.debug(s"Reading labelled hits")
+    val numLabelledPerSearcher = config.maxSampleSize - numUnlabelledPerSearcher
     val ((labelledHits, labelledSize), labelledReadTime) = Timing.time {
-      val hits = searchers.zip(lastUnlabelledDocs).map {
-        case (searcher, lastDoc) =>
+      val hits = searchers.zip(unlabelledEndPoints).map {
+        case (searcher, (lastDoc, lastToken)) =>
           hitGatherer.getLabelledSample(tokenizedQuery, searcher, targetTable,
-            tables, lastDoc).window(0, (config.maxSampleSize * (1 - percentUnlabelled)).toInt)
+            tables, lastDoc, lastToken + 1).window(0, numLabelledPerSearcher)
       }
       (hits, hits.map(_.size).sum)
     }
     logger.debug(s"Read $labelledSize labelled hits in" +
       s" ${labelledReadTime.toMillis / 1000.0} seconds")
+
+    // Number of documents we searched for labelled hits from
+    val numDocs = (labelledHits, unlabelledEndPoints, numDocsPerSearcher).zipped.map {
+      case (hits, (lastDoc, lastToken), totalDocs) =>
+        if (hits.size < numUnlabelledPerSearcher) {
+          totalDocs - lastDoc
+        } else {
+          hits.numberOfDocs()
+        }
+    }.sum
 
     val maxRemoves = if (narrow) {
       Int.MaxValue
@@ -336,14 +362,6 @@ object QuerySuggester extends Logging {
     val totalNegativeHits = hitAnalysis.examples.count(x => x.label == Negative)
     logger.info(s"Found $totalPositiveHits positive " +
       s"and $totalNegativeHits negative with ${hitAnalysis.operatorHits.size} possible operators")
-
-    val numDocs = labelledHits.map { hits =>
-      if (hits.last() == -1) {
-        numUnlabelledDocs
-      } else {
-        hits.get(hits.last()).doc
-      }
-    }.sum
 
     val opCombiner =
       if (config.allowDisjunctions) {

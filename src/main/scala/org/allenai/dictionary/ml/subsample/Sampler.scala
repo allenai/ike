@@ -11,7 +11,7 @@ import org.apache.lucene.search.spans.SpanQuery
 object Sampler extends Logging {
 
   /** @return the rows within a table that the given query might match, rows are returned as a
-    *    sequence of phrases, each phrase is a sequence of QWords
+    *   sequence of phrases, each phrase is a sequence of QWords
     */
   def getFilteredRows(query: TokenizedQuery, table: Table): Seq[Seq[Seq[QWord]]] = {
     val captureSizes = query.captures.map {
@@ -106,7 +106,7 @@ abstract class Sampler {
     * @param targetTable Table to limit queries to
     * @param tables map of string->Table, used for interpolating queries
     * @param startFromDoc document to start collecting hits from, returned hits will not have doc
-    *                  smaller than startFromDoc
+    *                 smaller than startFromDoc
     * @return Hits object containing the samples
     */
   def getLabelledSample(
@@ -114,7 +114,8 @@ abstract class Sampler {
     searcher: Searcher,
     targetTable: Table,
     tables: Map[String, Table],
-    startFromDoc: Int
+    startFromDoc: Int,
+    startFromToken: Int
   ): Hits
 }
 

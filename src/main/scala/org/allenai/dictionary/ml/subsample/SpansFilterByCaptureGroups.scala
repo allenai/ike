@@ -10,14 +10,16 @@ import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
   * @param query the 'query' spans to filter
   * @param filter the 'filter' spans to filter the query spans with
   * @param captureGroups the names of the captures groups to filter with, both the query and
-  *                 filter spans should contain these capture groups
-  * @param startFromDoc document to start from
+  *               filter spans should contain these capture groups
+  * @param startFromDoc document to start collecting hits from
+  * @param startFromToken token to start collecting hits from
   */
 class SpansFilterByCaptureGroups(
     query: BLSpans,
     filter: BLSpans,
     captureGroups: Seq[String],
-    startFromDoc: Int = 0
+    startFromDoc: Int = 0,
+    startFromToken: Int = 0
 ) extends BLSpans {
 
   var more = true
@@ -38,7 +40,16 @@ class SpansFilterByCaptureGroups(
     } else {
       more = if (!initialized) {
         initialized = true
-        query.skipTo(startFromDoc) && filter.skipTo(startFromDoc) && syncMatch()
+        if (query.skipTo(startFromDoc) && filter.skipTo(startFromDoc)) {
+          var continue = true
+          // Move past startFromToken
+          while (continue && query.start() < startFromToken && query.doc == startFromDoc) {
+            continue = query.next()
+          }
+          continue && syncMatch()
+        } else {
+          false
+        }
       } else {
         query.next() && syncMatch()
       }
