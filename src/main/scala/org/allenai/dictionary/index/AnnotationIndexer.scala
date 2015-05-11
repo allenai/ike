@@ -12,7 +12,6 @@ class AnnotationIndexer(indexer: Indexer, fileName: String, reader: Reader)
   val mainProp = getMainProperty
   val punctProp = getPropPunct
   val posProp = addProperty("pos", SensitivitySetting.SENSITIVE_AND_INSENSITIVE)
-  val clusterProp = addProperty("cluster", SensitivitySetting.ONLY_SENSITIVE)
   val lemmaProp = addProperty("lemma", SensitivitySetting.ONLY_SENSITIVE)
   addHandler("/document", new DocumentElementHandler())
   addHandler("word", new WordHandlerBase() {
@@ -20,11 +19,9 @@ class AnnotationIndexer(indexer: Indexer, fileName: String, reader: Reader)
       if (attrs.getValue(name) != null) prop.addValue(attrs.getValue(name))
     }
     def addPos(attrs: Attributes): Unit = addAttribute("pos", attrs, posProp)
-    def addCluster(attrs: Attributes): Unit = addAttribute("cluster", attrs, clusterProp)
     def addLemma(attrs: Attributes): Unit = addAttribute("lemma", attrs, lemmaProp)
     def addAttrs(attrs: Attributes): Unit = {
       addPos(attrs)
-      addCluster(attrs)
       addLemma(attrs)
     }
     override def startElement(uri: String, ln: String, qName: String, attrs: Attributes): Unit = {

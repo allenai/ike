@@ -17,6 +17,7 @@ var SuggestQueryButton = React.createClass({
     return {
       suggestions: [],
       sampleSize: 0,
+      disabled: false,
       narrow: false,
       waiting: false
     };
@@ -184,8 +185,8 @@ var SuggestQueryButton = React.createClass({
               {tableInstance}
           </DropdownButton>
           <Button
-            style={{fontSize: 'small'}}
             disabled={this.state.waiting}
+            style={{fontSize: 'small'}}
             onClick={this.suggestQuery}
             >Refresh
           </Button>
@@ -195,7 +196,8 @@ var SuggestQueryButton = React.createClass({
           style={{fontSize: 'small'}}
           label='Narrow'
           onChange={this.checkBoxChange}
-          defaultChecked={this.state.narrow}/>
+          defaultChecked={this.state.narrow}
+          disabled={this.props.disabled}/>
       </div>
     </div>
     );

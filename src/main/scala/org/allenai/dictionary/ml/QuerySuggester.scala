@@ -28,9 +28,9 @@ case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
   *
   * @param label label of the hit
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
-  *    this hit (see the ml/README.md)
+  *   this hit (see the ml/README.md)
   * @param captureStrings the string we captured, as a Sequence of capture groups of sequences of
-  *     words
+  *    words
   * @param doc the document number this Example came from
   * @param str String of hit, kept only for debugging purposes
   */
@@ -338,7 +338,11 @@ object QuerySuggester extends Logging {
       s"and $totalNegativeHits negative with ${hitAnalysis.operatorHits.size} possible operators")
 
     val numDocs = labelledHits.map { hits =>
-      hits.get(hits.last()).doc
+      if (hits.last() == -1) {
+        numUnlabelledDocs
+      } else {
+        hits.get(hits.last()).doc
+      }
     }.sum
 
     val opCombiner =

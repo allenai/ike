@@ -12,7 +12,7 @@ class TestBlackLabSemantics extends UnitSpec with ScratchDirectory {
     val e = QExprParser.parse(s).get
     val q = BlackLabSemantics.blackLabQuery(e)
     val hits = searcher.find(q)
-    BlackLabResult.fromHits(hits)
+    BlackLabResult.fromHits(hits, "testCorpus")
   }
   def search(s: String): Set[String] = {
     for {
@@ -43,11 +43,6 @@ class TestBlackLabSemantics extends UnitSpec with ScratchDirectory {
   it should "handle multi-term queries" in {
     assert(search("I VBP") == Set("I like", "I hate"))
     assert(search("PRP VBP") == Set("I like", "I hate", "It tastes", "They taste"))
-  }
-
-  it should "handle cluster prefix queries" in {
-    assert(search("^0") == Set("I", "mango", "It", "bananas", "They"))
-    assert(search("^00") == Set("mango", "bananas"))
   }
 
   it should "handle wildcard queries" in {

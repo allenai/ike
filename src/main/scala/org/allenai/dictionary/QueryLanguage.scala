@@ -14,11 +14,8 @@ sealed trait QAtom extends QExpr {
 sealed trait QCapture extends QAtom
 
 case class QWord(value: String) extends QLeaf
-case class QCluster(value: String) extends QLeaf
 case class QPos(value: String) extends QLeaf
 case class QDict(value: String) extends QLeaf
-case class QClusterFromWord(value: Int, wordValue: String, clusterId: String)
-  extends QLeaf
 case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])
   extends QLeaf
 case class QWildcard() extends QLeaf
@@ -64,11 +61,10 @@ object QExprParser extends RegexParsers {
   // scalastyle:off
   def wordRegex = """[^|\]\[\^$(){}\s*+,]+""".r
   def word = wordRegex ^^ QWord
-  def cluster = """\^[01]+""".r ^^ { s => QCluster(s.tail) }
   def pos = posTagRegex ^^ QPos
   def dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
   def wildcard = "\\.".r ^^^ QWildcard()
-  def atom = wildcard | pos | dict | cluster | word
+  def atom = wildcard | pos | dict | word
   def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
   def named = "(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) }
   def unnamed = "(" ~> expr <~ ")" ^^ QUnnamed
@@ -134,13 +130,12 @@ object QueryLanguage {
     *
     * @param query query to evaluate
     * @return String representation of the query
-    * @throws NotImplementedError if the query contains QAnd, QPosFromWord, or QClusterFromWord
+    * @throws NotImplementedError if the query contains QAnd or QPosFromWord
     */
   def getQueryString(query: QExpr): String = {
 
     def recurse(qexpr: QExpr): String = qexpr match {
       case QWord(value) => value
-      case QCluster(value) => "^" + value
       case QPos(value) => value
       case QDict(value) => "$" + value
       case QWildcard() => "."
@@ -152,8 +147,7 @@ object QueryLanguage {
       case QPlus(expr) => modifiableString(expr) + "+"
       case QStar(expr) => modifiableString(expr) + "*"
       case QRepetition(expr, min, max) => s"${modifiableString(expr)}[$min,$max]"
-      case (QClusterFromWord(_, _, _) | QPosFromWord(_, _, _) | QAnd(_, _)) =>
-        throw new NotImplementedError("No implementation for " + query.getClass.getName)
+      case _ => ???
     }
 
     def modifiableString(qexpr: QExpr): String = qexpr match {

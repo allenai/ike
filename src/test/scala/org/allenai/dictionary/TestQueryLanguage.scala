@@ -6,11 +6,12 @@ class TestQueryLanguage extends UnitSpec {
 
   "getQueryLength" should "get correct length" in {
     assertResult((2, 2)) {
-      val query = QSeq(Seq(QWord(""), QNamed(QCluster(""), "")))
+      val query = QSeq(Seq(QWord(""), QNamed(QPos(""), "")))
       QueryLanguage.getQueryLength(query)
     }
+
     assertResult((1, -1)) {
-      val query = QSeq(Seq(QStar(QWord("")), QNamed(QCluster(""), "")))
+      val query = QSeq(Seq(QStar(QWord("")), QNamed(QPos(""), "")))
       QueryLanguage.getQueryLength(query)
     }
 
@@ -28,7 +29,7 @@ class TestQueryLanguage extends UnitSpec {
     }
 
     assertResult((4, -1)) {
-      val q1 = QUnnamed(QSeq(Seq(disjLength2, QSeq(Seq(QCluster(""), QPlus(QWord("")))))))
+      val q1 = QUnnamed(QSeq(Seq(disjLength2, QSeq(Seq(QPos(""), QPlus(QWord("")))))))
       QueryLanguage.getQueryLength(q1)
     }
 
@@ -56,6 +57,6 @@ class TestQueryLanguage extends UnitSpec {
     check("a b[1,2] (c d)* e")
     check("a {d,e}* e")
     assert(QueryLanguage.getQueryString(QStar(QSeq(Seq(QWord("a"), QWord("b")))))
-        == "(?:a b)*")
+      == "(?:a b)*")
   }
 }

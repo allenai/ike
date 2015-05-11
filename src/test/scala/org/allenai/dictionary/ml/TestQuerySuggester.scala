@@ -185,12 +185,12 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       },
       Seq()
     )
-    val startingQuery = QueryLanguage.parse("^01 ({like, hate})").get
+    val startingQuery = QueryLanguage.parse("PRP ({like, hate})").get
     val suggestions =
       QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table),
         "test",  false, SuggestQueryConfig(5, 1, 100, 1, -5, 0, true)).suggestions
     val seq = suggestions(0).query.asInstanceOf[QSeq].qexprs
-    assertResult(QCluster("01"))(seq(0))
+    assertResult(QPos("PRP"))(seq(0))
     assertResult(Set("like", "hate", "taste").map(QWord(_)))(
       seq(1).asInstanceOf[QNamed].qexpr.asInstanceOf[QDisj].qexprs.toSet)
     assertResult(2)(seq.size)

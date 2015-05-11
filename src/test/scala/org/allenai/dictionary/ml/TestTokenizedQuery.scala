@@ -7,13 +7,11 @@ class TestTokenizedQuery extends UnitSpec with ScratchDirectory {
 
   "convertQuery" should "correctly tokenize" in {
     {
-      val captureSeq = Seq(QWord(""), QDisj(Seq(QCluster(""), QPos(""))))
-      val query = QSeq(Seq(QWord("1"), QWord("2"), QNamed(QSeq(captureSeq), "col1"), QCluster("3")))
-
+      val captureSeq = Seq(QWord(""), QDisj(Seq(QWord(""), QPos(""))))
+      val query = QSeq(Seq(QWord("1"), QWord("2"), QNamed(QSeq(captureSeq), "col1")))
       val tokenized = TokenizedQuery.buildFromQuery(query)
 
       assertResult(Seq(QWord("1"), QWord("2")))(tokenized.nonCaptures(0))
-      assertResult(Seq(QCluster("3")))(tokenized.nonCaptures(1))
       assertResult(CaptureSequence(captureSeq, "col1"))(tokenized.captures(0))
       assertResult(query)(tokenized.getQuery)
     }
