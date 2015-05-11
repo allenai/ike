@@ -147,9 +147,9 @@ var ConfigInterface = React.createClass({
                     label={'Unlabelled Weight ' + config.ml.uWeight.toFixed(2)}
                     value={config.ml.uWeight}
                     onChange={uWeightChange}
-                    step='0.01'
-                    min='-2'
-                    max='2'>
+                    step='0.001'
+                    min='-1'
+                    max='1'>
                 </Input>
                 </Panel>
                 <Panel header='Narrow Scoring' collapsed='True'>
@@ -176,9 +176,9 @@ var ConfigInterface = React.createClass({
                     label={'Unlabelled Weight ' + config.ml.uWeightNarrow.toFixed(2)}
                     value={config.ml.uWeightNarrow}
                     onChange={uWeightChangeNarrow}
-                    step='0.01'
-                    min='-2'
-                    max='2'>
+                    step='0.001'
+                    min='-1'
+                    max='1'>
                 </Input>
                 </Panel>
                 </PanelGroup>
