@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.compoundop
 
 import org.allenai.common.testkit.UnitSpec
-import org.allenai.dictionary.{QCluster, QWord}
+import org.allenai.dictionary.{QPos, QWord}
 import org.allenai.dictionary.ml.{QueryToken, Prefix}
 import org.allenai.dictionary.ml.queryop._
 
@@ -12,7 +12,7 @@ class TestOpConjunction extends UnitSpec {
     List((1, 1), (3, 0), (4, 1), (9, 1))
   )
   val replace3 = EvaluatedOp.fromList(
-    SetToken(QueryToken(3), QCluster("r3")),
+    SetToken(QueryToken(3), QPos("r3")),
     List(1, 2, 3, 4, 5)
   )
   val setMin3 = EvaluatedOp.fromPairs(

@@ -29,7 +29,6 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
 
   def buildToken(word: String): Token = {
     val pos = TestData.posTags(word)
-    val cluster = TestData.clusters(word)
     Token(word, pos)
   }
 

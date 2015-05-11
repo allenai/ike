@@ -16,7 +16,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
   val prefix3 = SetToken(Prefix(3), QPos("NN"))
   val suffix1 = SetToken(Suffix(1), QWord("s1"))
   val suffix3 = SetToken(Suffix(3), QWord("s3"))
-  val replace3 = SetToken(QueryToken(3), QCluster("11"))
+  val replace3 = SetToken(QueryToken(3), QWord("11"))
   val add1 = AddToken(1, QWord("a3"))
   val add21 = AddToken(2, QWord("a21"))
   val add22 = AddToken(2, QWord("a22"))

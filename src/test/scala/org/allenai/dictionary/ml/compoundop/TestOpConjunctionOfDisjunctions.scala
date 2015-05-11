@@ -20,7 +20,7 @@ class TestOpConjunctionOfDisjunctions extends UnitSpec {
     List((1, 1), (3, 0), (4, 1), (9, 1))
   )
   val replace3 = EvaluatedOp.fromList(
-    SetToken(QueryToken(3), QCluster("r3")),
+    SetToken(QueryToken(3), QPos("r3")),
     List(1, 2, 3, 4, 5, 6, 7)
   )
   val add3 = EvaluatedOp.fromPairs(
