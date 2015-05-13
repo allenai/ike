@@ -24,13 +24,18 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.collection.JavaConverters._
 import Ordering.Implicits._
+import scala.util.Sorting
 
 object CreatePhraseVectors extends App with Logging {
   // phrase2vec parameters
   val minWordCount = 5
   val startThreshold = 200
 
-  case class Options(input: URI = null, destination: File = null)
+  case class Options(
+    input: URI = null,
+    destination: File = null,
+    vocabSize: Int = 100000000
+  )
 
   val parser = new scopt.OptionParser[Options](this.getClass.getSimpleName.stripSuffix("$")) {
     opt[URI]('i', "input") required () action { (i, o) =>
@@ -40,6 +45,10 @@ object CreatePhraseVectors extends App with Logging {
     opt[File]('d', "destination") required () action { (d, o) =>
       o.copy(destination = d)
     } text "the destination vector file"
+
+    opt[Int]('v', "vocabSize") action { (v, o) =>
+      o.copy(vocabSize = v)
+    } text "the maximum size of the vocabulary"
 
     help("help")
   }
@@ -171,6 +180,31 @@ object CreatePhraseVectors extends App with Logging {
         def bumpCount[T](map: mutable.Map[T, Int], key: T): Unit = {
           val count = map.getOrElse(key, 0) + 1
           map.update(key, count)
+
+          // if the map is now bigger than the vocab size, cut down to vocab size
+          if (map.size > 2 * options.vocabSize) {
+            map.synchronized {
+              // Have to check twice. All threads will get here, only one reduces the vocab while
+              // the others wait.
+              if (map.size > 2 * options.vocabSize) {
+                // This would be a prime example for the QuickSelect algorithm, which can do this in
+                // O(n), but in practice the difference between O(n) and O(n log n) isn't worth the
+                // trouble.
+                val counts = map.values.toArray
+                Sorting.quickSort(counts)
+                val minCount = counts(counts.length - options.vocabSize - 1)
+
+                logger.info(s"Reducing vocab; removing all items with counts <= $minCount")
+                logger.info(s"Size before: ${map.size}")
+
+                map.foreach { case (k, c) => if (c <= minCount) map.remove(k) }
+
+                logger.info(s"Size after:  ${map.size}")
+
+                System.gc()
+              }
+            }
+          }
         }
 
         phrasified.foreach { sentence =>
