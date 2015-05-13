@@ -4,6 +4,7 @@ import nl.inl.blacklab.search.{ TextPattern, TextPatternAnd, TextPatternCaptureG
 import nl.inl.blacklab.search.sequences.{ TextPatternAnyToken, TextPatternRepetition, TextPatternSequence }
 
 object BlackLabSemantics {
+  var maxRepetition = 128
   def notImplemented: Exception = new UnsupportedOperationException
   def blackLabQuery(qexpr: QExpr): TextPattern = {
     var unnamedCnt = 0
@@ -18,8 +19,8 @@ object BlackLabSemantics {
         val result = blqHelper(QNamed(e, s"Capture Group ${unnamedCnt}"))
         result
       case QNonCap(e: QExpr) => blqHelper(e)
-      case QStar(e: QExpr) => new TextPatternRepetition(blqHelper(e), 0, -1)
-      case QPlus(e: QExpr) => new TextPatternRepetition(blqHelper(e), 1, -1)
+      case QStar(e: QExpr) => new TextPatternRepetition(blqHelper(e), 0, maxRepetition)
+      case QPlus(e: QExpr) => new TextPatternRepetition(blqHelper(e), 1, maxRepetition)
       case QRepetition(e, min, max) => new TextPatternRepetition(blqHelper(e), min, max)
       case QSeq(es: Seq[QExpr]) => new TextPatternSequence(es.map(blqHelper): _*)
       case QDisj(es: Seq[QExpr]) => new TextPatternOr(es.map(blqHelper): _*)
