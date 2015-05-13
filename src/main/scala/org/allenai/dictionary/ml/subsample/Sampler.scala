@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.subsample
 
 import org.allenai.common.Logging
-import org.allenai.dictionary.ml.{ CaptureSequence, TokenizedQuery }
+import org.allenai.dictionary.ml.{ TokenizedQuery }
 
 import nl.inl.blacklab.search.{ Hits, Searcher }
 import org.allenai.dictionary._
@@ -11,13 +11,13 @@ import org.apache.lucene.search.spans.SpanQuery
 object Sampler extends Logging {
 
   /** @return the rows within a table that the given query might match, rows are returned as a
-    *   sequence of phrases, each phrase is a sequence of QWords
+    *  sequence of phrases, each phrase is a sequence of QWords
     */
   def getFilteredRows(query: TokenizedQuery, table: Table): Seq[Seq[Seq[QWord]]] = {
-    val captureSizes = query.captures.map {
-      captureSequence =>
-        val querySize = QueryLanguage.getQueryLength(captureSequence.getQuery)
-        (captureSequence.columnName -> querySize)
+    val captureSizes = query.getCaptureGroups.map {
+      case (colName, seq) =>
+        val querySize = QueryLanguage.getQueryLength(QSeq(seq))
+        (colName -> querySize)
     }.toMap
     val orderedCapturedSizes = table.cols.map(captureSizes(_))
 
@@ -45,12 +45,19 @@ object Sampler extends Logging {
 
     // Reorder row to match the query
     val colNameToColumn = table.cols.zip(filteredRows.transpose).toMap
-    val captureNames = query.captures.map(_.columnName)
+    val captureNames = query.getCaptureGroups.map(_._1)
     val rowsReordered = captureNames.map(colNameToColumn(_)).transpose
 
-    val distanceBetweenCaptures = query.nonCaptures.drop(1).dropRight(1).
-      map(x => QueryLanguage.getQueryLength(QSeq(x)))
-
+    var prevWasCapture = query.tokenSequences.head.isCaptureGroup
+    val distanceBetweenCaptures = query.tokenSequences.drop(1).map { tokenSequence =>
+      val len = if (tokenSequence.isCaptureGroup && !prevWasCapture) {
+        Some(QueryLanguage.getQueryLength(tokenSequence.getQuery))
+      } else {
+        None
+      }
+      prevWasCapture = tokenSequence.isCaptureGroup
+      len
+    }.flatten
     val asSequences = rowsReordered.map(row => {
       val rowCaptures = row.zip(captureNames).map {
         case (phrase, columnName) => QNamed(QSeq(phrase), columnName)
@@ -106,7 +113,7 @@ abstract class Sampler {
     * @param targetTable Table to limit queries to
     * @param tables map of string->Table, used for interpolating queries
     * @param startFromDoc document to start collecting hits from, returned hits will not have doc
-    *                 smaller than startFromDoc
+    *                smaller than startFromDoc
     * @return Hits object containing the samples
     */
   def getLabelledSample(

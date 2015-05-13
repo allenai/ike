@@ -28,12 +28,12 @@ case class FuzzySequenceSampler(minEdits: Int, maxEdits: Int)
     // Figure out what subsequence we should record as capture group.
     var onIndex = 0
     var captureList = List[CaptureSpan]()
-    tokenizedQuery.nonCaptures.zip(tokenizedQuery.captures).foreach {
-      case (leftNonCapture, capture) =>
-        onIndex += leftNonCapture.size
-        captureList = CaptureSpan(capture.columnName, onIndex,
-          onIndex + capture.seq.size) +: captureList
-        onIndex += capture.seq.size
+    tokenizedQuery.tokenSequences.foreach { tokenSequence =>
+      if (tokenSequence.isCaptureGroup) {
+        captureList = CaptureSpan(tokenSequence.columnName.get, onIndex,
+          onIndex + tokenSequence.size) +: captureList
+      }
+      onIndex += tokenSequence.size
     }
     val querySize = tokenizedQuery.size
     new SpanQueryFuzzySequence(asSpanQueries, querySize - maxEdits, querySize - minEdits, true,

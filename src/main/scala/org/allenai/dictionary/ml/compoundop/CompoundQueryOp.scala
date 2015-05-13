@@ -183,49 +183,28 @@ object CompoundQueryOp {
     // Build a new token sequence to be use in our new TokenizedQuery by taking the modified
     // tokens if it exists otherwise using the previous tokens. None means the previous token
     // should be removed and not replaced
-    var newSeq =
+    var newQuerySequence =
       query.getSeq.zipWithIndex.map {
         case (qexpr, i) =>
           modifierOps.getOrElse(i + 1, Seq(qexpr))
       }
 
-    // Now split up our new token sequence into capture and non capture groups, this is
-    // done by consuming tokens from our sequence in the same proportions as found in the old query
-    var onCapture = false
-    var captures = List[CaptureSequence]()
-    var nonCaptures = List[Seq[QExpr]]()
-    var onIndex = 0
-    var done = false
-    while (!done) {
-      if (onCapture) {
-        val chunkSize = query.captures(onIndex).seq.size
-        val (newCaptureSeq, nextSeq) = newSeq.splitAt(chunkSize)
-        newSeq = nextSeq
-        val newCapture = CaptureSequence(
-          newCaptureSeq.flatten,
-          query.captures(onIndex)
-          .columnName
-        )
-        captures = newCapture :: captures
-        onIndex += 1
-      } else {
-        val chunkSize = query.nonCaptures(onIndex).size
-        val (newPad, nextSeq) = newSeq.splitAt(chunkSize)
-        newSeq = nextSeq
-        nonCaptures = newPad.flatten :: nonCaptures
-        if (onIndex == query.nonCaptures.size - 1) {
-          done = true
-        }
-      }
-      onCapture = !onCapture
+    // Now chunk up our new token sequence, this is done by consuming tokens from our sequence in
+    // the same proportions as found in the old query
+    var queryTokenSequences = List[QueryTokenSequence]()
+    query.tokenSequences.foreach { tokenSeq =>
+      val seqSize = tokenSeq.size
+      val (newSeq, rest) = newQuerySequence.splitAt(seqSize)
+      newQuerySequence = rest
+      queryTokenSequences =
+        QueryTokenSequence(newSeq.flatten, tokenSeq.columnName) :: queryTokenSequences
     }
-    nonCaptures = nonCaptures.reverse
-    captures = captures.reverse
+    require(newQuerySequence.isEmpty)
 
     // Finally, add in the new prefix and suffix sequences
-    nonCaptures = nonCaptures.updated(0, prefixSeq ++ nonCaptures.head)
-    nonCaptures = nonCaptures.updated(nonCaptures.size - 1, nonCaptures.last ++ suffixSeq)
-    TokenizedQuery(captures, nonCaptures)
+    queryTokenSequences = QueryTokenSequence(suffixSeq, None) :: queryTokenSequences
+    queryTokenSequences = QueryTokenSequence(prefixSeq, None) :: queryTokenSequences.reverse
+    TokenizedQuery(queryTokenSequences)
   }
 }
 
@@ -238,7 +217,7 @@ abstract class CompoundQueryOp() {
   def ops: Set[TokenQueryOp]
 
   /** @return  Map of (sentence index) -> (number of required edits this combined op
-    *       will have made towards that sentence)
+    *      will have made towards that sentence)
     */
   def numEdits: IntMap[Int]
 

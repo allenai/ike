@@ -27,7 +27,7 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
     }
   }
 
-  def buildToken(word: String): Token = {
+  def token(word: String): Token = {
     val pos = TestData.posTags(word)
     Token(word, pos)
   }
@@ -42,30 +42,30 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
     val matchData = HitAnalyzer.getMatchData(hits, tokenized, 1, 2)
     assertResult(QueryMatches(QuerySlotData(Prefix(1)), Seq(
       QueryMatch(List(), true),
-      QueryMatch(List(buildToken("hate")), true),
+      QueryMatch(List(token("hate")), true),
       QueryMatch(List(), true)
     )))(matchData(0))
     assertResult(QueryMatches(QuerySlotData(Some(query.asInstanceOf[QSeq].qexprs(0)),
       QueryToken(1), false, true, false), Seq(
-        QueryMatch(List(buildToken("It")), true),
-        QueryMatch(List(buildToken("those")), true),
-        QueryMatch(List(buildToken("They")), true)
+        QueryMatch(List(token("It")), true),
+        QueryMatch(List(token("those")), true),
+        QueryMatch(List(token("They")), true)
       )))(matchData(1))
     assertResult(QueryMatches(QuerySlotData(Some(QWildcard()), QueryToken(2),
-      true, false, false), Seq(
-      QueryMatch(List(buildToken("tastes")), true),
-      QueryMatch(List(buildToken("bananas")), true),
-      QueryMatch(List(buildToken("taste")), true)
+      true, false, true), Seq(
+      QueryMatch(List(token("tastes")), true),
+      QueryMatch(List(token("bananas")), true),
+      QueryMatch(List(token("taste")), true)
     )))(matchData(2))
     assertResult(QueryMatches(QuerySlotData(Suffix(1)), Seq(
-      QueryMatch(List(buildToken("great")), true),
-      QueryMatch(List(buildToken(".")), true),
-      QueryMatch(List(buildToken("not")), true)
+      QueryMatch(List(token("great")), true),
+      QueryMatch(List(token(".")), true),
+      QueryMatch(List(token("not")), true)
     )))(matchData(3))
     assertResult(QueryMatches(QuerySlotData(Suffix(2)), Seq(
-      QueryMatch(List(buildToken(".")), true),
+      QueryMatch(List(token(".")), true),
       QueryMatch(List(), true),
-      QueryMatch(List(buildToken("great")), true)
+      QueryMatch(List(token("great")), true)
     )))(matchData(4))
     assertResult(5)(matchData.size)
   }
@@ -115,11 +115,8 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
     )
     val hits = FuzzySequenceSampler(1, 1).getLabelledSample(tokenized, searcher, table, Map(), 0, 0)
 
-    val hitAnalysis = HitAnalyzer.buildHitAnalysis(
-      Seq(hits),
-      TokenizedQuery.buildFromQuery(query),
-      0, 0, GeneralizingOpGenerator(true, true, false, tokenized.size, true), table
-    )
+    val hitAnalysis = HitAnalyzer.buildHitAnalysis(Seq(hits), tokenized, 0, 0,
+      GeneralizingOpGenerator(true, true, false, tokenized.size, true), table)
     assertResult(IndexedSeq(WeightedExample(Positive, 1, 1.0, 0)))(
       hitAnalysis.examples.map(_.copy(str="")))
     // Note VBP will not be suggested because it does not generalize 'running'

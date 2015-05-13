@@ -29,113 +29,37 @@ object QuerySlotData {
   * @param qexpr the QExpr in this slot, None if and only if slot is a Prefix or Suffix
   * @param slot which query-token this data is about
   * @param isCapture whether this slot is contained within a capture group
-  * @param leftEdge whether this slot is the left-most non capture group
-  * @param rightEdge whether this slot is the right-most non capture group
+  * @param firstTokenSequence whether this slot is the left-most 'chunk' of the query
+  * @param lastTokenSequence whether this slot is the right-most 'chunk' of the query
   */
 case class QuerySlotData(qexpr: Option[QExpr], slot: Slot,
-    isCapture: Boolean, leftEdge: Boolean, rightEdge: Boolean) {
-  require(!(leftEdge && rightEdge))
+    isCapture: Boolean, firstTokenSequence: Boolean, lastTokenSequence: Boolean) {
   if (slot.isInstanceOf[QueryToken]) {
-    require(qexpr.isDefined && !((rightEdge || leftEdge) && isCapture))
+    require(qexpr.isDefined)
   } else {
-    require(qexpr.isEmpty && !isCapture && !leftEdge && !rightEdge)
+    require(qexpr.isEmpty && !isCapture && !firstTokenSequence && !lastTokenSequence)
   }
 }
 
 /** A sequence of of QExpr 'tokens' that make up one named capture group
   * paired with the name of the capture group
   */
-case class CaptureSequence(seq: Seq[QExpr], columnName: String) {
-  require(seq.nonEmpty)
-  def getQuery: QCapture = {
-    QNamed(TokenizedQuery.qexprFromSequence(seq), columnName)
+case class QueryTokenSequence(queryTokens: Seq[QExpr], columnName: Option[String]) {
+  def getQuery: QExpr = {
+    if (columnName.isDefined) {
+      QNamed(TokenizedQuery.qexprFromSequence(queryTokens), columnName.get)
+    } else {
+      TokenizedQuery.qexprFromSequence(queryTokens)
+    }
   }
+  def size: Int = queryTokens.size
+  def isCaptureGroup: Boolean = columnName.isDefined
 }
 
 object TokenizedQuery {
 
-  def getTokenNames(numTokens: Int): Seq[String] = {
-    Range(0, numTokens).map(i => s"__QueryToken${i}___")
-  }
-
-  private def mergeToAnnotated(
-    s1: List[CaptureSequence],
-    s2: List[Seq[QExpr]],
-    onIndex: Int = 0
-  ): Seq[QuerySlotData] = {
-    (s1, s2) match {
-      case (Nil, end :: Nil) => end.zipWithIndex.map {
-        case (qexpr, index) => QuerySlotData(Some(qexpr), QueryToken(index + onIndex + 1),
-          false, true, false)
-      }
-      case (capture :: restCapture, nonCapture :: restNonCapture) =>
-        val nonCaptureAnnotated = nonCapture.zipWithIndex.map {
-          case (qexpr, index) => QuerySlotData(Some(qexpr), QueryToken(index + onIndex + 1),
-            false, onIndex == 0, false)
-        }
-        val nonCaptureSize = nonCapture.size
-        val captureAnnotated = capture.seq.zipWithIndex.map {
-          case (qexpr, index) => QuerySlotData(Some(qexpr), QueryToken(index + onIndex +
-            nonCaptureSize + 1), true, false, false)
-        }
-        nonCaptureAnnotated ++ captureAnnotated ++ mergeToAnnotated(
-          restCapture, restNonCapture, onIndex + nonCaptureSize + capture.seq.size
-        )
-      case _ => throw new RuntimeException()
-    }
-  }
-
-  private def mergeToSeq(s1: List[CaptureSequence], s2: List[Seq[QExpr]]): List[Seq[QExpr]] = {
-    (s1, s2) match {
-      case (Nil, end :: Nil) => List(end)
-      case (capture :: restCapture, nonCapture :: restNonCapture) =>
-        List(nonCapture, capture.seq) ++ mergeToSeq(restCapture, restNonCapture)
-      case _ => throw new RuntimeException()
-    }
-  }
-
-  private def mergeToCapturedQExpr(
-    s1: List[CaptureSequence], s2: List[Seq[QExpr]], names: List[String]
-  ): Seq[QExpr] = {
-
-    def zipToNamed(sq: Seq[QExpr], names: Seq[String]): Seq[QExpr] = {
-      sq.zip(names).map {
-        case (qexpr, name) =>
-          val size = QueryLanguage.getQueryLength(qexpr)
-          if (size._1 != size._2 || size._2 == -1) {
-            QNamed(qexpr, name)
-          } else {
-            qexpr
-          }
-      }
-    }
-
-    (s1, s2) match {
-      case (Nil, end :: Nil) =>
-        require(names.size == end.size); zipToNamed(end, names)
-      case (capture :: restCapture, nonCapture :: restNonCapture) =>
-        val captureSize = capture.seq.size
-        val nonCaptureSize = nonCapture.size
-        require(names.size >= captureSize + nonCaptureSize)
-        val nonCaptureNamed = zipToNamed(nonCapture, names)
-        val captureName = QNamed(TokenizedQuery.qexprFromSequence(
-          zipToNamed(capture.seq, names.drop(nonCaptureSize))
-        ), capture.columnName)
-        val remainingNames = names.drop(nonCaptureSize + captureSize)
-        (nonCaptureNamed :+ captureName) ++
-          mergeToCapturedQExpr(restCapture, restNonCapture, remainingNames)
-      case _ => throw new RuntimeException()
-    }
-  }
-
-  private def mergeToQExpr(s1: List[CaptureSequence], s2: List[Seq[QExpr]]): List[QExpr] = {
-    (s1, s2) match {
-      case (Nil, end :: Nil) => end.toList
-      case (capture :: restCapture, nonCapture :: restNonCapture) =>
-        nonCapture.toList ++ (capture.getQuery +: mergeToQExpr(restCapture, restNonCapture))
-      case _ => throw new RuntimeException()
-    }
-  }
+  def getTokenName(tokenIndex: Int): String = s"__QueryToken${tokenIndex}___"
+  def getTokenNames(numTokens: Int): Seq[String] = Range(0, numTokens).map(getTokenName)
 
   def qexprToSequence(qexpr: QExpr): Seq[QExpr] = qexpr match {
     case QSeq(seq) => seq
@@ -152,7 +76,7 @@ object TokenizedQuery {
     * @param tableCols Sequence of table columns, used to name the query's unnamed capture group
     * @return the tokenized QExpr
     * @throws IllegalArgumentException if the query capture groups could not be made mapped to
-    *                               the table columns
+    *                              the table columns
     */
   def buildFromQuery(qexpr: QExpr, tableCols: Seq[String]): TokenizedQuery = {
     buildFromQuery(QueryLanguage.nameCaptureGroups(qexpr, tableCols))
@@ -161,60 +85,77 @@ object TokenizedQuery {
   /** Builds a TokenizedQuery from a QExpr
     *
     * @param qexpr Expression to tokenize, assumed to be fixed length (always matches the same
-    *       number of tokens) and with no unnamed capture groups
+    *      number of tokens) and with no unnamed capture groups
     * @return the tokenized QExpr
     * @throws IllegalArgumentException if the query has unnamed capture groups
     */
   def buildFromQuery(qexpr: QExpr): TokenizedQuery = {
     val asSeq = qexprToSequence(qexpr)
 
-    var captures = List[CaptureSequence]()
-    var currentNonCapture = List[QExpr]()
-    var nonCaptures = List[Seq[QExpr]]()
+    var tokenSequences = Seq[QueryTokenSequence]()
+    var onSequence = List[QExpr]()
     asSeq.foreach {
       case c: QCapture =>
-        nonCaptures = currentNonCapture.reverse :: nonCaptures
-        currentNonCapture = List[QExpr]()
+        if (onSequence.nonEmpty) {
+          tokenSequences = tokenSequences :+ QueryTokenSequence(onSequence.reverse, None)
+          onSequence = List()
+        }
         val captureSeq = c match {
           case QUnnamed(expr) => throw new IllegalArgumentException("Cannot convert unnamed " +
             "capture groups")
-          case QNamed(expr, name) => CaptureSequence(qexprToSequence(expr), name)
+          case QNamed(expr, name) => QueryTokenSequence(qexprToSequence(expr), Some(name))
         }
-        captures = captureSeq :: captures
-      case q: QExpr => currentNonCapture = q :: currentNonCapture
+        tokenSequences = tokenSequences :+ captureSeq
+      case q: QExpr => onSequence = q :: onSequence
     }
-    nonCaptures = currentNonCapture.reverse :: nonCaptures
-    TokenizedQuery(captures.reverse, nonCaptures.reverse)
+    if (onSequence.nonEmpty) {
+      tokenSequences = tokenSequences :+ QueryTokenSequence(onSequence.reverse, None)
+    }
+    TokenizedQuery(tokenSequences)
   }
 }
 
 /** Query that has been 'tokenized' into a sequence of QExpr
   *
-  * @param captures Sequence of capture groups in the query
-  * @param nonCaptures Sequence of of QExpr that occurs between each capture group, including
-  *            to the left and right of the first and last capture group. Can contain
-  *            empty sequences
   * @throws IllegalArgumentException if capture.size + 1 != nonCapture.size
   */
-case class TokenizedQuery(captures: List[CaptureSequence], nonCaptures: List[Seq[QExpr]]) {
+case class TokenizedQuery(tokenSequences: Seq[QueryTokenSequence]) {
 
-  require(captures.size + 1 == nonCaptures.size)
-
-  def size: Int = captures.map(_.seq.size).sum + nonCaptures.map(_.size).sum
+  val size: Int = tokenSequences.map(_.queryTokens.size).sum
 
   def getQuery: QExpr = {
-    TokenizedQuery.qexprFromSequence(TokenizedQuery.mergeToQExpr(captures, nonCaptures))
+    TokenizedQuery.qexprFromSequence(tokenSequences.map { ts =>
+      if (ts.isCaptureGroup) {
+        Seq(ts.getQuery)
+      } else {
+        ts.queryTokens
+      }
+    }.flatten)
   }
 
   def getSeq: Seq[QExpr] = {
-    TokenizedQuery.mergeToSeq(captures, nonCaptures).flatten
+    tokenSequences.map(_.queryTokens).flatten
+  }
+
+  def getCaptureGroups: Seq[(String, Seq[QExpr])] = tokenSequences.filter(_.isCaptureGroup).map {
+    qc => (qc.columnName.get, qc.queryTokens)
   }
 
   /** @return the tokens of this, plus their Slot, their group number, and whether they are part
-    *  of a capture group or not
+    * of a capture group or not
     */
   def getAnnotatedSeq: Seq[QuerySlotData] = {
-    TokenizedQuery.mergeToAnnotated(captures, nonCaptures)
+    var onIndex = 0
+    tokenSequences.zipWithIndex.map {
+      case (tokenSequence, sequenceIndex) =>
+        val isCapture = tokenSequence.columnName.isDefined
+        tokenSequence.queryTokens.map { queryToken =>
+          val qsd = QuerySlotData(Some(queryToken), QueryToken(onIndex + 1), isCapture,
+            sequenceIndex == 0, sequenceIndex == tokenSequences.size - 1)
+          onIndex += 1
+          qsd
+        }
+    }.flatten
   }
 
   /** @return the names each token in this.getSeq in order */
@@ -231,6 +172,25 @@ case class TokenizedQuery(captures: List[CaptureSequence], nonCaptures: List[Seq
     * name, in addition to the capture groups normally part of this.getQuery
     */
   def getNamedQuery: QExpr = {
-    QSeq(TokenizedQuery.mergeToCapturedQExpr(captures, nonCaptures, getNames.toList))
+    var onIndex = 0
+    val querySequence = tokenSequences.map { tokenSequence =>
+      val namedTokens = tokenSequence.queryTokens.map { queryToken =>
+        val (min, max) = QueryLanguage.getQueryLength(queryToken)
+        val q = if (min == max) {
+          queryToken
+        } else {
+          QNamed(queryToken, TokenizedQuery.getTokenName(onIndex))
+        }
+        onIndex += 1
+        q
+      }
+      val query = TokenizedQuery.qexprFromSequence(namedTokens)
+      if (tokenSequence.columnName.isDefined) {
+        QNamed(query, tokenSequence.columnName.get)
+      } else {
+        query
+      }
+    }
+    TokenizedQuery.qexprFromSequence(querySequence)
   }
 }

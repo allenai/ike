@@ -13,8 +13,8 @@ import scala.collection.immutable.IntMap
   * @param suggestWord whether to build operators that add words to the query
   * @param addToken whether to suggest AddToken ops in addition to SetToken ops
   * @param maxRemoves the maximum number of tokens that can be removed, this will stop this from
-  *              suggesting RemoveEdge ops that would require removing more then that many
-  *              tokens
+  *             suggesting RemoveEdge ops that would require removing more then that many
+  *             tokens
   */
 case class GeneralizingOpGenerator(
     suggestPos: Boolean,
@@ -75,15 +75,17 @@ case class GeneralizingOpGenerator(
       setTokenOps
     }
 
-    val removeOps = if (matches.queryToken.leftEdge || matches.queryToken.rightEdge) {
-      val distance = if (matches.queryToken.leftEdge) {
+    val removeOps = if (!matches.queryToken.isCapture && (
+      matches.queryToken.firstTokenSequence || matches.queryToken.lastTokenSequence
+    )) {
+      val distance = if (matches.queryToken.firstTokenSequence) {
         slot.token
       } else {
         queryLength - slot.token
       }
       if (distance <= maxRemoves) {
         val removeOp =
-          if (matches.queryToken.leftEdge) {
+          if (matches.queryToken.firstTokenSequence) {
             if (slot.token == 1) {
               RemoveToken(slot.token)
             } else {
