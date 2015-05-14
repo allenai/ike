@@ -3,6 +3,8 @@ package org.allenai.dictionary.index
 import java.io.File
 import java.nio.charset.MalformedInputException
 import org.allenai.common.{ Resource, Logging }
+import org.allenai.common.ParIterator._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.io.Source
 import com.typesafe.config.Config
@@ -27,17 +29,21 @@ case object IdText extends Logging {
     idText = IdText(id, line)
   } yield idText
 
-  def fromDirectory(file: File): Iterator[IdText] = for {
-    subFile <- recursiveListFiles(file).toIterator
-    if !subFile.isDirectory
-    id = subFile.getAbsolutePath
-    text <- safeLinesFromFile(subFile)
-    idText = IdText(id, text)
-  } yield idText
+  def fromDirectory(file: File): Iterator[IdText] = recursiveListFiles(file).parMap({ subFile =>
+    if (subFile.isDirectory) {
+      None
+    } else {
+      val id = subFile.getAbsolutePath
+      for {
+        text <- safeLinesFromFile(subFile)
+        idText = IdText(id, text)
+      } yield idText
+    }
+  }, 32).flatten
 
-  def recursiveListFiles(f: File): Array[File] = {
+  def recursiveListFiles(f: File): Iterator[File] = {
     val these = f.listFiles
-    these ++ these.filter(_.isDirectory).flatMap(recursiveListFiles)
+    these.iterator ++ these.iterator.filter(_.isDirectory).flatMap(recursiveListFiles)
   }
 
   def safeLinesFromFile(file: File): Option[String] = try {
