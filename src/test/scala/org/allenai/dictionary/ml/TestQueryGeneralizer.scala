@@ -47,11 +47,11 @@ class TestQueryGeneralizer extends UnitSpec with ScratchDirectory {
       val gens = QueryGeneralizer.queryGeneralizations(QRepetition(QPos("NN"), 1, 4), searchers, 10)
       val qexprs = gens.asInstanceOf[GeneralizeToDisj].elements
 
-      assert(qexprs.size == 1)
-      val repeatOf = qexprs.head.asInstanceOf[QRepeating].qexpr.asInstanceOf[QDisj].qexprs
-      assert(repeatOf.contains(QPos("NNS")))
-      assert(repeatOf.contains(QPos("NN")))
-      assert(!repeatOf.contains(QPos("VB")))
+      assert(qexprs.size == 4)
+      assert(qexprs contains QRepetition(QPos("NNS"), 1, 4))
+      assert(qexprs contains QRepetition(QPos("FW"), 1, 4))
+      assert(qexprs contains QRepetition(QPos("NNP"), 1, 4))
+      assert(qexprs contains QRepetition(QPos("NNPS"), 1, 4))
     }
     assertResult(GeneralizeToNone())(QueryGeneralizer.queryGeneralizations(
       QRepetition(QWildcard(), 1, 4), searchers, 10))

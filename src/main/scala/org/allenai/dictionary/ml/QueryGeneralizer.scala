@@ -14,9 +14,17 @@ object Generalization {
     }
   }
 }
+
+/** Represents a way of generalizing another QExpr*/
 sealed abstract class Generalization()
+
+/** Use any query of the given length */
 case class GeneralizeToAny(min: Int, max: Int) extends Generalization
+
+/** Use a query from a fixed set */
 case class GeneralizeToDisj(elements: Seq[QExpr]) extends Generalization
+
+/** No generalizations possible */
 case class GeneralizeToNone() extends Generalization
 
 object QueryGeneralizer {
@@ -32,59 +40,13 @@ object QueryGeneralizer {
     Set("RBS", "RBR", "RP", "SYM", "RB", "IN", "CD", "MD")
   ).map(_ + "FW")
 
-  private def getQLeafGeneralizations(
-      qexpr: QLeaf,
-      searchers: Seq[Searcher],
-      sampleSize: Int
-      ): Generalization = qexpr match {
-    case QWord(word) =>
-      val posTags = searchers.map { searcher =>
-        val hits = searcher.find(BlackLabSemantics.blackLabQuery(qexpr)).window(0, sampleSize)
-        hits.setContextSize(0)
-        hits.setContextField(List("pos").asJava)
-        hits.asScala.map { hit =>
-          val kwic = hits.getKwic(hit)
-          val pos = kwic.getTokens("pos").get(0)
-          pos
-        }
-      }.flatten
-      val posCounts = posTags.groupBy(identity).mapValues(_.size)
-
-      val usePos = posCounts.keySet
-      Generalization.to(posCounts.keySet.toSeq.map(QPos(_)))
-    // Word2Vec also goes here, probably add in the closest N QWords
-    case QPos(pos) => Generalization.to(
-      (posSets.filter(_.contains(pos)).reduce((a, b) => a ++ b) - pos).map(QPos(_)).toSeq)
-    case _ => GeneralizeToNone()
-  }
-
-  private def getQDisjGeneralization(
-      qexpr: QDisj,
-      searchers: Seq[Searcher],
-      sampleSize: Int
-      ): Generalization = {
-    if (qexpr.qexprs.forall(q => q.isInstanceOf[QLeaf]) && qexpr.qexprs.size < 10) {
-      val generalizations = qexpr.qexprs.map(q =>
-        getQLeafGeneralizations(q.asInstanceOf[QLeaf], searchers, sampleSize))
-      val candidatePos = generalizations.map {
-        case GeneralizeToDisj(disj) => disj
-        case _ => Seq()
-      }.flatten.toSet
-      Generalization.to((candidatePos -- qexpr.qexprs).toSeq)
-    } else {
-      val (min, max) = QueryLanguage.getQueryLength(qexpr)
-      GeneralizeToAny(min, max)
-    }
-  }
-
   /** Suggestions some generalizations for a given query expressions
     *
-    * @param qexpr
-    * @param searchers
-    * @param sampleSize
-    * @return Either an Int, indicating that this qexpr could be generalized to match any that many
-    *         tokens of any kinds, or a sequence of QExpr that would match generalizations of the
-    *         token
+    * @param qexpr QExpr to generalize
+    * @param searchers Searchers to use when deciding what to generalize
+    * @param sampleSize Number of samples to get per a searcher when deciding what a word can be
+    *                   generalized to
+    * @return Generalization that could be made from the QExpr
     */
   def queryGeneralizations(
       qexpr: QExpr,
@@ -92,29 +54,45 @@ object QueryGeneralizer {
       sampleSize: Int
 ): Generalization = {
     qexpr match {
-      case ql: QLeaf => getQLeafGeneralizations(ql, searchers, sampleSize)
-      case qd: QDisj => getQDisjGeneralization(qd, searchers, sampleSize)
-      case qr: QRepeating if qr.qexpr.isInstanceOf[QLeaf] =>
-        val extensions = getQLeafGeneralizations(
-          qr.qexpr.asInstanceOf[QLeaf], searchers, sampleSize)
-        extensions match {
-          case GeneralizeToDisj(disj) => qr.qexpr match {
-            case QWord(_) => Generalization.to(disj.map(ex => QRepetition(ex, qr.min, qr.max)))
-            case _ => Generalization.to(
-              Seq(QRepetition(QDisj(disj :+ qr.qexpr), qr.min, qr.max)))
+      case QWord(word) =>
+        val posTags = searchers.map { searcher =>
+          val hits = searcher.find(BlackLabSemantics.blackLabQuery(qexpr)).window(0, sampleSize)
+          hits.setContextSize(0)
+          hits.setContextField(List("pos").asJava)
+          hits.asScala.map { hit =>
+            val kwic = hits.getKwic(hit)
+            val pos = kwic.getTokens("pos").get(0)
+            pos
           }
+        }.flatten
+        val posCounts = posTags.groupBy(identity).mapValues(_.size)
+        Generalization.to(posCounts.keySet.toSeq.map(QPos(_)))
+      case QPos(pos) => Generalization.to(
+        (posSets.filter(_.contains(pos)).reduce((a, b) => a ++ b) - pos).map(QPos(_)).toSeq)
+      case QDisj(qexprs) =>
+        if (qexprs.size < 10) {
+          val generalizations = qexprs.map(queryGeneralizations(_, searchers, sampleSize))
+          val candidatePos = generalizations.map {
+            case GeneralizeToDisj(disj) => disj
+            case _ => Seq()
+          }.flatten.toSet
+          Generalization.to((candidatePos -- qexprs).toSeq)
+        } else {
+          val (min, max) = QueryLanguage.getQueryLength(qexpr)
+          GeneralizeToAny(min, max)
+        }
+      case qr: QRepeating => {
+        val childGeneralization = queryGeneralizations(qr.qexpr, searchers, sampleSize)
+        childGeneralization match {
+          case GeneralizeToDisj(elements) =>
+            GeneralizeToDisj(elements.map(QRepetition(_, qr.min, qr.max)))
+          case GeneralizeToAny(min, max) if min == 1 =>
+            // if min != 1 then QRepeating(childGeneralization) can only match sequences of
+            // particular size (ex. sequence of size 2,4,6...) which we currently cant model
+            GeneralizeToAny(min * qr.min, if (qr.max == -1) -1 else qr.max * max)
           case _ => GeneralizeToNone()
         }
-      case qr: QRepeating if qr.isInstanceOf[QDisj] =>
-        val extensions = getQDisjGeneralization(qr.qexpr.asInstanceOf[QDisj], searchers, sampleSize)
-        val atomSize = QueryLanguage.getQueryLength(qr.qexpr)
-        extensions match {
-          case GeneralizeToAny(min, max) if atomSize == 1 && qr.max == qr.min =>
-            GeneralizeToAny(qr.min, qr.max)
-          case GeneralizeToDisj(disj) => Generalization.to(
-            Seq(QRepetition(QDisj(disj :+ qr.qexpr), qr.min, qr.max)))
-          case _ => GeneralizeToNone()
-        }
+      }
       case _ => GeneralizeToNone()
     }
   }
