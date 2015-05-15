@@ -30,7 +30,7 @@ case class QueryMatch(tokens: Seq[Token], didMatch: Boolean)
   *
   * @param queryToken The query-token
   * @param matches the Tokens this QExpr matched, or should have matched, within a sequence of
-  *         sentences the original TokenizedQuery matched, or nearly matched
+  *        sentences the original TokenizedQuery matched, or nearly matched
   */
 case class QueryMatches(
   queryToken: QuerySlotData,
@@ -41,9 +41,9 @@ case class QueryMatches(
   * sentences each primitive operation would allow the starting query to match
   *
   * @param operatorHits Maps primitive operations to map of (sentence index within Examples ->
-  *            number of required 'edit' that operator completes for that sentence
-  *            (can be 0)). If a sentence index is not included the starting query will no long
-  *            match the corresponding sentence if the query operaiton is applied to it
+  *           number of required 'edit' that operator completes for that sentence
+  *           (can be 0)). If a sentence index is not included the starting query will no long
+  *           match the corresponding sentence if the query operaiton is applied to it
   * @param examples List of examples, one for each sentence
   */
 case class HitAnalysis(
@@ -75,7 +75,7 @@ object HitAnalyzer extends Logging {
     )).toSet
 
     // If the whole query is QWords, delete the encoded word from the
-    // dictionary so its occurances will be treated as unlabelled
+    // dictionary so its occurences will be treated as unlabelled
     val columnToQSeq = query.getCaptureGroups.toMap
     val captureGroupsInOrder = table.cols.map(columnToQSeq(_))
     if (captureGroupsInOrder.forall(_.forall(_.isInstanceOf[QWord]))) {
@@ -95,11 +95,11 @@ object HitAnalyzer extends Logging {
     )
     hits.asScala.map { hit =>
       val allCaptureSpans = hits.getCapturedGroups(hit)
-      val captureSpans = captureGroupIndices.map(allCaptureSpans(_))
+      val columnsCaptures = captureGroupIndices.map(allCaptureSpans(_))
       val kwic = hits.getKwic(hit)
       val (label, captures) = {
         val shift = hit.start - kwic.getHitStart
-        val captures = captureSpans.map {
+        val captures = columnsCaptures.map {
           captureSpan =>
             if (captureSpan == null) {
               // We assume null captures --> imply the capture group was in an empty
@@ -132,7 +132,7 @@ object HitAnalyzer extends Logging {
 
   /** Builds a sequence of WeightedExamples from a set of Examples. Currently we down weight
     * examples that captured the same string to encourage returning queries that would return a
-    * diversity of different sentences.
+    * diversity of capture groups.
     */
   def getWeightedExamples(examples: Seq[Example]): IndexedSeq[WeightedExample] = {
     val counts = examples.map(example => example.captureStrings).
@@ -166,8 +166,8 @@ object HitAnalyzer extends Logging {
 
     val captureGroups = hits.getCapturedGroupNames
 
-    // For each queryToken, Either the capture group that token's matches are stored
-    // in or the number of tokens that queryToken will have match
+    // For each queryToken, note either the capture group that token's matches are stored
+    // in or the number of tokens that queryToken will have matched
     val queryTokenMatchLocations = query.getNamedTokens.map {
       case (name, token) =>
         if (captureGroups.contains(name)) {
@@ -248,14 +248,14 @@ object HitAnalyzer extends Logging {
     * @param hits sequence of hits to build the object from
     * @param query Query to use when deciding which primitive operations to generate
     * @param prefixCounts number of tokens before each to gather and pass to generator
-    *                in a Prefix Slot.
+    *               in a Prefix Slot.
     * @param suffixCounts number of tokens before each hit to gather and pass to generator
-    *                in a Suffix Slot.
+    *               in a Suffix Slot.
     * @param generator generator used to decide what primtive operations to generate for each
-    *             query-token within query
+    *            query-token within query
     * @param table table to use when labelling the hits as positive or negative
     * @return the HitAnalysis object containing one 'Example' for each hit in hits, in the same
-    *    order as was given
+    *   order as was given
     */
   def buildHitAnalysis(
     hits: Seq[Hits],
@@ -272,10 +272,8 @@ object HitAnalyzer extends Logging {
 
     logger.debug("Calculating labels and weights...")
     val (examples, exampleTime) = Timing.time {
-      val examples = hits.map(h =>
-        getExamples(query, h, table)).flatten
+      val examples = hits.map(h => getExamples(query, h, table)).flatten
       getWeightedExamples(examples)
-
     }
     logger.debug(s"Done in ${exampleTime.toMillis / 1000.0} seconds")
 

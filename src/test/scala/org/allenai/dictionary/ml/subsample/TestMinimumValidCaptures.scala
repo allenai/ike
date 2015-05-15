@@ -4,7 +4,7 @@ import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{BLSpans, HitQueryContext}
 import org.allenai.common.testkit.UnitSpec
 
-class TestSpansValidateCaptures extends UnitSpec {
+class TestMinimumValidCaptures extends UnitSpec {
   def s(spans: Int*) = spans.map { x => new Span(x, x + x/Math.abs(x)) }
 
   it should "test correctly" in {
@@ -22,7 +22,7 @@ class TestSpansValidateCaptures extends UnitSpec {
       s(-1, 1, -1, 1),
       s(1, 1, 1, 1)
     ), captureNames)
-    val validated = new SpansValidateCaptures(
+    val validated = new SpansMinimumValidCaptures(
       stub, 2, Seq("c1", "c2", "c3")
     )
     val context = new HitQueryContext(validated)

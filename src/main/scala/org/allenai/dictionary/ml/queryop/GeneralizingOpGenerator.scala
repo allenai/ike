@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.queryop
 
 import org.allenai.dictionary._
-import org.allenai.dictionary.ml.{ QueryToken, QueryMatches }
+import org.allenai.dictionary.ml._
 
 import scala.collection.immutable.IntMap
 
@@ -11,18 +11,10 @@ import scala.collection.immutable.IntMap
   *
   * @param suggestPos whether to build operators that add POS in the query
   * @param suggestWord whether to build operators that add words to the query
-  * @param addToken whether to suggest AddToken ops in addition to SetToken ops
-  * @param maxRemoves the maximum number of tokens that can be removed, this will stop this from
-  *             suggesting RemoveEdge ops that would require removing more then that many
-  *             tokens
   */
 case class GeneralizingOpGenerator(
     suggestPos: Boolean,
-    suggestWord: Boolean,
-    addToken: Boolean,
-    queryLength: Int,
-    generalizationPruning: Boolean = true,
-    maxRemoves: Int = Int.MaxValue
+    suggestWord: Boolean
 ) extends OpGenerator {
 
   /* Builds a QLeafGenerator to determine what QLeaf to use in SetTokenOps for the
@@ -39,83 +31,44 @@ case class GeneralizingOpGenerator(
   /* Builds a QLeafGenerator to determine what QLeaf to use in AddTokenOps for the
    * the given query expression
    */
-  private def getAddTokenLeaves(qexpr: QExpr, isCapture: Boolean): QLeafGenerator = {
-    qexpr match {
-      case q: QWord => QLeafGenerator(pos = false, !isCapture, Set(q))
-      case q: QPos => QLeafGenerator(suggestWord, word = false, Set(q))
-      case QDisj(qexprs) =>
-        val avoid = qexprs.flatMap {
-          case q: QLeaf => Some(q)
-          case _ => None
-        }.toSet
-        val anyPos = qexprs.forall(!_.isInstanceOf[QPos])
-        val anyWord = qexprs.forall(!_.isInstanceOf[QWord])
-        QLeafGenerator(
-          (!anyPos || anyWord) && suggestPos,
-          (anyPos || !anyWord) && suggestWord, avoid
-        )
-      case _ => QLeafGenerator(pos = false, word = false)
-    }
-  }
+  //  private def getAddTokenLeaves(qexpr: QExpr, isCapture: Boolean): QLeafGenerator = {
+  //    qexpr match {
+  //      case q: QWord => QLeafGenerator(pos = false, !isCapture, Set(q))
+  //      case q: QPos => QLeafGenerator(suggestWord, word = false, Set(q))
+  //      case QDisj(qexprs) =>
+  //        val avoid = qexprs.flatMap {
+  //          case q: QLeaf => Some(q)
+  //          case _ => None
+  //        }.toSet
+  //        val anyPos = qexprs.forall(!_.isInstanceOf[QPos])
+  //        val anyWord = qexprs.forall(!_.isInstanceOf[QWord])
+  //        QLeafGenerator(
+  //          (!anyPos || anyWord) && suggestPos,
+  //          (anyPos || !anyWord) && suggestWord, avoid
+  //        )
+  //      case _ => QLeafGenerator(pos = false, word = false)
+  //    }
+  //  }
 
   override def generate(matches: QueryMatches): Map[QueryOp, IntMap[Int]] = {
     val slot = matches.queryToken.slot
     require(slot.isInstanceOf[QueryToken] && matches.queryToken.qexpr.isDefined)
-    val qexpr = matches.queryToken.qexpr
-    require(matches.queryToken.slot.isInstanceOf[QueryToken])
-    val setTokenLeaves = getSetTokenLeaves(qexpr.get, matches.queryToken.isCapture)
-    val setTokenOps = OpGenerator.getSetTokenOps(matches, setTokenLeaves)
-
-    // Prune out ops that were never suggested when the QExpr did match, as these ops could not
-    // by said to 'generalize' QExpr (for example, this prevents us suggesting 'DT' as a
-    // replacement for the starting QExpr QWord(cat))
-    val prunedSetTokenOps = if (generalizationPruning) {
-      setTokenOps.filter { case (_, hitMap) => !hitMap.values.forall(_ == 1) }
+    val generalizations = matches.queryToken.generalization.get
+    if (generalizations.isInstanceOf[GeneralizeToNone]) {
+      Map()
     } else {
-      setTokenOps
-    }
+      val leaves = getSetTokenLeaves(matches.queryToken.qexpr.get, matches.queryToken.isCapture)
+      val leaveOps = OpGenerator.getSetTokenOps(matches, leaves)
 
-    val removeOps = if (!matches.queryToken.isCapture && (
-      matches.queryToken.firstTokenSequence || matches.queryToken.lastTokenSequence
-    )) {
-      val distance = if (matches.queryToken.firstTokenSequence) {
-        slot.token
+      val setLeaves = if (generalizations.isInstanceOf[GeneralizeToAny]) {
+        leaveOps
+      } else if (generalizations.isInstanceOf[GeneralizeToDisj]) {
+        val allowedOps = generalizations.asInstanceOf[GeneralizeToDisj].elements.toSet
+        leaveOps.filterKeys(allowedOps contains _.qexpr)
       } else {
-        queryLength - slot.token
+        throw new RuntimeException()
       }
-      if (distance <= maxRemoves) {
-        val removeOp =
-          if (matches.queryToken.firstTokenSequence) {
-            if (slot.token == 1) {
-              RemoveToken(slot.token)
-            } else {
-              RemoveEdge(slot.token, 1)
-            }
-          } else {
-            if (slot.token == queryLength) {
-              RemoveToken(slot.token)
-            } else {
-              RemoveEdge(slot.token, queryLength)
-            }
-          }
-        val removable = IntMap(matches.matches.zipWithIndex.map {
-          case (queryMatch, index) => (index, if (queryMatch.didMatch) 0 else 1)
-        }: _*)
-        Map[QueryOp, IntMap[Int]](removeOp -> removable)
-      } else {
-        Map[QueryOp, IntMap[Int]]()
-      }
-    } else {
-      Map[QueryOp, IntMap[Int]]()
+      setLeaves.asInstanceOf[Map[QueryOp, IntMap[Int]]]
     }
-
-    val addTokenOps =
-      if (addToken) {
-        val addTokenLeaves = getAddTokenLeaves(qexpr.get, matches.queryToken.isCapture)
-        OpGenerator.getAddTokenOps(matches, addTokenLeaves)
-      } else {
-        Map[QueryOp, IntMap[Int]]()
-      }
-    prunedSetTokenOps ++ addTokenOps ++ removeOps
   }
 }

@@ -1,5 +1,6 @@
 package org.allenai.dictionary.ml
 
+import nl.inl.blacklab.search.Searcher
 import org.allenai.dictionary._
 
 case class UnconvertibleQuery(msg: String) extends Exception
@@ -29,15 +30,18 @@ object QuerySlotData {
   * @param qexpr the QExpr in this slot, None if and only if slot is a Prefix or Suffix
   * @param slot which query-token this data is about
   * @param isCapture whether this slot is contained within a capture group
-  * @param firstTokenSequence whether this slot is the left-most 'chunk' of the query
-  * @param lastTokenSequence whether this slot is the right-most 'chunk' of the query
+  * @param firstTokenSequence whether this occurs before the first capture group
+  * @param lastTokenSequence whether this occurs after the last capture group
   */
-case class QuerySlotData(qexpr: Option[QExpr], slot: Slot,
-    isCapture: Boolean, firstTokenSequence: Boolean, lastTokenSequence: Boolean) {
+// TODO prefix/suffix should probably be their own classes
+case class QuerySlotData(qexpr: Option[QExpr], slot: Slot, isCapture: Boolean,
+    firstTokenSequence: Boolean, lastTokenSequence: Boolean,
+    generalization: Option[Generalization] = None) {
   if (slot.isInstanceOf[QueryToken]) {
     require(qexpr.isDefined)
   } else {
-    require(qexpr.isEmpty && !isCapture && !firstTokenSequence && !lastTokenSequence)
+    require(qexpr.isEmpty && generalization.isEmpty &&
+      !isCapture && !firstTokenSequence && !lastTokenSequence)
   }
 }
 
@@ -76,7 +80,7 @@ object TokenizedQuery {
     * @param tableCols Sequence of table columns, used to name the query's unnamed capture group
     * @return the tokenized QExpr
     * @throws IllegalArgumentException if the query capture groups could not be made mapped to
-    *                              the table columns
+    *                             the table columns
     */
   def buildFromQuery(qexpr: QExpr, tableCols: Seq[String]): TokenizedQuery = {
     buildFromQuery(QueryLanguage.nameCaptureGroups(qexpr, tableCols))
@@ -85,7 +89,7 @@ object TokenizedQuery {
   /** Builds a TokenizedQuery from a QExpr
     *
     * @param qexpr Expression to tokenize, assumed to be fixed length (always matches the same
-    *      number of tokens) and with no unnamed capture groups
+    *     number of tokens) and with no unnamed capture groups
     * @return the tokenized QExpr
     * @throws IllegalArgumentException if the query has unnamed capture groups
     */
@@ -113,15 +117,33 @@ object TokenizedQuery {
     }
     TokenizedQuery(tokenSequences)
   }
+
+  def buildWithGeneralizations(
+    qexpr: QExpr,
+    searchers: Seq[Searcher],
+    sampleSize: Int
+  ): TokenizedQuery = {
+    val tq = buildFromQuery(qexpr)
+    val generalizations =
+      tq.getSeq.map(QueryGeneralizer.queryGeneralizations(_, searchers, sampleSize))
+    tq.copy(generalizations = Some(generalizations))
+  }
 }
 
-/** Query that has been 'tokenized' into a sequence of QExpr
+/** Query that has been 'tokenized' into a sequence of QExpr, the QExpr are then chunked together
+  * into tokenSequence which can be marked as capture groups or not.
   *
+  * @param tokenSequences
+  * @param generalizations
   * @throws IllegalArgumentException if capture.size + 1 != nonCapture.size
   */
-case class TokenizedQuery(tokenSequences: Seq[QueryTokenSequence]) {
+case class TokenizedQuery(
+  tokenSequences: Seq[QueryTokenSequence],
+    generalizations: Option[Seq[Generalization]] = None
+) {
 
   val size: Int = tokenSequences.map(_.queryTokens.size).sum
+  require(generalizations.isEmpty || size == generalizations.get.size)
 
   def getQuery: QExpr = {
     TokenizedQuery.qexprFromSequence(tokenSequences.map { ts =>
@@ -150,8 +172,13 @@ case class TokenizedQuery(tokenSequences: Seq[QueryTokenSequence]) {
       case (tokenSequence, sequenceIndex) =>
         val isCapture = tokenSequence.columnName.isDefined
         tokenSequence.queryTokens.map { queryToken =>
+          val gen = if (generalizations.isDefined) {
+            Some(generalizations.get(onIndex))
+          } else {
+            None
+          }
           val qsd = QuerySlotData(Some(queryToken), QueryToken(onIndex + 1), isCapture,
-            sequenceIndex == 0, sequenceIndex == tokenSequences.size - 1)
+            sequenceIndex == 0, sequenceIndex == tokenSequences.size - 1, gen)
           onIndex += 1
           qsd
         }

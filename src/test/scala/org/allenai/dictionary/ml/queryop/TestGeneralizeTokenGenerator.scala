@@ -1,84 +1,42 @@
 package org.allenai.dictionary.ml.queryop
 
-import org.allenai.common.testkit.UnitSpec
+import org.allenai.common.testkit.{ScratchDirectory, UnitSpec}
 import org.allenai.dictionary.{QPos, QWord, QueryLanguage}
 import org.allenai.dictionary.ml._
 
 import scala.collection.immutable.IntMap
 
-class TestGeneralizeTokenGenerator extends UnitSpec {
+class TestGeneralizeTokenGenerator extends UnitSpec with ScratchDirectory {
 
   "GeneralizeTokenGenerator" should "Suggest correct operators" in {
     val query = QueryLanguage.parse("a (?<x>b c) d").get
     val tokenized = TokenizedQuery.buildFromQuery(query)
-    val generator = GeneralizingOpGenerator(true, true, true, tokenized.size)
+    val generator = GeneralizingOpGenerator(true, true)
 
-    val matches = QueryMatches(QuerySlotData(
-      Some(QWord("d")), QueryToken(4), false, false, true), Seq(
+    val setPosNN = SetToken(QueryToken(4), QPos("NN"))
+    val setPosCC = SetToken(QueryToken(4), QPos("CC"))
+    val setPosVB = SetToken(QueryToken(4), QPos("VB"))
+
+    def getWithGeneralization(gen: Generalization): Map[QueryOp, IntMap[Int]] = {
+      val matches = QueryMatches(QuerySlotData(
+        Some(QWord("d")), QueryToken(4), false, false, true, Some(gen)), Seq(
         QueryMatch(Seq(), true),
-        QueryMatch(Seq(), false),
+        QueryMatch(Seq(Token("a", "CC")), false),
         QueryMatch(Seq(Token("a", "NN")), true),
-        QueryMatch(Seq(Token("a", "VB")), false)
-      )
-    )
-
-    val generated = generator.generate(matches)
-    val remove = RemoveToken(4)
-    val addWord = AddToken(QueryToken(4), QWord("a"))
-    val setPos = SetToken(QueryToken(4), QPos("NN"))
-
-    // Note QPos(VB) is not suggested because it only occurs in non-matching sequences
-    assertResult(IntMap(0 -> 0, 1 -> 1, 2 -> 0, 3 -> 1))(generated(remove))
-    assertResult(IntMap(0 -> 0, 2 -> 0, 3 -> 1))(generated(addWord))
-    assertResult(IntMap(2 -> 0))(generated(setPos))
-  }
-
-  it should "Suggest correct Remove ops" in {
-
-    val matches = Seq(
-      QueryMatches(QuerySlotData(Some(QWord("a")), QueryToken(1), false, true, false), Seq(
-        QueryMatch(Seq(), true),
-        QueryMatch(Seq(), false),
-        QueryMatch(Seq(), false)
-      )),
-      QueryMatches(QuerySlotData(Some(QWord("b")), QueryToken(2), false, true, false), Seq(
-        QueryMatch(Seq(), true),
-        QueryMatch(Seq(), true),
-        QueryMatch(Seq(Token("", "")), false)
-      )),
-      QueryMatches(QuerySlotData(Some(QWord("c")), QueryToken(3), false, true, false), Seq(
-        QueryMatch(Seq(), true),
-        QueryMatch(Seq(Token("", "")), false),
-        QueryMatch(Seq(Token("", "")), false)
-      )),
-      QueryMatches(QuerySlotData(Some(QWord("c")), QueryToken(4), true, false, false), Seq(
-        QueryMatch(Seq(), false),
-        QueryMatch(Seq(Token("", "")), false),
-        QueryMatch(Seq(Token("", "")), false)
-      )),
-      QueryMatches(QuerySlotData(Some(QWord("f")), QueryToken(6), false, false, true), Seq(
-        QueryMatch(Seq(Token("", "")), false),
-        QueryMatch(Seq(), false),
-        QueryMatch(Seq(Token("", "")), true)
-      )),
-      QueryMatches(QuerySlotData(Some(QWord("e")), QueryToken(5), false, false, true), Seq(
-        QueryMatch(Seq(Token("", "")), true),
-        QueryMatch(Seq(), false),
-        QueryMatch(Seq(), true)
+        QueryMatch(Seq(Token("a", "VB")), false),
+        QueryMatch(Seq(Token("a", "CC")), true)
       ))
-    )
+      generator.generate(matches)
+    }
 
-    val query = QueryLanguage.parse("a b c (?<x>d) e f").get
-    val tokenized = TokenizedQuery.buildFromQuery(query)
-    val generator = GeneralizingOpGenerator(true, true, true, tokenized.size)
-    val generated = matches.map(generator.generate(_)).reduceLeft { (acc, next) => acc ++ next }
-    assertResult(Set(
-      RemoveToken(1), RemoveToken(6), RemoveEdge(2, 1), RemoveEdge(3, 1), RemoveEdge(5, 6)
-    ))(generated.keySet)
-    assertResult(IntMap(0 -> 0, 1 -> 1, 2 -> 1))(generated(RemoveToken(1)))
-    assertResult(IntMap(0 -> 0, 1 -> 0, 2 -> 1))(generated(RemoveEdge(2, 1)))
-    assertResult(IntMap(0 -> 0, 1 -> 1, 2 -> 1))(generated(RemoveEdge(3, 1)))
-    assertResult(IntMap(0 -> 1, 1 -> 1, 2 -> 0))(generated(RemoveToken(6)))
-    assertResult(IntMap(0 -> 0, 1 -> 1, 2 -> 0))(generated(RemoveEdge(5, 6)))
+    val m1 = getWithGeneralization(GeneralizeToAny(1, 1))
+    assertResult(IntMap(2 -> 0))(m1(setPosNN))
+    assertResult(IntMap(1 -> 1, 4 -> 0))(m1(setPosCC))
+    assertResult(IntMap(3 -> 1))(m1(setPosVB))
+    assertResult(3)(m1.size)
+
+    val m2 = getWithGeneralization(GeneralizeToDisj(Seq(QPos("NN"))))
+    assertResult(IntMap(2 -> 0))(m2(setPosNN))
+    assertResult(1)(m2.size)
   }
 }

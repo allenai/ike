@@ -173,14 +173,14 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     unmatchedPath { p => getFromFile("public" + p) }
   }
 
-  implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
-    ExceptionHandler {
-      case NonFatal(e) =>
-        requestUri { uri =>
-          log.error(toString, e)
-          complete(StatusCodes.InternalServerError -> e.getMessage)
-        }
-    }
+  //  implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
+  //    ExceptionHandler {
+  //      case NonFatal(e) =>
+  //        requestUri { uri =>
+  //          log.error(toString, e)
+  //          complete(StatusCodes.InternalServerError -> e.getMessage)
+  //        }
+  //    }
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
   def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoute ~ tablesRoute ~ corporaRoute)

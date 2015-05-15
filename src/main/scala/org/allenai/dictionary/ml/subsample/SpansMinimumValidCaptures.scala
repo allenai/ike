@@ -3,9 +3,9 @@ package org.allenai.dictionary.ml.subsample
 import java.util
 
 import nl.inl.blacklab.search.Span
-import nl.inl.blacklab.search.lucene.{HitQueryContext, BLSpans}
+import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 
-class SpansValidateCaptures(
+class SpansMinimumValidCaptures(
     clause: BLSpans,
     requiredMatches: Int,
     capturesToCheck: Seq[String]
@@ -51,7 +51,7 @@ class SpansValidateCaptures(
   override def next(): Boolean = {
     if (more) {
       more = clause.next()
-      while(more && !validate()) {
+      while (more && !validate()) {
         more = clause.next()
       }
     }

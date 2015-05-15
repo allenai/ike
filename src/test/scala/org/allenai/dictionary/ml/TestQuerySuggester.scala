@@ -96,7 +96,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     assertResult(4)(scoredQueries.head._2)
   }
 
-  it should "Select diverse queries" in {
+  "QuerySuggester" should "Select diverse queries" in {
     val examples = (Seq(Unlabelled) ++ Seq.fill(5)(Positive) ++
         Seq.fill(5)(Negative) ++ Seq(Unlabelled)).
         map(x => WeightedExample(x, 0, 1.0, 0)).toIndexedSeq
@@ -125,18 +125,20 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     }
   }
 
-  "SuggestQuery" should "suggest removing tokens" in {
+  it should "suggest POS generalization" in {
     val table = Table("test", Seq("c1"),
-      Seq(Seq("i"), Seq("like")).map { x =>
+      Seq(Seq("i"), Seq("like"), Seq("hate")).map { x =>
         TableRow(x.map(y => TableValue(Seq(QWord(y)))))
       },
       Seq()
     )
-    val startingQuery = QueryLanguage.parse("blarg (PRP)").get
+    val startingQuery = QueryLanguage.parse("I (?<c1> like)").get
     val suggestions =
       QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table),
-      "test",  false, SuggestQueryConfig(5, 2, 100, 1, 0, 0, false)).suggestions
-    assertResult(suggestions(0).query)(QNamed(QPos("PRP"), "c1"))
+        "test", false, SuggestQueryConfig(5, 2, 100, 10, 0, -0.1, false)).suggestions
+    val bestSuggestions= suggestions.take(2).map(_.query)
+    assert(bestSuggestions contains QueryLanguage.parse("PRP (?<c1> VBP)").get)
+    assert(bestSuggestions contains QueryLanguage.parse("I (?<c1> VBP)").get)
   }
 
   it should "suggest removing plus operators" in {
@@ -176,40 +178,6 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val bestSuggestions = suggestions.suggestions.filter(_.score == bestScore).map(_.query)
     assert(bestSuggestions contains
         QueryLanguage.parse("(?<c1> RB+) {mango, those, great}").get)
-  }
-
-  it should "suggest adding to a disjunction" in {
-    val table = Table("test", Seq("c1"),
-      Seq(Seq("like"),Seq("taste")).map { x =>
-        TableRow(x.map(y => TableValue(Seq(QWord(y)))))
-      },
-      Seq()
-    )
-    val startingQuery = QueryLanguage.parse("PRP ({like, hate})").get
-    val suggestions =
-      QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table),
-        "test",  false, SuggestQueryConfig(5, 1, 100, 1, -5, 0, true)).suggestions
-    val seq = suggestions(0).query.asInstanceOf[QSeq].qexprs
-    assertResult(QPos("PRP"))(seq(0))
-    assertResult(Set("like", "hate", "taste").map(QWord(_)))(
-      seq(1).asInstanceOf[QNamed].qexpr.asInstanceOf[QDisj].qexprs.toSet)
-    assertResult(2)(seq.size)
-  }
-
-  it should "suggest removing multiple tokens" in {
-    val table = Table("test", Seq("c1"),
-      Seq(Seq("I"), Seq("like")).map { x =>
-        TableRow(x.map(y => TableValue(Seq(QWord(y)))))
-      },
-      Seq()
-    )
-    val startingQuery = QueryLanguage.parse("blah blah ({I, like})").get
-    val suggestions =
-      QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table),
-        "test",  false, SuggestQueryConfig(10, 2, 100, 1, -5, 0, true)).suggestions
-    val q = suggestions(0).query.asInstanceOf[QNamed]
-    assertResult(q.name)("c1")
-    assertResult(q.qexpr.asInstanceOf[QDisj].qexprs.toSet)(Set(QWord("I"), QWord("like")))
   }
 
   it should "suggest altering repeated op" in {

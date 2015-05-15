@@ -45,14 +45,14 @@ object QueryGeneralizer {
     * @param qexpr QExpr to generalize
     * @param searchers Searchers to use when deciding what to generalize
     * @param sampleSize Number of samples to get per a searcher when deciding what a word can be
-    *                   generalized to
+    *                  generalized to
     * @return Generalization that could be made from the QExpr
     */
   def queryGeneralizations(
-      qexpr: QExpr,
-      searchers: Seq[Searcher],
-      sampleSize: Int
-): Generalization = {
+    qexpr: QExpr,
+    searchers: Seq[Searcher],
+    sampleSize: Int
+  ): Generalization = {
     qexpr match {
       case QWord(word) =>
         val posTags = searchers.map { searcher =>
@@ -68,15 +68,20 @@ object QueryGeneralizer {
         val posCounts = posTags.groupBy(identity).mapValues(_.size)
         Generalization.to(posCounts.keySet.toSeq.map(QPos(_)))
       case QPos(pos) => Generalization.to(
-        (posSets.filter(_.contains(pos)).reduce((a, b) => a ++ b) - pos).map(QPos(_)).toSeq)
+        (posSets.filter(_.contains(pos)).reduce((a, b) => a ++ b) - pos).map(QPos(_)).toSeq
+      )
       case QDisj(qexprs) =>
         if (qexprs.size < 10) {
           val generalizations = qexprs.map(queryGeneralizations(_, searchers, sampleSize))
-          val candidatePos = generalizations.map {
-            case GeneralizeToDisj(disj) => disj
-            case _ => Seq()
-          }.flatten.toSet
-          Generalization.to((candidatePos -- qexprs).toSeq)
+          if (generalizations.forall(!_.isInstanceOf[GeneralizeToAny])) {
+            val candidatePos = generalizations.map {
+              case GeneralizeToDisj(disj) => disj
+              case _ => Seq()
+            }.flatten.toSet
+            Generalization.to((candidatePos -- qexprs).toSeq)
+          } else {
+            GeneralizeToNone()
+          }
         } else {
           val (min, max) = QueryLanguage.getQueryLength(qexpr)
           GeneralizeToAny(min, max)

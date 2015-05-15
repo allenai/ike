@@ -3,24 +3,25 @@ package org.allenai.dictionary.ml.subsample
 import java.util
 
 import nl.inl.blacklab.search.Span
-import nl.inl.blacklab.search.lucene.{HitQueryContext, BLSpans}
+import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 import org.apache.lucene.util.PriorityQueue;
 
-
-/**
- * Disjunction of spans that matches a disjunction of Span, but that also captures the region the
- *
- * @param firstSpan
- * @param alternatives
- * @param captureName
- */
+/** Disjunction of spans that matches a disjunction of Spans, but ensure that it matches are
+  * unique. Sets a capture group to the span it returned, only negated if firstSpan could not
+  * produce it.
+  *
+  * @param firstSpan Span in disjunction that return positive capture groups
+  * @param alternatives Spans that return negated capture groups
+  * @param captureName Name of the capture group to fill
+  */
 class SpansTrackingDisjunction(
-    firstSpan: BLSpans, 
+    firstSpan: BLSpans,
     alternatives: Seq[BLSpans],
     captureName: String,
     matchEdge: Boolean = false
 ) extends BLSpans {
 
+  /** Contains BLSpans marked with whether it is the firstSpan */
   case class SortedSpans(spans: BLSpans, first: Boolean)
 
   class SpanQueue(size: Int) extends PriorityQueue[SortedSpans](size) {
@@ -29,7 +30,7 @@ class SpansTrackingDisjunction(
       if (spans1.spans.doc() == spans2.spans.doc()) {
         if (spans1.spans.start() == spans2.spans.start()) {
           if (spans1.spans.end() == spans2.spans.end()) {
-            spans1.first
+            spans1.first // firstSpan is smallest so it matches first if possible
           } else {
             spans1.spans.end() < spans2.spans.end()
           }
@@ -47,15 +48,6 @@ class SpansTrackingDisjunction(
   var queue: SpanQueue = null
   var captureGroupIndex = -1
 
-  override val hitsAllSameLength: Boolean =
-    firstSpan.hitsAllSameLength() && alternatives.forall(_.hitsLength() == firstSpan.hitsLength())
-  override val hitsLength: Int = if (hitsAllSameLength) firstSpan.hitsLength() else -1
-  override val hitsEndPointSorted = firstSpan.hitsEndPointSorted() && hitsAllSameLength
-  override val hitsStartPointSorted = true
-  override val hitsHaveUniqueEnd = firstSpan.hitsHaveUniqueEnd() && hitsAllSameLength
-  override val hitsHaveUniqueStart = firstSpan.hitsHaveUniqueEnd() && hitsAllSameLength
-  override val hitsAreUnique = true
-
   def initialize(): Boolean = {
     initialized = true
     val allSpans = SortedSpans(firstSpan, true) +: alternatives.map(SortedSpans(_, false))
@@ -72,19 +64,19 @@ class SpansTrackingDisjunction(
   override def next(): Boolean = {
     if (more) {
       more =
-          if (!initialized) {
-            initialize()
-          } else {
-            val (prevStart, prevDoc, prevEnd) = (start(), doc(), end())
-            do {
-              if (top.next()) {
-                queue.updateTop()
-              } else {
-                queue.pop()
-              }
-            } while (queue.size() != 0 && prevStart == start && prevEnd == end && prevDoc == doc)
-            queue.size() != 0
-          }
+        if (!initialized) {
+          initialize()
+        } else {
+          val (prevStart, prevDoc, prevEnd) = (start(), doc(), end())
+          do {
+            if (top.next()) {
+              queue.updateTop()
+            } else {
+              queue.pop()
+            }
+          } while (queue.size() != 0 && prevStart == start && prevEnd == end && prevDoc == doc)
+          queue.size() != 0
+        }
     }
     more
   }
@@ -151,4 +143,13 @@ class SpansTrackingDisjunction(
       capturedGroups.update(captureGroupIndex, new Span(-top.start, -top.end))
     }
   }
+
+  override val hitsAllSameLength: Boolean =
+    firstSpan.hitsAllSameLength() && alternatives.forall(_.hitsLength() == firstSpan.hitsLength())
+  override val hitsLength: Int = if (hitsAllSameLength) firstSpan.hitsLength() else -1
+  override val hitsEndPointSorted = firstSpan.hitsEndPointSorted() && hitsAllSameLength
+  override val hitsStartPointSorted = true
+  override val hitsHaveUniqueEnd = firstSpan.hitsHaveUniqueEnd() && hitsAllSameLength
+  override val hitsHaveUniqueStart = firstSpan.hitsHaveUniqueStart() && hitsAllSameLength
+  override val hitsAreUnique = true
 }
