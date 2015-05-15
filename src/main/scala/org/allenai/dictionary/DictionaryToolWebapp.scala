@@ -14,12 +14,10 @@ import spray.routing.{ ExceptionHandler, HttpService }
 import spray.util.LoggingContext
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 import scala.util.control.NonFatal
-import scala.xml.NodeSeq
 
 object DictionaryToolWebapp {
   lazy val config = ConfigFactory.load().getConfig("DictionaryToolWebapp")
@@ -45,6 +43,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   import JsonSerialization._
   import spray.json._
   import spray.json.DefaultJsonProtocol._
+  import context.dispatcher
 
   logger.debug("Starting DictionaryToolActor") // this is just here to force logger initialization
 
@@ -52,27 +51,35 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   val searchApps = config.getConfigList("DictionaryToolWebapp.indices").asScala.map { config =>
     config.getString("name") -> Future { SearchApp(config) }
   }.toMap
-  def readySearchApps = searchApps.filter(_._2.isCompleted)
 
   val serviceRoute = pathPrefix("api") {
     parameters('corpora.?) { corpora =>
-      val searchers = (corpora match {
-        case None => readySearchApps.values
+      val searchersFuture = Future.sequence(corpora match {
+        case None => searchApps.values
         case Some(searcherKeys) => searcherKeys.split(' ').map(searchApps).toIterable
-      }).map(_.get)
+      })
 
       path("groupedSearch") {
         post {
           entity(as[SearchRequest]) { req =>
             complete {
-              val results = searchers.par.flatMap(_.search(req).get).seq
-
-              val grouped = req.target match {
-                case Some(target) => SearchResultGrouper.groupResults(req, results)
-                case None => SearchResultGrouper.identityGroupResults(req, results)
+              val resultsFuture = searchersFuture.map { searchers =>
+                val parResult = searchers.par.flatMap { searcher => searcher.search(req).get }
+                parResult.seq
               }
+
+              val groupedFuture = for {
+                results <- resultsFuture
+              } yield {
+                req.target match {
+                  case Some(target) => SearchResultGrouper.groupResults(req, results)
+                  case None => SearchResultGrouper.identityGroupResults(req, results)
+                }
+              }
+
               val qexpr = SearchApp.parse(req).get
-              SearchResponse(qexpr, grouped)
+
+              groupedFuture.map { grouped => SearchResponse(qexpr, grouped) }
             }
           }
         }
@@ -80,7 +87,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
         path("wordInfo") {
           post {
             entity(as[WordInfoRequest]) { req =>
-              complete {
+              complete(searchersFuture.map { searchers =>
                 val results = searchers.par.map(_.wordInfo(req).get)
 
                 // find the word
@@ -96,16 +103,16 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
                 val posTags = results.map(_.posTags).reduce(combineCountMaps[String])
 
                 WordInfoResponse(word, posTags)
-              }
+              })
             }
           }
         } ~
         path("suggestQuery") {
           post {
             entity(as[SuggestQueryRequest]) { req =>
-              complete {
+              complete(searchersFuture.map { searchers =>
                 SearchApp.suggestQuery(searchers.toSeq, req)
-              }
+              })
             }
           }
         }
@@ -153,6 +160,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
 
   val corporaRoute = path("api" / "corpora") {
     complete {
+      val readySearchApps = searchApps.filter(_._2.isCompleted)
       JsArray(readySearchApps.map {
         case (corpusName, app) => CorpusDescription(corpusName, app.get.description).toJson
       }.toSeq: _*)
