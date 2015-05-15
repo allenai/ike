@@ -12,7 +12,6 @@ libraryDependencies ++= Seq(
     allenAiCommon,
     allenAiTestkit,
     allenAiDatastore,
-    allenAiPipeline,
     nlpstackModule("tokenize"),
     nlpstackModule("postag"),
     nlpstackModule("lemmatize"),

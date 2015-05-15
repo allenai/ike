@@ -18,7 +18,8 @@ object CreateIndex extends App {
   case class Options(
     destinationDir: File = null,
     batchSize: Int = 1000,
-    textSource: URI = null
+    textSource: URI = null,
+    oneSentencePerDoc: Boolean = false
   )
 
   val parser = new scopt.OptionParser[Options](this.getClass.getSimpleName.stripSuffix("$")) {
@@ -34,13 +35,16 @@ object CreateIndex extends App {
       o.copy(textSource = t)
     } text "URL of a file or directory to load the text from"
 
+    opt[Unit]("oneSentencePerDoc") action { (_, o) =>
+      o.copy(oneSentencePerDoc = true)
+    }
+
     help("help")
   }
 
   parser.parse(args, Options()) foreach { options =>
     val indexDir = options.destinationDir
     val batchSize = options.batchSize
-    var numAdded = 0
     val idTexts = options.textSource.getScheme match {
       case "file" =>
         val path = Paths.get(options.textSource)
@@ -62,26 +66,39 @@ object CreateIndex extends App {
 
     def indexableToken(lemmatized: Lemmatized[PostaggedToken]): IndexableToken = {
       val word = lemmatized.token.string
-      val wordLc = word.toLowerCase
       val pos = lemmatized.token.postag
       val lemma = lemmatized.lemma
       IndexableToken(word, pos, lemma)
     }
 
-    def process(idText: IdText): IndexableText = {
-      val text = idText.text
-      val sents = for {
-        sent <- NlpAnnotate.annotate(text)
-        indexableSent = sent map indexableToken
-      } yield indexableSent
-      IndexableText(idText, sents)
+    def process(idText: IdText): Seq[IndexableText] = {
+      if (options.oneSentencePerDoc) {
+        val sents = NlpAnnotate.annotate(idText.text)
+        sents.zipWithIndex.map {
+          case (sent, index) =>
+            val text = idText.text.substring(
+              sent.head.token.offset,
+              sent.last.token.offset + sent.last.token.string.length
+            )
+            val sentenceIdText = IdText(s"${idText.id}-$index", text)
+
+            IndexableText(sentenceIdText, Seq(sent map indexableToken))
+        }
+      } else {
+        val text = idText.text
+        val sents = for {
+          sent <- NlpAnnotate.annotate(text)
+          indexableSent = sent map indexableToken
+        } yield indexableSent
+        Seq(IndexableText(idText, sents))
+      }
     }
 
-    def processBatch(batch: Seq[IdText]): Seq[IndexableText] = batch.toArray.par.map(process).seq
+    def processBatch(batch: Seq[IdText]): Seq[IndexableText] =
+      batch.toArray.par.map(process).flatten.seq
 
     def addTo(indexer: Indexer)(text: IndexableText): Unit = {
       CreateIndex.addTo(indexer)(text)
-      numAdded = numAdded + 1
     }
 
     val indexer = new Indexer(indexDir, true, classOf[AnnotationIndexer])
