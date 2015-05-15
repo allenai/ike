@@ -14,12 +14,10 @@ import spray.routing.{ ExceptionHandler, HttpService }
 import spray.util.LoggingContext
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 import scala.util.control.NonFatal
-import scala.xml.NodeSeq
 
 object DictionaryToolWebapp {
   lazy val config = ConfigFactory.load().getConfig("DictionaryToolWebapp")
@@ -45,6 +43,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   import JsonSerialization._
   import spray.json._
   import spray.json.DefaultJsonProtocol._
+  import context.dispatcher
 
   logger.debug("Starting DictionaryToolActor") // this is just here to force logger initialization
 
@@ -65,7 +64,8 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
           entity(as[SearchRequest]) { req =>
             complete {
               val resultsFuture = searchersFuture.map { searchers =>
-                searchers.flatMap { searcher => searcher.search(req).get }
+                val parResult = searchers.par.flatMap { searcher => searcher.search(req).get }
+                parResult.seq
               }
 
               val groupedFuture = for {
