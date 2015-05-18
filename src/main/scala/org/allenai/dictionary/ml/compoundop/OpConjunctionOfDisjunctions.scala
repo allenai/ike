@@ -7,11 +7,11 @@ import scala.collection.immutable.IntMap
 
 object OpConjunctionOfDisjunctions {
   def apply(
-    evaluatedOp: EvaluatedOp,
+    op: EvaluatedOp,
     maxRemoves: Int = Int.MaxValue
-  ): Option[OpConjunctionOfDisjunctions] = evaluatedOp.op match {
-    case tq: TokenQueryOp => Some(new OpConjunctionOfDisjunctions(Set(tq), evaluatedOp.matches,
-      Map(tq.slot -> evaluatedOp.matches), maxRemoves))
+  ): Option[OpConjunctionOfDisjunctions] = op.op match {
+    case tq: TokenQueryOp => Some(new OpConjunctionOfDisjunctions(Set(tq), op.matches,
+      Map(tq.slot -> op.matches), maxRemoves))
     case _ => None // Cannot initialize with a non-TokenQueryOp
   }
 }
@@ -51,9 +51,9 @@ case class OpConjunctionOfDisjunctions private (
       }
   }
 
-  override def add(op: EvaluatedOp): OpConjunctionOfDisjunctions = {
-    require(canAdd(op.op))
-    val newOp = op.op match {
+  override def add(op: QueryOp, matches: IntMap[Int]): OpConjunctionOfDisjunctions = {
+    require(canAdd(op))
+    val newOp = op match {
       case tq: TokenQueryOp => tq
       case RemoveEdge(index, _) => RemoveToken(index)
     }
@@ -63,17 +63,17 @@ case class OpConjunctionOfDisjunctions private (
         val otherOps = ops.filter(_.slot == newOp.slot)
         if (newOp.combinable(otherOps.head) == OR) {
           val newSlot = perSlotEdits(newOp.slot).unionWith(
-            op.matches, (_, v1: Int, v2: Int) => math.min(1, v1 + v2)
+            matches, (_, v1: Int, v2: Int) => math.min(1, v1 + v2)
           )
           (perSlotEdits + (newOp.slot -> newSlot), true)
         } else {
           val newSlot = perSlotEdits(newOp.slot).intersectionWith(
-            op.matches, (_, v1: Int, v2: Int) => math.min(1, v1 + v2)
+            matches, (_, v1: Int, v2: Int) => math.min(1, v1 + v2)
           )
           (perSlotEdits + (newOp.slot -> newSlot), false)
         }
       } else {
-        (perSlotEdits + (newOp.slot -> op.matches), false)
+        (perSlotEdits + (newOp.slot -> matches), false)
       }
 
     val newMatches = if (recalculate) {
@@ -82,9 +82,9 @@ case class OpConjunctionOfDisjunctions private (
       newPerSlot.values.reduce((a, b) =>
         a.intersectionWith(b, (_, v1: Int, v2: Int) => v1 + v2))
     } else {
-      numEdits.intersectionWith(op.matches, (_, v1: Int, v2: Int) => v1 + v2)
+      numEdits.intersectionWith(matches, (_, v1: Int, v2: Int) => v1 + v2)
     }
-    val newMaxRemove = maxRemoves - (if (op.op.isInstanceOf[RemoveToken]) 1 else 0)
+    val newMaxRemove = maxRemoves - (if (op.isInstanceOf[RemoveToken]) 1 else 0)
     new OpConjunctionOfDisjunctions(ops + newOp, newMatches, newPerSlot, newMaxRemove)
   }
 }

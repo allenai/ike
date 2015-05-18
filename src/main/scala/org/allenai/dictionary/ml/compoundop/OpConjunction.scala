@@ -5,7 +5,8 @@ import org.allenai.dictionary.ml.queryop.TokenCombination._
 import scala.collection.immutable.IntMap
 
 object OpConjunction {
-  def apply(op: EvaluatedOp, maxRemoves: Int = Int.MaxValue): Option[OpConjunction] = op.op match {
+  def apply(op: EvaluatedOp, maxRemoves: Int = Int.MaxValue):
+  Option[OpConjunction] = op.op match {
     case tq: TokenQueryOp => Some(new OpConjunction(Set(tq), op.matches, maxRemoves))
     case _ => None
   }
@@ -26,23 +27,23 @@ case class OpConjunction private (
     case tq: TokenQueryOp => !ops.exists(x => x.slot == tq.slot && x.combinable(tq) != AND)
   }
 
-  override def add(op: EvaluatedOp): OpConjunction = {
-    require(canAdd(op.op))
-    val addEdits = op.op match {
+  override def add(op: QueryOp, matches: IntMap[Int]): OpConjunction = {
+    require(canAdd(op))
+    val addEdits = op match {
       case tq: TokenQueryOp => !ops.exists(_.slot == tq.slot)
       case _ => true
     }
     val newNumEdits =
       if (addEdits) {
-        numEdits.intersectionWith(op.matches, (_, v1: Int, v2: Int) => v1 + v2)
+        numEdits.intersectionWith(matches, (_, v1: Int, v2: Int) => v1 + v2)
       } else {
-        numEdits.intersectionWith(op.matches, (_, v1: Int, v2: Int) => math.min(1, v1 + v2))
+        numEdits.intersectionWith(matches, (_, v1: Int, v2: Int) => math.min(1, v1 + v2))
       }
-    val newOp = op.op match {
+    val newOp = op match {
       case RemoveEdge(index, _) => RemoveToken(index)
       case tq: TokenQueryOp => tq
     }
-    val newMaxRemove = maxRemoves - (if (op.op.isInstanceOf[RemoveToken]) 1 else 0)
+    val newMaxRemove = maxRemoves - (if (op.isInstanceOf[RemoveToken]) 1 else 0)
     new OpConjunction(ops + newOp, newNumEdits, newMaxRemove)
   }
 }

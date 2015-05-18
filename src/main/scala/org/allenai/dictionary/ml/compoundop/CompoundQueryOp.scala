@@ -11,7 +11,7 @@ object CompoundQueryOp {
   // Transforms a sequence of (index, QExpr) pairs into a sequence of QExpr
   // using QWildcard expressions to fill in 'gaps' in the given indices
   private def buildExpression(ops: Map[Int, QExpr]): Seq[QExpr] = {
-    if (ops.size == 0) {
+    if (ops.isEmpty) {
       Seq()
     } else {
       (1 until ops.keys.max + 1).map(ops.getOrElse(_, QWildcard()))
@@ -35,8 +35,9 @@ object CompoundQueryOp {
     }
   }
 
+  // Given a list of ChangeLeaf ops, applies them to a QExpr
   private def changeLeaf(leafOps: Iterable[ChangeLeaf], current: QExpr): QExpr = {
-    if (leafOps.size == 0) {
+    if (leafOps.isEmpty) {
       current
     } else {
       val allExpressions = leafOps.map {
@@ -189,7 +190,7 @@ object CompoundQueryOp {
           modifierOps.getOrElse(i + 1, Seq(qexpr))
       }
 
-    // Now chunk up our new token sequence, this is done by consuming tokens from our sequence in
+    // Now chunk up new token sequence, this is done by consuming tokens from our sequence in
     // the same proportions as found in the old query
     var queryTokenSequences = List[QueryTokenSequence]()
     query.tokenSequences.foreach { tokenSeq =>
@@ -209,27 +210,23 @@ object CompoundQueryOp {
 }
 
 /** Abstract class for classes that combine a set of QueryOps, while keeping track of the number
-  * of required edits the collective operations made to each sentence
+  * of required edits the collective operations made to a set of sentences
   */
 abstract class CompoundQueryOp() {
 
-  /** @return set of query-token operations to apply to the query */
   def ops: Set[TokenQueryOp]
 
-  /** @return  Map of (sentence index) -> (number of required edits this combined op
-    *      will have made towards that sentence)
-    */
   def numEdits: IntMap[Int]
 
   def size: Int = ops.size
 
   def canAdd(op: QueryOp): Boolean
 
-  def add(op: TokenQueryOp, matches: IntMap[Int]): CompoundQueryOp = {
-    add(EvaluatedOp(op, matches))
-  }
+  def add(op: QueryOp, matches: IntMap[Int]): CompoundQueryOp
 
-  def add(op: EvaluatedOp): CompoundQueryOp
+  def add(evaluatedOp: EvaluatedOp): CompoundQueryOp = {
+    add(evaluatedOp.op, evaluatedOp.matches)
+  }
 
   def applyOps(query: TokenizedQuery): TokenizedQuery = {
     CompoundQueryOp.applyOps(query, ops)

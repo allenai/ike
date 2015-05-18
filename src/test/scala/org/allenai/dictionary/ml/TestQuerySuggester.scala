@@ -1,6 +1,6 @@
 package org.allenai.dictionary.ml
 
-import org.allenai.dictionary.ml.compoundop.{OpConjunctionOfDisjunctions, OpConjunction, EvaluatedOp}
+import org.allenai.dictionary.ml.compoundop.{EvaluatedOp, OpConjunctionOfDisjunctions, OpConjunction}
 import org.allenai.dictionary.ml.queryop.{QueryOp, SetToken}
 
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }

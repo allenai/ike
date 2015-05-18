@@ -102,7 +102,7 @@ class TestOpConjunctionOfDisjunctions extends UnitSpec {
     val r2 = EvaluatedOp.fromPairs(
       SetToken(QueryToken(2), QWord("r2")), List((1,0), (2,1), (3,0), (4,0))
     )
-    var op = OpConjunctionOfDisjunctions(r2).get
+    var op: CompoundQueryOp = OpConjunctionOfDisjunctions(r2).get
     val rl2 = RemoveEdge(2, 1)
     val rl3 = RemoveEdge(3, 1)
     val rl6 = RemoveEdge(6, 7)

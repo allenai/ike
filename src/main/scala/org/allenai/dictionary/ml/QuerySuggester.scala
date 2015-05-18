@@ -192,7 +192,7 @@ object QuerySuggester extends Logging {
             // Map the remaining operators to new compound rules
             foreach {
               case (newOp, opMatches) =>
-                val newOperator = operator.add(EvaluatedOp(newOp, opMatches))
+                val newOperator = operator.add(newOp, opMatches)
                 if (!alreadyFound.contains(newOperator.ops)) {
                   val newScore = evaluationFunction.evaluate(newOperator, 1 + i)
                   if (addOp(newOperator, newScore)) alreadyFound.add(newOperator.ops)
