@@ -94,6 +94,9 @@ object HitAnalyzer extends Logging {
       s"Expected capture names ${table.cols} but got $captureNames"
     )
     hits.asScala.map { hit =>
+      if (Thread.interrupted()) {
+        throw new InterruptedException()
+      }
       val allCaptureSpans = hits.getCapturedGroups(hit)
       val captureSpans = captureGroupIndices.map(allCaptureSpans(_))
       val kwic = hits.getKwic(hit)
@@ -184,21 +187,27 @@ object HitAnalyzer extends Logging {
       val hitQueryMatches = {
         var tokens = props.map(prop => kwic.getMatch(prop).asScala).
           transpose.map(x => Token(x(0), x(1)))
-        queryTokenMatchLocations.map {
-          case Right(captureGroupIndex) =>
-            val span = captureGroups(captureGroupIndex)
-            val length = if (span == null) {
-              0
-            } else {
-              math.abs(span.end) - math.abs(span.start)
-            }
-            val (matchedTokens, rest) = tokens.splitAt(length)
-            tokens = rest
-            QueryMatch(matchedTokens, didMatch = span != null && span.end >= 0)
-          case Left(numTokens) =>
-            val (matchedTokens, rest) = tokens.splitAt(numTokens)
-            tokens = rest
-            QueryMatch(matchedTokens, didMatch = true)
+        queryTokenMatchLocations.map { tokensMatches =>
+          val qMatch = tokensMatches match {
+            case Right(captureGroupIndex) =>
+              val span = captureGroups(captureGroupIndex)
+              val length = if (span == null) {
+                0
+              } else {
+                math.abs(span.end) - math.abs(span.start)
+              }
+              val (matchedTokens, rest) = tokens.splitAt(length)
+              tokens = rest
+              QueryMatch(matchedTokens, didMatch = span != null && span.end >= 0)
+            case Left(numTokens) =>
+              val (matchedTokens, rest) = tokens.splitAt(numTokens)
+              tokens = rest
+              QueryMatch(matchedTokens, didMatch = true)
+          }
+          if (Thread.interrupted()) {
+            throw new InterruptedException()
+          }
+          qMatch
         }
       }
 
@@ -208,6 +217,9 @@ object HitAnalyzer extends Logging {
             QueryMatch(Seq(Token(x(0), x(1))), didMatch = true))
         prefixTokens.toSeq.padTo(prefixCounts, QueryMatch(Seq(), didMatch = true)).reverse
       }
+      if (Thread.interrupted()) {
+        throw new InterruptedException()
+      }
 
       val suffixQueryMatches = {
         // == "" to filter out blank ending tokens BlackLab sometime inserts
@@ -216,6 +228,9 @@ object HitAnalyzer extends Logging {
             x => QueryMatch(Seq(Token(x(0), x(1))), didMatch = true)
           )
         suffixTokens.toSeq.padTo(suffixCounts, QueryMatch(Seq(), didMatch = true))
+      }
+      if (Thread.interrupted()) {
+        throw new InterruptedException()
       }
 
       assert(hitQueryMatches.size == query.size)

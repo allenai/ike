@@ -11,7 +11,6 @@ import org.allenai.dictionary._
 import org.allenai.dictionary.ml.subsample._
 import com.typesafe.config.ConfigFactory
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.IntMap
 
 case class Suggestions(
@@ -28,7 +27,7 @@ case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
   *
   * @param label label of the hit
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
-  *  this hit (see the ml/README.md)
+  * this hit (see the ml/README.md)
   * @param captureStrings the string we captured, as a Sequence of capture groups of sequences of
   *   words
   * @param doc the document number this Example came from
@@ -184,6 +183,9 @@ object QuerySuggester extends Logging {
         case (operator, score) => operator.size == i
       }.to[Seq].foreach { // iterate over a copy so we do not expand we added in this loop
         case (operator, score) =>
+          if (Thread.interrupted()) {
+            throw new InterruptedException()
+          }
           hitAnalysis.operatorHits.
             // Filter our unusable operators
             filter { case (newOp, opMatches) => operator.canAdd(newOp) }.

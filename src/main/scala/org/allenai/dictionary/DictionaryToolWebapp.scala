@@ -10,7 +10,7 @@ import org.allenai.dictionary.persistence.Tablestore
 import spray.can.Http
 import spray.http.{ CacheDirectives, HttpHeaders, StatusCodes }
 import spray.httpx.SprayJsonSupport
-import spray.routing.{ Route, ExceptionHandler, HttpService }
+import spray.routing.{ ExceptionHandler, HttpService }
 import spray.util.LoggingContext
 
 import scala.collection.JavaConverters._
@@ -18,6 +18,8 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 import scala.util.control.NonFatal
+
+import java.util.concurrent.TimeUnit
 
 object DictionaryToolWebapp {
   lazy val config = ConfigFactory.load().getConfig("DictionaryToolWebapp")
@@ -110,8 +112,10 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
         path("suggestQuery") {
           post {
             entity(as[SuggestQueryRequest]) { req =>
+              val timeout = config.getConfig("QuerySuggester").
+                getDuration("timeoutInSeconds", TimeUnit.SECONDS)
               complete(searchersFuture.map { searchers =>
-                SearchApp.suggestQuery(searchers.toSeq, req)
+                SearchApp.suggestQuery(searchers.toSeq, req, timeout)
               })
             }
           }

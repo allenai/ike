@@ -11,7 +11,7 @@ import org.apache.lucene.search.spans.SpanQuery
 object Sampler extends Logging {
 
   /** @return the rows within a table that the given query might match, rows are returned as a
-    *  sequence of phrases, each phrase is a sequence of QWords
+    * sequence of phrases, each phrase is a sequence of QWords
     */
   def getFilteredRows(query: TokenizedQuery, table: Table): Seq[Seq[Seq[QWord]]] = {
     val captureSizes = query.getCaptureGroups.map {
