@@ -28,7 +28,7 @@ libraryDependencies ++= Seq(
     "nl.inl" %% "blacklab" % "1.0-ALLENAI-2",
     scopt)
 
-javaOptions in Revolver.reStart += "-Xmx6G"
+javaOptions in Revolver.reStart += "-Xmx14G"
 
 mainClass in Revolver.reStart := Some("org.allenai.dictionary.DictionaryToolWebapp")
 

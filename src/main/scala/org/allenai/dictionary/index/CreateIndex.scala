@@ -74,7 +74,7 @@ object CreateIndex extends App {
     def process(idText: IdText): Seq[IndexableText] = {
       if (options.oneSentencePerDoc) {
         val sents = NlpAnnotate.annotate(idText.text)
-        sents.zipWithIndex.map {
+        sents.zipWithIndex.filter(_._1.nonEmpty).map {
           case (sent, index) =>
             val text = idText.text.substring(
               sent.head.token.offset,
