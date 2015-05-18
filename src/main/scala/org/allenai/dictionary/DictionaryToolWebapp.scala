@@ -177,7 +177,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     ExceptionHandler {
       case NonFatal(e) =>
         requestUri { uri =>
-          log.error(toString, e)
+          log.error(e.toString)
           complete(StatusCodes.InternalServerError -> e.getMessage)
         }
     }
