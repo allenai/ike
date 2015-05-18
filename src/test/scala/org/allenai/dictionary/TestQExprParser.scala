@@ -10,7 +10,6 @@ class TestQExprParser extends UnitSpec with ScratchDirectory {
   // scalastyle:off
   def w(s: String) = QWord(s)
   def p(s: String) = QPos(s)
-  def c(s: String) = QCluster(s)
   def qs(exprs: QExpr*) = QSeq(exprs)
   def cap(expr: QExpr) = QUnnamed(expr)
   def cap(name: String, expr: QExpr) = QNamed(expr, name)
@@ -31,10 +30,6 @@ class TestQExprParser extends UnitSpec with ScratchDirectory {
     val q2 = "this is DT NN"
     val e2 = qs(w("this"), w("is"), p("DT"), p("NN"))
     assert(parse(q2) == e2)
-
-    val q3 = "^10 is DT NN"
-    val e3 = qs(c("10"), w("is"), p("DT"), p("NN"))
-    assert(parse(q3) == e3)
 
     val q4 = "this is (a test)"
     val e4 = qs(w("this"), w("is"), cap(qs(w("a"), w("test"))))

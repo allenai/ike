@@ -30,7 +30,7 @@ libraryDependencies ++= Seq(
     "org.apache.thrift" % "libthrift" % "0.9.1",
     scopt)
 
-javaOptions in Revolver.reStart += "-Xmx6G"
+javaOptions in Revolver.reStart += "-Xmx14G"
 
 mainClass in Revolver.reStart := Some("org.allenai.dictionary.DictionaryToolWebapp")
 

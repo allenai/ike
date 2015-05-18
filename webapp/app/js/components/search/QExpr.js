@@ -71,6 +71,7 @@ var QExprMixin = {
     var handleChange = this.props.handleChange;
     var rootState = this.props.rootState;
     var config = this.props.config;
+    var makeUri = this.props.makeUri;
     childPath.push(attr);
     if (attr == 'qexprs') {
       childPath.push(index);
@@ -81,6 +82,7 @@ var QExprMixin = {
           qexpr={childExpr}
           path={childPath}
           config={config}
+          makeUri={makeUri}
           handleChange={handleChange}
           rootState={rootState}/>
       </Node>
@@ -198,9 +200,10 @@ var QWord = React.createClass({
       word: word,
       config: config
     };
+    var uri = this.props.makeUri('wordInfo');
     var requestData = {
       body: JSON.stringify(query),
-      uri: 'api/wordInfo',
+      uri: uri,
       method: 'POST',
       headers: {'Content-Type': 'application/json'}
     };
@@ -222,6 +225,10 @@ var QWord = React.createClass({
     };
     this.updateSelf(replacement);
   },
+  toPosFromWord: function() {
+    var replace = this.replaceWithPosFromWord;
+    this.getWordInfo(replace);
+  },
   replaceWithSimilarPhrases: function(phraseData) {
     var children = [this.props.qexpr]
     var replacement = {
@@ -236,10 +243,6 @@ var QWord = React.createClass({
     var replace = this.replaceWithSimilarPhrases;
     var phrase = this.props.qexpr.value;
     similarPhrases(phrase, replace);
-  },
-  toPosFromWord: function() {
-    var replace = this.replaceWithPosFromWord;
-    this.getWordInfo(replace);
   },
   render: function() {
     var value = this.props.qexpr.value;
@@ -406,13 +409,15 @@ var QExpr = React.createClass({
       var rootState = this.props.rootState;
       var handleChange = this.props.handleChange;
       var config = this.props.config;
+      var makeUri = this.props.makeUri;
       var path = this.props.path;
       var implProps = {
         qexpr: qexpr,
         path: path,
         rootState: rootState,
         handleChange: handleChange,
-        config: config
+        config: config,
+        makeUri: makeUri
       };
       return React.createElement(component, implProps);
     } else {

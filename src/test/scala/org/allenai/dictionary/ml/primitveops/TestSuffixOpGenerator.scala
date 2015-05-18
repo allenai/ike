@@ -17,7 +17,7 @@ class TestSuffixOpGenerator extends UnitSpec with ScratchDirectory {
     val hits = searcher.find(BlackLabSemantics.blackLabQuery(
       QDisj(Seq(QWord("They"), QWord("mango"), QWord(".")))
     ))
-    val generator = SuffixOpGenerator(QLeafGenerator(Set("word"), Set(2)), Seq(1, 2, 8))
+    val generator = SuffixOpGenerator(QLeafGenerator(Set("word")), Seq(1, 2, 8))
     val operators = hits.asScala.flatMap(hit => {
       generator.generateOperations(hit, hits)
     }).toSeq
@@ -26,10 +26,7 @@ class TestSuffixOpGenerator extends UnitSpec with ScratchDirectory {
     // it cannot be escaped
     val expectedOperators = Set(
       (1, QWord("taste")),
-      (2, QWord("not")),
-      (1, QCluster("10")),
-      (2, QCluster("11")),
-      (1, QCluster("11"))
+      (2, QWord("not"))
     ).map(x => makeMarkedOpSuffix(x._1, x._2))
     assertResult(expectedOperators)(operators.toSet)
   }

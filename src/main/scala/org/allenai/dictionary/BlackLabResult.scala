@@ -5,8 +5,12 @@ import org.allenai.common.immutable.Interval
 
 import scala.collection.JavaConverters._
 
-case class BlackLabResult(wordData: Seq[WordData], matchOffset: Interval,
-    captureGroups: Map[String, Interval]) {
+case class BlackLabResult(
+    wordData: Seq[WordData],
+    matchOffset: Interval,
+    captureGroups: Map[String, Interval],
+    corpusName: String
+) {
   def matchData: Seq[WordData] = wordData.slice(matchOffset.start, matchOffset.end)
   def matchWords: Seq[String] = matchData.map(_.word)
 }
@@ -40,7 +44,7 @@ case object BlackLabResult {
   /** Converts a hit to a BlackLabResult. Returns None if the dreaded BlackLab NPE is returned
     * when computing the capture groups.
     */
-  def fromHit(hits: Hits, hit: Hit, kwicSize: Int = 40): Option[BlackLabResult] = {
+  def fromHit(hits: Hits, hit: Hit, corpusName: String, kwicSize: Int = 20): Option[BlackLabResult] = {
     val kwic = hits.getKwic(hit, kwicSize)
     val data = wordData(hits, kwic)
     val offset = Interval.open(kwic.getHitStart, kwic.getHitEnd)
@@ -52,21 +56,21 @@ case object BlackLabResult {
       // mysterious NPE was thrown and we can't compute the result's capture groups.
       if (optGroups.values.forall(_.isDefined)) {
         val groups = optGroups.mapValues(_.get)
-        Some(BlackLabResult(data, offset, groups))
+        Some(BlackLabResult(data, offset, groups, corpusName))
       } else {
         None
       }
     } else {
       // No capture groups? No problem.
-      Some(BlackLabResult(data, offset, Map.empty[String, Interval]))
+      Some(BlackLabResult(data, offset, Map.empty[String, Interval], corpusName))
     }
   }
   /** Converts the hits into BlackLabResult objects. If ignoreNpe is true, then it will skip over
     * any hits that throw the weird NPE. If ignoreNpe is false, will throw an IllegalStateException.
     */
-  def fromHits(hits: Hits, ignoreNpe: Boolean = true): Iterator[BlackLabResult] = for {
+  def fromHits(hits: Hits, corpusName: String, ignoreNpe: Boolean = true): Iterator[BlackLabResult] = for {
     hit <- hits.iterator.asScala
-    result <- fromHit(hits, hit) match {
+    result <- fromHit(hits, hit, corpusName) match {
       case x if (x.isDefined || ignoreNpe) => x
       case _ => throw new IllegalStateException(s"Could not compute capture groups for $hit")
     }

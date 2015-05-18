@@ -4,12 +4,12 @@ import nl.inl.blacklab.search.{ TextPattern, TextPatternAnd, TextPatternCaptureG
 import nl.inl.blacklab.search.sequences.{ TextPatternAnyToken, TextPatternRepetition, TextPatternSequence }
 
 object BlackLabSemantics {
+  var maxRepetition = 128
   def notImplemented: Exception = new UnsupportedOperationException
   def blackLabQuery(qexpr: QExpr): TextPattern = {
     var unnamedCnt = 0
     def blqHelper(qexpr: QExpr): TextPattern = qexpr match {
       case QWord(w) => new TextPatternTerm(w)
-      case QCluster(c) => new TextPatternProperty("cluster", new TextPatternPrefix(c))
       case QPos(p) => new TextPatternProperty("pos", new TextPatternTerm(p))
       case QDict(d) => throw notImplemented
       case QWildcard() => new TextPatternAnyToken(1, 1)
@@ -19,18 +19,12 @@ object BlackLabSemantics {
         val result = blqHelper(QNamed(e, s"Capture Group ${unnamedCnt}"))
         result
       case QNonCap(e: QExpr) => blqHelper(e)
-      case QStar(e: QExpr) => new TextPatternRepetition(blqHelper(e), 0, -1)
-      case QPlus(e: QExpr) => new TextPatternRepetition(blqHelper(e), 1, -1)
+      case QStar(e: QExpr) => new TextPatternRepetition(blqHelper(e), 0, maxRepetition)
+      case QPlus(e: QExpr) => new TextPatternRepetition(blqHelper(e), 1, maxRepetition)
       case QRepetition(e, min, max) => new TextPatternRepetition(blqHelper(e), min, max)
       case QSeq(es: Seq[QExpr]) => new TextPatternSequence(es.map(blqHelper): _*)
       case QDisj(es: Seq[QExpr]) => new TextPatternOr(es.map(blqHelper): _*)
       case QAnd(expr1, expr2) => new TextPatternAnd(blqHelper(expr1), blqHelper(expr2))
-      case QClusterFromWord(value, word, clusterId) =>
-        if (value < clusterId.size) {
-          blqHelper(QCluster(clusterId.slice(0, value)))
-        } else {
-          blqHelper(QWord(word))
-        }
       case QPosFromWord(value, word, posTags) => value match {
         case Some(string) => blqHelper(QPos(string))
         case None => blqHelper(QWord(word))

@@ -37,38 +37,26 @@ object QLeafGenerator {
 /** Class that generates QLeafs that would match a particular token in a sentence.
   *
   * @param properties to generate leaves for
-  * @param clusterSizes cluster sizes to generate QClusters for
   * @param wildCard whether to generate QWildcard expressions
   */
 case class QLeafGenerator(
     properties: Set[String],
-    clusterSizes: Set[Int] = Set(),
     wildCard: Boolean = false
 ) {
 
   def generate(kwic: Kwic, index: Int): Seq[QLeaf] = {
-    val clusters = if (clusterSizes.isEmpty) {
-      Seq()
-    } else {
-      val cluster = kwic.getTokens("cluster").get(index)
-      clusterSizes.filter(_ <= cluster.length).map(backoff =>
-        QCluster(cluster.substring(0, backoff)))
-    }
     val otherProps = properties.map(property => {
       val token = kwic.getTokens(property).get(index)
       QLeafGenerator.propertyValueToLeaf(property, token)
     }).flatten
-    val withWildCard =
-      if (wildCard) (otherProps + QWildcard()) else otherProps
-    (withWildCard ++ clusters).toSeq
+    if (wildCard) (otherProps + QWildcard()).toSeq else otherProps.toSeq
   }
 
   def getRequiredProperties: Seq[String] = {
-    if (clusterSizes.isEmpty) properties.toSeq else "cluster" +: properties.toSeq
+    properties.toSeq
   }
 
   override def toString: String = {
-    val leafStr = properties ++ clusterSizes.map(i => "C" + i)
-    s"QLeaves<${leafStr.mkString(",")}>"
+    s"QLeaves<${properties.mkString(",")}>"
   }
 }

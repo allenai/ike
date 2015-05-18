@@ -102,7 +102,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val positiveTerms = Set("qwerty", "bananas").
       map(x => TableRow(Seq(TableValue(Seq(QWord(x))))))
     val negativeTerms = Set("mango").map(x => TableRow(Seq(TableValue(Seq(QWord(x))))))
-    val generator = PrefixOpGenerator(QLeafGenerator(Set(), Set(2)), Seq(1))
+    val generator = PrefixOpGenerator(QLeafGenerator(Set("pos")), Seq(1))
     val hitAnalysis = QuerySuggester.buildHitAnalysis(
       hits, Seq(generator), positiveTerms, negativeTerms, captureIndices = Seq(0)
     )
@@ -112,8 +112,8 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     assertResult(Example(Positive, 0, "bananas"))(hitAnalysis.examples(2))
     assertResult(3)(hitAnalysis.examples.size)
 
-    val op10 = SetToken(Prefix(1), QCluster("10"))
-    val op11 = SetToken(Prefix(1), QCluster("11"))
+    val op10 = SetToken(Prefix(1), QPos("VBP"))
+    val op11 = SetToken(Prefix(1), QPos("DT"))
 
     assertResult(Set(op10, op11))(hitAnalysis.operatorHits.keySet)
     assertResult(Set(0, 1))(hitAnalysis.operatorHits.get(op10).get.keySet)

@@ -6,11 +6,11 @@ class TestQueryLanguage extends UnitSpec {
 
   "getQueryLength" should "get correct length" in {
     assertResult(2) {
-      val query = QSeq(Seq(QWord(""), QNamed(QCluster(""), "")))
+      val query = QSeq(Seq(QWord(""), QNamed(QWord(""), "")))
       QueryLanguage.getQueryLength(query)
     }
     assertResult(-1) {
-      val query = QSeq(Seq(QStar(QWord("")), QNamed(QCluster(""), "")))
+      val query = QSeq(Seq(QStar(QWord("")), QNamed(QWord(""), "")))
       QueryLanguage.getQueryLength(query)
     }
 
@@ -28,7 +28,7 @@ class TestQueryLanguage extends UnitSpec {
     }
 
     assertResult(-1) {
-      val q1 = QUnnamed(QSeq(Seq(disjLength2, QSeq(Seq(QCluster(""), QPlus(QWord("")))))))
+      val q1 = QUnnamed(QSeq(Seq(disjLength2, QSeq(Seq(QWord(""), QPlus(QWord("")))))))
       QueryLanguage.getQueryLength(q1)
     }
 
