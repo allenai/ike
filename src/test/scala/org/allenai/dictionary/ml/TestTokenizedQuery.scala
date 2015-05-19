@@ -28,7 +28,8 @@ class TestTokenizedQuery extends UnitSpec with ScratchDirectory {
       val tokenized = TokenizedQuery.buildFromQuery(query)
 
       assertResult(qs(QWord("a")))(tokenized.tokenSequences(0))
-      assertResult(qsc("y",
+      assertResult(qsc(
+        "y",
         Seq(
           QDisj(List(QWord("b"), QWord("c"))),
           QWord("d")
@@ -53,7 +54,26 @@ class TestTokenizedQuery extends UnitSpec with ScratchDirectory {
         case (expected, actual) => assertResult(expected)(actual)
       }
     }
+    {
+      // Make sure if the user writes a overly-complex sequential query we can recover the original
+      val query = QueryLanguage.parse("{a b} (?: {{c d}} {e}) (?<z> {f g})").get
+      val tokenized = TokenizedQuery.buildFromQuery(query)
 
+      val seq = tokenized.getSeq
+      val expectedSeq = Seq(
+        QWord("a"),
+        QWord("b"),
+        QWord("c"),
+        QWord("d"),
+        QWord("e"),
+        QWord("f"),
+        QWord("g")
+      )
+      assertResult(expectedSeq.size)(seq.size)
+      seq.zip(expectedSeq).foreach {
+        case (expected, actual) => assertResult(expected)(actual)
+      }
+    }
   }
 
   it should "get data correctly" in {
