@@ -8,7 +8,7 @@ import nl.inl.blacklab.search.{ Span, Hits }
 
 import scala.collection.JavaConverters._
 
-class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
+class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
 
   TestData.createTestIndex(scratchDir)
   val searcher = TestData.testSearcher(scratchDir)
@@ -36,34 +36,39 @@ class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
       negative.map(x => TableRow(Seq(TableValue(x.split(" ").map(QWord.apply))))))
   }
 
-  "FuzzySequenceSampler" should "capture misses correctly" in {
+  it should "capture misses correctly" in {
     val testQuery = QSeq(Seq(
-      QDisj(Seq(QWord("I"), QWord("taste"))),
-      QDisj(Seq(QWord("like"), QWord("hate"))),
-      QUnnamed(QDisj(Seq(QWord("those"), QWord("great"))))
+      QWord("I"),
+      QDisj(Seq(QWord("like"), QWord("tastes"))),
+      QNamed(QDisj(Seq(QPos("DT"), QPos("JJ"), QPos("NNS"))), "c1")
     ))
-    val tokenized = TokenizedQuery.buildFromQuery(testQuery, Seq("c1"))
-    val hits = FuzzySequenceSampler(0, 1).getSample(tokenized, searcher,
+    val tokenized = TokenizedQuery.buildWithGeneralizations(testQuery, Seq(searcher), 10)
+    val cnames = tokenized.getNames :+ "c1"
+    val hits = GeneralizedQuerySampler(1).getSample(tokenized, searcher,
       Table("", Seq("c1"), Seq(), Seq()), Map())
     // Match I like mango
-    assertResult(Seq((2, 3), (0, 1), (1, 2), (-2, -3)))(
-      hits.getCapturedGroups(hits.get(0)).map(span2tuple)
+    assertResult(0)(hits.get(0).doc)
+    assertResult(cnames.zip(Seq((0, 1), (1, 2), (-2, -3), (2, 3))).toMap)(
+      hits.getCapturedGroupMap(hits.get(0)).asScala.mapValues(span2tuple)
     )
-    // Match I hate those
-    assertResult(Seq((2, 3), (0, 1), (1, 2), (2, 3)))(
-      hits.getCapturedGroups(hits.get(1)).map(span2tuple)
+    // Match It tastes great
+    assertResult(1)(hits.get(1).doc)
+    assertResult(cnames.zip(Seq((0, -1), (1, 2), (2, 3), (2, 3))).toMap)(
+      hits.getCapturedGroupMap(hits.get(1)).asScala.mapValues(span2tuple)
     )
-    // Match taste not great
-    assertResult(Seq((3, 4), (1, 2), (-2, -3), (3, 4)))(
-      hits.getCapturedGroups(hits.get(2)).map(span2tuple)
+    //     Match I hate those
+    assertResult(2)(hits.get(2).doc)
+    assertResult(cnames.zip(Seq((0, 1), (-1, -2), (2, 3), (2, 3))).toMap)(
+      hits.getCapturedGroupMap(hits.get(2)).asScala.mapValues(span2tuple)
     )
   }
 
-  "FuzzySequenceSampler" should "Limit queries correctly" in {
-    val startingQuery = QueryLanguage.parse("({I, hate}) those ({mango, bananas, great})").get
+  it should "Limit queries correctly" in {
+    val startingQuery =
+      QueryLanguage.parse("(?<c1> {I, hate}) {those,hate} (?<c2> {mango, bananas, great})").get
     val table = Table(
       "test",
-      Seq("col1", "col2"),
+      Seq("c1", "c2"),
       Seq(
         TableRow(Seq(TableValue(Seq(QWord("I"))), TableValue(Seq(QWord("mango"))))),
         TableRow(Seq(TableValue(Seq(QWord("hate"))), TableValue(Seq(QWord("those")))))
@@ -72,13 +77,13 @@ class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
         TableRow(Seq(TableValue(Seq(QWord("hate"))), TableValue(Seq(QWord("bananas")))))
       )
     )
-    val tokenized = TokenizedQuery.buildFromQuery(startingQuery, table.cols)
+    val tokenized = TokenizedQuery.buildWithGeneralizations(startingQuery, Seq(searcher), 10)
     val expectedResults = Seq(
       "I like mango",
       "hate those bananas"
     )
-    assertResult(expectedResults)(hitsToStrings(FuzzySequenceSampler(0, 1).getLabelledSample(
-      tokenized, searcher, table, Map(), 0, 0
-    )))
+    val hits = GeneralizedQuerySampler(2).getLabelledSample(tokenized, searcher, table, Map(), 0, 0)
+    assertResult(expectedResults)(hitsToStrings(hits))
+    assertResult(2)(hits.size)
   }
 }

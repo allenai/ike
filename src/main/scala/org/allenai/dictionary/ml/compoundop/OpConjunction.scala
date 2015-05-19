@@ -5,8 +5,7 @@ import org.allenai.dictionary.ml.queryop.TokenCombination._
 import scala.collection.immutable.IntMap
 
 object OpConjunction {
-  def apply(op: EvaluatedOp, maxRemoves: Int = Int.MaxValue):
-  Option[OpConjunction] = op.op match {
+  def apply(op: EvaluatedOp, maxRemoves: Int = Int.MaxValue): Option[OpConjunction] = op.op match {
     case tq: TokenQueryOp => Some(new OpConjunction(Set(tq), op.matches, maxRemoves))
     case _ => None
   }

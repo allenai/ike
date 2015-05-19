@@ -50,7 +50,7 @@ case class RemoveToken(slot: QueryToken) extends TokenQueryOp() {
 sealed abstract class ChangeRepetition extends TokenQueryOp()
 
 /** Changes a QDisj or QLeaf, that is possibly being modifier by a * or + operator */
-abstract class ChangeLeaf extends TokenQueryOp {
+sealed abstract class ChangeLeaf extends TokenQueryOp {
   def combinable(other: TokenQueryOp): TokenCombination = other match {
     case cl: ChangeLeaf => if (other == this) NONE else OR
     case cm: ChangeRepetition => AND

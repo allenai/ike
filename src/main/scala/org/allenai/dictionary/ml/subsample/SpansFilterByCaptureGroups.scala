@@ -1,5 +1,7 @@
 package org.allenai.dictionary.ml.subsample
 
+import java.util
+
 import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 
@@ -9,15 +11,15 @@ import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
   *
   * @param query the 'query' spans to filter
   * @param filter the 'filter' spans to filter the query spans with
-  * @param captureGroups the names of the captures groups to filter with, both the query and
-  *               filter spans should contain these capture groups
+  * @param captureGroupNames the names of the captures groups to filter with, both the query and
+  *              filter spans should contain these capture groups
   * @param startFromDoc document to start collecting hits from
   * @param startFromToken token to start collecting hits from
   */
 class SpansFilterByCaptureGroups(
     query: BLSpans,
     filter: BLSpans,
-    captureGroups: Seq[String],
+    captureGroupNames: Seq[String],
     startFromDoc: Int = 0,
     startFromToken: Int = 0
 ) extends BLSpans {
@@ -25,7 +27,7 @@ class SpansFilterByCaptureGroups(
   var more = true
   var initialized = false
 
-  // Indices the capture and filter query use to store each capture group in captureGroups
+  // Indices the capture and filter query use to store capture groups from captureGroupNames
   var captureIndicesToAnd = Seq[(Int, Int)]()
 
   // array to use when getting capture spans for the query spans
@@ -135,12 +137,12 @@ class SpansFilterByCaptureGroups(
   }
 
   override def setHitQueryContext(context: HitQueryContext): Unit = {
-    super.setHitQueryContext(context)
+    super.setHitQueryContext(context) // Will call passHitQueryContextToClauses
     val filterContext = new HitQueryContext()
     filter.setHitQueryContext(filterContext)
 
-    val queryIndicesToAnd = captureGroups.map(context.getCapturedGroupNames.indexOf(_))
-    val filterIndicesToAnd = captureGroups.map(filterContext.getCapturedGroupNames.indexOf(_))
+    val queryIndicesToAnd = captureGroupNames.map(context.getCapturedGroupNames.indexOf(_))
+    val filterIndicesToAnd = captureGroupNames.map(filterContext.getCapturedGroupNames.indexOf(_))
     captureIndicesToAnd = queryIndicesToAnd.zip(filterIndicesToAnd)
     require(captureIndicesToAnd.forall { case (a, b) => a >= 0 && b >= 0 })
     filterSpanHolder = Array.fill[Span](filterContext.numberOfCapturedGroups())(null)
@@ -152,7 +154,8 @@ class SpansFilterByCaptureGroups(
   }
 
   override def getCapturedGroups(capturedGroups: Array[Span]): Unit = {
-    query.getCapturedGroups(capturedGroups)
+    // Any valid hit will have already set querySpanHolder, not point in recomputing
+    System.arraycopy(querySpanHolder, 0, capturedGroups, 0, querySpanHolder.length)
   }
 
   override def doc(): Int = query.doc
@@ -160,4 +163,22 @@ class SpansFilterByCaptureGroups(
   override def start(): Int = query.start
 
   override def end(): Int = query.end
+
+  override def hitsHaveUniqueStart(): Boolean = query.hitsHaveUniqueStart
+
+  override def hitsHaveUniqueEnd(): Boolean = query.hitsHaveUniqueEnd
+
+  override def hitsAllSameLength(): Boolean = query.hitsAllSameLength
+
+  override def hitsLength(): Int = query.hitsLength
+
+  override def hitsAreUnique(): Boolean = query.hitsAreUnique
+
+  override def getSpan: Span = query.getSpan
+
+  override def hitsEndPointSorted(): Boolean = query.hitsEndPointSorted
+
+  override def getPayload: util.Collection[Array[Byte]] = query.getPayload
+
+  override def isPayloadAvailable: Boolean = query.isPayloadAvailable
 }
