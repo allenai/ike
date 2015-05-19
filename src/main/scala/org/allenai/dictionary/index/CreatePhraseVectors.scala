@@ -159,6 +159,28 @@ object CreatePhraseVectors extends App with Logging {
       * @return two maps, one with unigram counts, and one with bigram counts
       */
     def phraseCounts(phrases: OrderedPrefixSet) = {
+      def reduceMapToVocabSize[T](map: mutable.Map[T, Int]): Unit = map.synchronized {
+        // Have to check twice. All threads will get here, only one reduces the vocab while
+        // the others wait.
+        if (map.size > 2 * options.vocabSize) {
+          // This would be a prime example for the QuickSelect algorithm, which can do this in
+          // O(n), but in practice the difference between O(n) and O(n log n) isn't worth the
+          // trouble.
+          val counts = map.values.toArray
+          Sorting.quickSort(counts)
+          val minCount = counts(counts.length - options.vocabSize - 1)
+
+          logger.info(s"Reducing vocab; removing all items with counts <= $minCount")
+          logger.info(s"Size before: ${map.size}")
+
+          map.foreach { case (k, c) => if (c <= minCount) map.remove(k) }
+
+          logger.info(s"Size after:  ${map.size}")
+
+          System.gc()
+        }
+      }
+
       val bigUnigramCounts = new concurrent.TrieMap[Phrase, Int]
       val bigBigramCounts = new concurrent.TrieMap[(Phrase, Phrase), Int]
       def bumpBigCount[T](map: concurrent.Map[T, Int], key: T, increase: Int): Unit = {
@@ -169,6 +191,7 @@ object CreatePhraseVectors extends App with Logging {
             if (!success) bumpBigCount(map, key, increase)
           case None => // yay!
         }
+        if (map.size > 2 * options.vocabSize) reduceMapToVocabSize(map)
       }
 
       idTexts.grouped(1024).parForeach { docs =>
@@ -182,29 +205,7 @@ object CreatePhraseVectors extends App with Logging {
           map.update(key, count)
 
           // if the map is now bigger than the vocab size, cut down to vocab size
-          if (map.size > 2 * options.vocabSize) {
-            map.synchronized {
-              // Have to check twice. All threads will get here, only one reduces the vocab while
-              // the others wait.
-              if (map.size > 2 * options.vocabSize) {
-                // This would be a prime example for the QuickSelect algorithm, which can do this in
-                // O(n), but in practice the difference between O(n) and O(n log n) isn't worth the
-                // trouble.
-                val counts = map.values.toArray
-                Sorting.quickSort(counts)
-                val minCount = counts(counts.length - options.vocabSize - 1)
-
-                logger.info(s"Reducing vocab; removing all items with counts <= $minCount")
-                logger.info(s"Size before: ${map.size}")
-
-                map.foreach { case (k, c) => if (c <= minCount) map.remove(k) }
-
-                logger.info(s"Size after:  ${map.size}")
-
-                System.gc()
-              }
-            }
-          }
+          if (map.size > 2 * options.vocabSize) reduceMapToVocabSize(map)
         }
 
         phrasified.foreach { sentence =>
