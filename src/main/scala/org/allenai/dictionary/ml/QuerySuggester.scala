@@ -258,12 +258,12 @@ object QuerySuggester extends Logging {
     }
 
     logger.debug("Reading unlabelled hits")
-    val numUnlabelledPerSearcher = (config.maxSampleSize * percentUnlabelled).toInt / searchers.size
+    val maxUnlabelledPerSearcher = (config.maxSampleSize * percentUnlabelled).toInt / searchers.size
     val numDocsPerSearcher = searchers.map(_.getIndexReader.numDocs())
     val ((unlabelledHits, unlabelledSize), unlabelledReadTime) = Timing.time {
       val hits = searchers.map(searcher =>
         hitGatherer.getSample(tokenizedQuery, searcher, targetTable, tables).
-          window(0, numUnlabelledPerSearcher))
+          window(0, maxUnlabelledPerSearcher))
       (hits, hits.map(_.size()).sum)
     }
     logger.debug(s"Read $unlabelledSize unlabelled hits " +
@@ -276,7 +276,7 @@ object QuerySuggester extends Logging {
     // Number of documents we searched for unlabelled hits from
     val numUnlabelledDocs = unlabelledHits.zip(numDocsPerSearcher).map {
       case (hits, totalDocs) =>
-        if (hits.size() < numUnlabelledPerSearcher) {
+        if (hits.size() < maxUnlabelledPerSearcher) {
           totalDocs
         } else {
           hits.numberOfDocs()
@@ -290,12 +290,12 @@ object QuerySuggester extends Logging {
       }
     }
     logger.debug(s"Reading labelled hits")
-    val numLabelledPerSearcher = config.maxSampleSize - numUnlabelledPerSearcher
+    val maxLabelledPerSearcher = config.maxSampleSize - maxUnlabelledPerSearcher
     val ((labelledHits, labelledSize), labelledReadTime) = Timing.time {
       val hits = searchers.zip(unlabelledEndPoints).map {
         case (searcher, (lastDoc, lastToken)) =>
           hitGatherer.getLabelledSample(tokenizedQuery, searcher, targetTable,
-            tables, lastDoc, lastToken + 1).window(0, numLabelledPerSearcher)
+            tables, lastDoc, lastToken + 1).window(0, maxLabelledPerSearcher)
       }
       (hits, hits.map(_.size).sum)
     }
@@ -303,10 +303,11 @@ object QuerySuggester extends Logging {
       s" ${labelledReadTime.toMillis / 1000.0} seconds")
 
     // Number of documents we searched for labelled hits from
-    val numDocs = (labelledHits, unlabelledEndPoints, numDocsPerSearcher).zipped.map {
-      case (hits, (lastDoc, lastToken), totalDocs) =>
-        if (hits.size < numUnlabelledPerSearcher) {
-          totalDocs - lastDoc
+    val numDocs = numUnlabelledDocs +
+      (labelledHits, numDocsPerSearcher).zipped.map {
+      case (hits, totalDocs) =>
+        if (hits.size < maxLabelledPerSearcher) {
+          totalDocs
         } else {
           hits.numberOfDocs()
         }
@@ -326,7 +327,8 @@ object QuerySuggester extends Logging {
         val selectConf = querySuggestionConf.getConfig("broaden")
         GeneralizingOpGenerator(
           selectConf.getBoolean("suggestPos"),
-          selectConf.getBoolean("suggestWord")
+          selectConf.getBoolean("suggestWord"),
+          selectConf.getBoolean("createDisjunctions")
         )
       }
       val (prefixCounts, suffixCounts) = if (narrow) {
@@ -372,11 +374,8 @@ object QuerySuggester extends Logging {
 
     val unlabelledBiasCorrection =
       Math.min(
-        Math.max(if (numUnlabelledDocs > 0) {
-          numUnlabelledDocs / numDocs.toDouble
-        } else {
-          numDocs.toDouble
-        }, 1), querySuggestionConf.getDouble("maxUnlabelledBiasCorrection")
+        numUnlabelledDocs / numDocs.toDouble,
+        querySuggestionConf.getDouble("maxUnlabelledBiasCorrection")
       )
     val evalFunction =
       if (narrow) {

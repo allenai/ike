@@ -55,7 +55,7 @@ object OpGenerator {
   def getSetTokenOps(
     matches: QueryMatches,
     leafGenerator: QLeafGenerator
-  ): Map[SetToken, IntMap[Int]] = {
+  ): Map[QueryOp, IntMap[Int]] = {
     OpGenerator.buildLeafMap(leafGenerator, matches.matches).map {
       case (k, v) => SetToken(matches.queryToken.slot, k) -> v
     }
@@ -68,14 +68,18 @@ object OpGenerator {
   def getAddTokenOps(
     matches: QueryMatches,
     leafGenerator: QLeafGenerator
-  ): Map[AddToken, IntMap[Int]] = {
+  ): Map[QueryOp, IntMap[Int]] = {
     require(matches.queryToken.slot.isInstanceOf[QueryToken])
     // AddToken ops implicitly match everything that is currently matched, add that back in
     val allreadyMatches = IntMap(matches.matches.zipWithIndex.flatMap {
       case (qMatch, index) => if (qMatch.didMatch) Some((index, 0)) else None
     }: _*)
-    OpGenerator.buildLeafMap(leafGenerator, matches.matches).map {
-      case (k, v) => AddToken(matches.queryToken.slot.token, k) ->
+    OpGenerator.buildLeafMap(leafGenerator, matches.matches).filter {
+      // Filter ops that match every single existing match, in that case we prefer using SetTokenOp
+      case (leaf, matches) => allreadyMatches.intersection(matches).size != allreadyMatches.size
+    }.map {
+      case (k, v) =>
+        AddToken(matches.queryToken.slot.token, k) ->
         v.unionWith(allreadyMatches, (_, v1, v2) => v1 + v2)
     }
   }

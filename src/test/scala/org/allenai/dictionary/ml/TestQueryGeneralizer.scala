@@ -39,11 +39,6 @@ class TestQueryGeneralizer extends UnitSpec with ScratchDirectory {
       assert(gens == GeneralizeToDisj(Seq(QPos("PRP"))))
     }
     {
-      val gens = QueryGeneralizer.queryGeneralizations(
-        QRepetition(QWord("like"), 1, 4), searchers, 10)
-      assert(gens == GeneralizeToDisj(Seq(QRepetition(QPos("VBP"), 1, 4))))
-    }
-    {
       val gens = QueryGeneralizer.queryGeneralizations(QRepetition(QPos("NN"), 1, 4), searchers, 10)
       val qexprs = gens.asInstanceOf[GeneralizeToDisj].elements
 

@@ -90,7 +90,7 @@ object QueryGeneralizer {
         val childGeneralization = queryGeneralizations(qr.qexpr, searchers, sampleSize)
         childGeneralization match {
           case GeneralizeToDisj(elements) =>
-            GeneralizeToDisj(elements.map(QRepetition(_, qr.min, qr.max)))
+            GeneralizeToDisj(Seq(QRepetition(QDisj(elements), qr.min, qr.max)))
           case GeneralizeToAny(min, max) if min == 1 =>
             // if min != 1 then QRepeating(childGeneralization) can only match sequences of
             // particular size (ex. sequence of size 2,4,6...) which we currently cant model

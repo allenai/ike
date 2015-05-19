@@ -1,10 +1,10 @@
 package org.allenai.dictionary.ml.subsample
 
 import nl.inl.blacklab.search.lucene.SpanQueryCaptureGroup
-import nl.inl.blacklab.search.sequences.{ SpanQueryRepetition, SpanQuerySequence }
+import nl.inl.blacklab.search.sequences.SpanQuerySequence
 import nl.inl.blacklab.search.{ Hits, Searcher }
 import org.allenai.dictionary._
-import org.allenai.dictionary.ml.{ GeneralizeToDisj, QueryGeneralizer, TokenizedQuery }
+import org.allenai.dictionary.ml.{ GeneralizeToDisj, TokenizedQuery }
 import org.apache.lucene.search.spans.SpanQuery
 
 import scala.collection.JavaConverters._
@@ -23,6 +23,7 @@ object GeneralizedQuerySampler {
       )
     }
     val generalizations = qexpr.generalizations.get
+    // TODO do this by running the unlabelled query?
     val generalizingSpanQueries = generalizations.zip(qexpr.getNamedTokens).map {
       case (GeneralizeToDisj(qexprs), (name, original)) =>
         if (qexprs.isEmpty) {
@@ -52,8 +53,8 @@ object GeneralizedQuerySampler {
   }
 }
 
-/** Sampler that returns sentences that could be matched by a query that is
-  * within an edit distance of the given query. See SpanQueryFuzzySequence
+/** Sampler that returns hits that could be matched by the generalizations of the input
+  * query.
   *
   * @param maxEdits maximum edits a sentence can be from the query to be returned
   */

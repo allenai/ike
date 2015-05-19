@@ -11,7 +11,7 @@ class TestGeneralizeTokenGenerator extends UnitSpec with ScratchDirectory {
   "GeneralizeTokenGenerator" should "Suggest correct operators" in {
     val query = QueryLanguage.parse("a (?<x>b c) d").get
     val tokenized = TokenizedQuery.buildFromQuery(query)
-    val generator = GeneralizingOpGenerator(true, true)
+    val generator = GeneralizingOpGenerator(true, true, false)
 
     val setPosNN = SetToken(QueryToken(4), QPos("NN"))
     val setPosCC = SetToken(QueryToken(4), QPos("CC"))
@@ -29,11 +29,11 @@ class TestGeneralizeTokenGenerator extends UnitSpec with ScratchDirectory {
       generator.generate(matches)
     }
 
-    val m1 = getWithGeneralization(GeneralizeToAny(1, 1))
-    assertResult(IntMap(2 -> 0))(m1(setPosNN))
-    assertResult(IntMap(1 -> 1, 4 -> 0))(m1(setPosCC))
-    assertResult(IntMap(3 -> 1))(m1(setPosVB))
-    assertResult(3)(m1.size)
+//    val m1 = getWithGeneralization(GeneralizeToAny(1, 1))
+//    assertResult(IntMap(2 -> 0))(m1(setPosNN))
+//    assertResult(IntMap(1 -> 1, 4 -> 0))(m1(setPosCC))
+//    assertResult(IntMap(3 -> 1))(m1(setPosVB))
+//    assertResult(3)(m1.size)
 
     val m2 = getWithGeneralization(GeneralizeToDisj(Seq(QPos("NN"))))
     assertResult(IntMap(2 -> 0))(m2(setPosNN))
