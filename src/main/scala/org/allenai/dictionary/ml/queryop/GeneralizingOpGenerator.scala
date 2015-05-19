@@ -34,8 +34,7 @@ case class GeneralizingOpGenerator(
         }
       case (SetMin(_, min), qr: QRepeating) => qr.min < min
       case (SetMax(_, max), qr: QRepeating) => qr.max > max
-      case (SetRepeatedToken(slot, index, qexpr), qr: QRepeating)
-        if qr.min <= index && qr.max >= index => allowOps(SetToken(slot, qexpr), qr.qexpr)
+      case (SetRepeatedToken(slot, index, qexpr), qr: QRepeating) if qr.min <= index && qr.max >= index => allowOps(SetToken(slot, qexpr), qr.qexpr)
       case _ => false // Defensively assume if I have not accounted for it its not good
     }
   }

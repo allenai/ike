@@ -1,6 +1,6 @@
 package org.allenai.dictionary.ml
 
-import org.allenai.common.testkit.{ScratchDirectory, UnitSpec}
+import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary._
 import org.allenai.dictionary.index.TestData
 
@@ -12,7 +12,7 @@ class TestQueryGeneralizer extends UnitSpec with ScratchDirectory {
 
   it should "cover all PosTags" in {
     val tagSet = QueryLanguage.parser.posTagSet.toSet
-    val generalizingTagset = QueryGeneralizer.posSets.reduce( (a,b) => a ++ b)
+    val generalizingTagset = QueryGeneralizer.posSets.reduce((a, b) => a ++ b)
     assert((tagSet == generalizingTagset))
   }
 
@@ -26,7 +26,8 @@ class TestQueryGeneralizer extends UnitSpec with ScratchDirectory {
     }
     {
       val gens = QueryGeneralizer.queryGeneralizations(
-        QDisj(Seq(QPos("NN"), QPos("VBG"))), searchers, 10)
+        QDisj(Seq(QPos("NN"), QPos("VBG"))), searchers, 10
+      )
       val qexprs = gens.asInstanceOf[GeneralizeToDisj].elements
       assert(qexprs.contains(QPos("NNS")))
       assert(qexprs.contains(QPos("VB")))
@@ -49,6 +50,7 @@ class TestQueryGeneralizer extends UnitSpec with ScratchDirectory {
       assert(qexprs contains QRepetition(QPos("NNPS"), 1, 4))
     }
     assertResult(GeneralizeToNone())(QueryGeneralizer.queryGeneralizations(
-      QRepetition(QWildcard(), 1, 4), searchers, 10))
+      QRepetition(QWildcard(), 1, 4), searchers, 10
+    ))
   }
 }

@@ -42,7 +42,7 @@ class TestQueryLanguage extends UnitSpec {
       val q1 = QueryLanguage.parse("(a (b c d)*)[2,2]").get
       QueryLanguage.getQueryLength(q1)
     }
-    
+
     assertResult((2, 4)) {
       val q1 = QueryLanguage.parse("(a b)[1,2]").get
       QueryLanguage.getQueryLength(q1)

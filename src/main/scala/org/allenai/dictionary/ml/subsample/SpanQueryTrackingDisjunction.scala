@@ -15,8 +15,10 @@ class SpanQueryTrackingDisjunction(
     captureName: String
 ) extends SpanQueryBase((firstSpan +: alternatives).asJava) {
 
-  override def getSpans(atomicReaderContext: AtomicReaderContext,
-      bits: Bits, map: util.Map[Term, TermContext]): Spans = {
+  override def getSpans(
+    atomicReaderContext: AtomicReaderContext,
+    bits: Bits, map: util.Map[Term, TermContext]
+  ): Spans = {
     val spans = clauses.map { spanQuery =>
       BLSpansWrapper.optWrap(spanQuery.getSpans(atomicReaderContext, bits, map))
     }

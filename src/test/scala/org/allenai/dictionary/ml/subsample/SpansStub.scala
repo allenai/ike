@@ -17,7 +17,8 @@ object SpansStub {
     apply(data.map((x => (x._1, x._2, x._2 + length))))
 
   def withCaptures(
-      data: Seq[(Int, Int, Int)], captures: Seq[Seq[Span]], names: Seq[String]): SpansStub = {
+    data: Seq[(Int, Int, Int)], captures: Seq[Seq[Span]], names: Seq[String]
+  ): SpansStub = {
     val (d, s, e) = data.unzip3
     new SpansStub(d.toIndexedSeq, s.toIndexedSeq, e.toIndexedSeq, names, captures.toIndexedSeq)
   }
@@ -48,7 +49,6 @@ class SpansStub(
       1
     }
   }
-
 
   override def setHitQueryContext(context: HitQueryContext): Unit = {
     captureNumbers = captureNames.map(context.registerCapturedGroup(_))

@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml
 
-import org.allenai.dictionary.ml.compoundop.{OpConjunctionOfDisjunctions, OpConjunction, EvaluatedOp}
-import org.allenai.dictionary.ml.queryop.{QueryOp, SetToken}
+import org.allenai.dictionary.ml.compoundop.{ OpConjunctionOfDisjunctions, OpConjunction, EvaluatedOp }
+import org.allenai.dictionary.ml.queryop.{ QueryOp, SetToken }
 
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary.index.TestData
@@ -50,21 +50,21 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       (x: EvaluatedOp) => OpConjunction.apply(x),
       (x: EvaluatedOp) => OpConjunctionOfDisjunctions.apply(x)
     ).foreach { combiner =>
-      val scoredQueries = QuerySuggester.selectOperator(
-        data, new PositivePlusNegative(examples, -1),
-        combiner,
-        3, 2, 100
-      )
+        val scoredQueries = QuerySuggester.selectOperator(
+          data, new PositivePlusNegative(examples, -1),
+          combiner,
+          3, 2, 100
+        )
 
-      // Best Results is ANDing op1 and op2
-      assertResult(Seq(
-        Set(op1, op2),
-        Set(op1),
-        Set(op2)
-      )) {
-        scoredQueries.map(_._1.ops)
+        // Best Results is ANDing op1 and op2
+        assertResult(Seq(
+          Set(op1, op2),
+          Set(op1),
+          Set(op2)
+        )) {
+          scoredQueries.map(_._1.ops)
+        }
       }
-    }
 
   }
 
@@ -98,8 +98,8 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
 
   "QuerySuggester" should "Select diverse queries" in {
     val examples = (Seq(Unlabelled) ++ Seq.fill(5)(Positive) ++
-        Seq.fill(5)(Negative) ++ Seq(Unlabelled)).
-        map(x => WeightedExample(x, 0, 1.0, 0)).toIndexedSeq
+      Seq.fill(5)(Negative) ++ Seq(Unlabelled)).
+      map(x => WeightedExample(x, 0, 1.0, 0)).toIndexedSeq
 
     val op1 = SetToken(Prefix(1), QWord("p1"))
     val op2 = SetToken(Prefix(2), QWord("p2"))
@@ -112,16 +112,18 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     )
     val data = HitAnalysis(operatorHits, examples)
 
-    Seq(2, 3).foreach { case i =>
-      val scoredQueries = QuerySuggester.selectOperator(
-        data, new PositivePlusNegative(examples, -2),
-        (x: EvaluatedOp) => OpConjunctionOfDisjunctions(x),
-        20, 3, i)
-      // op1 OR op2 is better then op2, but we should not suggest if i == 2 since
-      // then op1 would be over used
-      val expected = Seq(Set(op1), Set(op1, op3), Set(op2))
-      val actual = scoredQueries.take(3).map(_._1.ops)
-      if (i == 2) assert(expected == actual) else assert (expected != actual)
+    Seq(2, 3).foreach {
+      case i =>
+        val scoredQueries = QuerySuggester.selectOperator(
+          data, new PositivePlusNegative(examples, -2),
+          (x: EvaluatedOp) => OpConjunctionOfDisjunctions(x),
+          20, 3, i
+        )
+        // op1 OR op2 is better then op2, but we should not suggest if i == 2 since
+        // then op1 would be over used
+        val expected = Seq(Set(op1), Set(op1, op3), Set(op2))
+        val actual = scoredQueries.take(3).map(_._1.ops)
+        if (i == 2) assert(expected == actual) else assert(expected != actual)
     }
   }
 
@@ -130,13 +132,12 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       Seq(Seq("i"), Seq("like"), Seq("hate")).map { x =>
         TableRow(x.map(y => TableValue(Seq(QWord(y)))))
       },
-      Seq()
-    )
+      Seq())
     val startingQuery = QueryLanguage.parse("I (?<c1> like)").get
     val suggestions =
       QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table),
         "test", false, SuggestQueryConfig(5, 2, 100, 10, 0, -0.1, false)).suggestions
-    val bestSuggestions= suggestions.take(2).map(_.query)
+    val bestSuggestions = suggestions.take(2).map(_.query)
     assert(bestSuggestions contains QueryLanguage.parse("PRP (?<c1> VBP)").get)
     assert(bestSuggestions contains QueryLanguage.parse("I (?<c1> VBP)").get)
   }
@@ -148,16 +149,15 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       },
       Seq(Seq("i like")).map { x =>
         TableRow(x.map(y => TableValue(y.split(" ").map(QWord(_)))))
-      }
-    )
+      })
     val startingQuery = QueryLanguage.parse("(?<c1> {I, like, hate, it}+)").get
     val suggestions =
       QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table),
-        "test",  true, SuggestQueryConfig(5, 2, 100, 1, -5, 0, false)).suggestions
+        "test", true, SuggestQueryConfig(5, 2, 100, 1, -5, 0, false)).suggestions
     val bestScore = suggestions.head.score
-    val bestSuggestions= suggestions.filter(_.score == bestScore)
+    val bestSuggestions = suggestions.filter(_.score == bestScore)
     assert(bestSuggestions.map(_.query).toSet contains
-        QueryLanguage.parse("(?<c1> {I, like, hate,it})").get)
+      QueryLanguage.parse("(?<c1> {I, like, hate,it})").get)
   }
 
   it should "suggest changing a plus operator" in {
@@ -167,17 +167,16 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       },
       Seq(Seq("like"), Seq("hate")).map { x =>
         TableRow(x.map(y => TableValue(Seq(QWord(y)))))
-      }
-    )
+      })
     val startingQuery = QueryLanguage.parse("(?<c1> .+) {mango, those, great}").get
     val suggestions =
       QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table),
-        "test",  true, SuggestQueryConfig(5, 1, 100, 1, -5, -5, false))
+        "test", true, SuggestQueryConfig(5, 1, 100, 1, -5, -5, false))
     val bestScore = suggestions.suggestions.head.score
     // Fuzzy match to 1 to account for size penalties and the like
     val bestSuggestions = suggestions.suggestions.filter(_.score == bestScore).map(_.query)
     assert(bestSuggestions contains
-        QueryLanguage.parse("(?<c1> RB+) {mango, those, great}").get)
+      QueryLanguage.parse("(?<c1> RB+) {mango, those, great}").get)
   }
 
   it should "suggest altering repeated op" in {
@@ -185,12 +184,11 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       Seq(Seq("I like mango"), Seq("I hate those"), Seq("It tastes great")).map { x =>
         TableRow(x.map(y => TableValue(y.split(" ").map(word => QWord(word)))))
       },
-      Seq()
-    )
+      Seq())
     val startingQuery = QueryLanguage.parse("(.[1,3])").get
     val suggestions =
       QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table),
-        "test",  true, SuggestQueryConfig(10, 2, 100, 100, -1, -1, true)).suggestions
+        "test", true, SuggestQueryConfig(10, 2, 100, 100, -1, -1, true)).suggestions
     val bestScore = suggestions(0).score
     val bestQueries = suggestions.filter(_.score == bestScore)
     val queries = bestQueries.map(x => x.query)

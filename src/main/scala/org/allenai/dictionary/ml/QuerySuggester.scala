@@ -30,7 +30,7 @@ case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
   * this hit (see the ml/README.md)
   * @param captureStrings the string we captured, as a Sequence of capture groups of sequences of
-  *  words
+  * words
   * @param doc the document number this Example came from
   * @param str String of hit, kept only for debugging purposes
   */
@@ -305,13 +305,13 @@ object QuerySuggester extends Logging {
     // Number of documents we searched for labelled hits from
     val numDocs = numUnlabelledDocs +
       (labelledHits, numDocsPerSearcher).zipped.map {
-      case (hits, totalDocs) =>
-        if (hits.size < maxLabelledPerSearcher) {
-          totalDocs
-        } else {
-          hits.numberOfDocs()
-        }
-    }.sum
+        case (hits, totalDocs) =>
+          if (hits.size < maxLabelledPerSearcher) {
+            totalDocs
+          } else {
+            hits.numberOfDocs()
+          }
+      }.sum
 
     logger.debug("Analyzing hits")
 

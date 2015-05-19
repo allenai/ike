@@ -1,11 +1,11 @@
 package org.allenai.dictionary.ml.subsample
 
 import nl.inl.blacklab.search.Span
-import nl.inl.blacklab.search.lucene.{BLSpans, HitQueryContext}
+import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
 import org.allenai.common.testkit.UnitSpec
 
 class TestMinimumValidCaptures extends UnitSpec {
-  def s(spans: Int*) = spans.map { x => new Span(x, x + x/Math.abs(x)) }
+  def s(spans: Int*) = spans.map { x => new Span(x, x + x / Math.abs(x)) }
 
   it should "test correctly" in {
     val captureNames = Seq("c1", "c2", "c3", "c4")

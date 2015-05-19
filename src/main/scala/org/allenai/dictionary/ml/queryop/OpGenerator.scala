@@ -80,7 +80,7 @@ object OpGenerator {
     }.map {
       case (k, v) =>
         AddToken(matches.queryToken.slot.token, k) ->
-        v.unionWith(allreadyMatches, (_, v1, v2) => v1 + v2)
+          v.unionWith(allreadyMatches, (_, v1, v2) => v1 + v2)
     }
   }
 }

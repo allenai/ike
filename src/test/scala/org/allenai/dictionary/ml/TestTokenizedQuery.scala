@@ -28,7 +28,8 @@ class TestTokenizedQuery extends UnitSpec with ScratchDirectory {
       val tokenized = TokenizedQuery.buildFromQuery(query)
 
       assertResult(qs(QWord("a")))(tokenized.tokenSequences(0))
-      assertResult(qsc("y",
+      assertResult(qsc(
+        "y",
         Seq(
           QDisj(List(QWord("b"), QWord("c"))),
           QWord("d")

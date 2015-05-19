@@ -4,7 +4,7 @@ import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary._
 import org.allenai.dictionary.index.TestData
 import org.allenai.dictionary.ml.TokenizedQuery
-import nl.inl.blacklab.search.{Span, Hits}
+import nl.inl.blacklab.search.{ Span, Hits }
 
 import scala.collection.JavaConverters._
 
@@ -28,8 +28,7 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
     }).toSeq
   }
 
-  def span2tuple(span : Span) : (Int, Int)= (span.start, span.end)
-
+  def span2tuple(span: Span): (Int, Int) = (span.start, span.end)
 
   def buildTable(positive: Seq[String], negative: Seq[String]): Table = {
     Table("testTable", Seq("testCol"),
@@ -49,16 +48,19 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
       Table("", Seq("c1"), Seq(), Seq()), Map())
     // Match I like mango
     assertResult(0)(hits.get(0).doc)
-    assertResult(cnames.zip(Seq((0,1), (1,2), (-2,-3), (2,3))).toMap)(
-      hits.getCapturedGroupMap(hits.get(0)).asScala.mapValues(span2tuple))
+    assertResult(cnames.zip(Seq((0, 1), (1, 2), (-2, -3), (2, 3))).toMap)(
+      hits.getCapturedGroupMap(hits.get(0)).asScala.mapValues(span2tuple)
+    )
     // Match It tastes great
     assertResult(1)(hits.get(1).doc)
-    assertResult(cnames.zip(Seq((0,-1), (1,2), (2,3), (2,3))).toMap)(
-      hits.getCapturedGroupMap(hits.get(1)).asScala.mapValues(span2tuple))
+    assertResult(cnames.zip(Seq((0, -1), (1, 2), (2, 3), (2, 3))).toMap)(
+      hits.getCapturedGroupMap(hits.get(1)).asScala.mapValues(span2tuple)
+    )
     //     Match I hate those
     assertResult(2)(hits.get(2).doc)
-    assertResult(cnames.zip(Seq((0,1), (-1,-2), (2,3), (2,3))).toMap)(
-      hits.getCapturedGroupMap(hits.get(2)).asScala.mapValues(span2tuple))
+    assertResult(cnames.zip(Seq((0, 1), (-1, -2), (2, 3), (2, 3))).toMap)(
+      hits.getCapturedGroupMap(hits.get(2)).asScala.mapValues(span2tuple)
+    )
   }
 
   it should "Limit queries correctly" in {

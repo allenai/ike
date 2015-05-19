@@ -51,14 +51,14 @@ class TestOpConjunctionOfDisjunctions extends UnitSpec {
   )
   val replace12 = EvaluatedOp.fromPairs(
     SetToken(QueryToken(1), QWord("r2")),
-    List((3,0))
+    List((3, 0))
   )
   val setMax1 = EvaluatedOp.fromPairs(
-    SetMax(1, 1), List((3,1))
+    SetMax(1, 1), List((3, 1))
   )
 
   val remove3 = EvaluatedOp.fromPairs(
-    RemoveToken(3), List((1, 1), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7,0))
+    RemoveToken(3), List((1, 1), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7, 0))
   )
   val setMin2 = EvaluatedOp.fromPairs(
     SetMin(2, 1), List((1, 1), (2, 0), (3, 1))
@@ -88,11 +88,11 @@ class TestOpConjunctionOfDisjunctions extends UnitSpec {
 
     // (replace12 OR replace11) AND (removeStar2 AND replace2) AND remove3
     op = op.add(replace12)
-    assertResult(List((2, 1), (3,1)))(op.numEdits.toSeq.sorted)
+    assertResult(List((2, 1), (3, 1)))(op.numEdits.toSeq.sorted)
 
     // (removePlus1 AND (replace12 OR replace11)) AND (removeStar2 AND replace2) AND remove3
     op = op.add(setMax1)
-    assertResult(List((3,2)))(op.numEdits.toSeq.sorted)
+    assertResult(List((3, 2)))(op.numEdits.toSeq.sorted)
 
     assertResult(Set(replace11.op, replace12.op, remove3.op, replace2.op,
       setMin2.op, setMax1.op))(op.ops)
@@ -100,7 +100,7 @@ class TestOpConjunctionOfDisjunctions extends UnitSpec {
 
   "OpConjunctionOfDisjunctions" should "work with RemoveEdge" in {
     val r2 = EvaluatedOp.fromPairs(
-      SetToken(QueryToken(2), QWord("r2")), List((1,0), (2,1), (3,0), (4,0))
+      SetToken(QueryToken(2), QWord("r2")), List((1, 0), (2, 1), (3, 0), (4, 0))
     )
     var op = OpConjunctionOfDisjunctions(r2).get
     val rl2 = RemoveEdge(2, 1)
@@ -110,14 +110,14 @@ class TestOpConjunctionOfDisjunctions extends UnitSpec {
     assert(!op.canAdd(RemoveToken(2)))
     assert(!op.canAdd(rl5))
     assert(!op.canAdd(rl2))
-    op = op.add(EvaluatedOp.fromPairs(RemoveToken(7), List((1,1), (2,1), (3,0))))
-    assertResult(List((1,1), (2,2), (3,0)))(op.numEdits.toSeq.sorted)
-    op = op.add(EvaluatedOp.fromPairs(rl6, List((1,1), (2,1))))
-    assertResult(List((1,2), (2,3)))(op.numEdits.toSeq.sorted)
+    op = op.add(EvaluatedOp.fromPairs(RemoveToken(7), List((1, 1), (2, 1), (3, 0))))
+    assertResult(List((1, 1), (2, 2), (3, 0)))(op.numEdits.toSeq.sorted)
+    op = op.add(EvaluatedOp.fromPairs(rl6, List((1, 1), (2, 1))))
+    assertResult(List((1, 2), (2, 3)))(op.numEdits.toSeq.sorted)
     assert(!op.canAdd(SetToken(QueryToken(6), QWord("")))) // remove that token
     assert(!op.canAdd(rl6)) // overlap at QueryMatch(3)
-    op = op.add(EvaluatedOp.fromPairs(rl5, List((1,1), (3,1))))
-    assertResult(List((1,3)))(op.numEdits.toSeq.sorted)
+    op = op.add(EvaluatedOp.fromPairs(rl5, List((1, 1), (3, 1))))
+    assertResult(List((1, 3)))(op.numEdits.toSeq.sorted)
     assertResult(4)(op.size)
     assertResult(Set(RemoveToken(7), RemoveToken(6), RemoveToken(5), r2.op))(op.ops)
   }

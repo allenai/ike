@@ -1,8 +1,8 @@
 package org.allenai.dictionary.ml.compoundop
 
 import org.allenai.common.testkit.UnitSpec
-import org.allenai.dictionary.{QPos, QWord}
-import org.allenai.dictionary.ml.{QueryToken, Prefix}
+import org.allenai.dictionary.{ QPos, QWord }
+import org.allenai.dictionary.ml.{ QueryToken, Prefix }
 import org.allenai.dictionary.ml.queryop._
 
 class TestOpConjunction extends UnitSpec {
@@ -25,19 +25,19 @@ class TestOpConjunction extends UnitSpec {
     SetMin(3, 2), List((1, 1), (3, 0))
   )
 
-  val removeToken = EvaluatedOp.fromPairs(RemoveToken(1), List((1,1), (2,1), (5,0)))
-  val removeLeft = EvaluatedOp.fromPairs(RemoveEdge(2, 1), List((1,0), (5,0)))
+  val removeToken = EvaluatedOp.fromPairs(RemoveToken(1), List((1, 1), (2, 1), (5, 0)))
+  val removeLeft = EvaluatedOp.fromPairs(RemoveEdge(2, 1), List((1, 0), (5, 0)))
 
   "OpConjunction" should "calculate numEdits correctly" in {
     assertResult(OpConjunction(removeLeft))(None)
     var op = OpConjunction(replace3).get.add(prefix2)
-    assertResult(List((1,1), (3,0), (4,1)))(op.numEdits.toSeq.sorted)
+    assertResult(List((1, 1), (3, 0), (4, 1)))(op.numEdits.toSeq.sorted)
 
     assert(!op.canAdd(prefix2.op))
     assert(!op.canAdd(removeLeft.op))
 
     op = op.add(setMin3).add(setMax3)
-    assertResult(List((1,1), (3,0)))(op.numEdits.toSeq.sorted)
+    assertResult(List((1, 1), (3, 0)))(op.numEdits.toSeq.sorted)
 
     assert(!op.canAdd(setMax3.op))
     assert(!op.canAdd(setMin3.op))
@@ -45,7 +45,7 @@ class TestOpConjunction extends UnitSpec {
 
     op = op.add(removeToken)
     op = op.add(removeLeft)
-    assertResult(List((1,2)))(op.numEdits.toSeq.sorted)
+    assertResult(List((1, 2)))(op.numEdits.toSeq.sorted)
     assert(!op.canAdd(SetToken(QueryToken(2), QWord(""))))
 
     assertResult(6)(op.size)

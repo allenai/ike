@@ -65,8 +65,10 @@ case class GeneralizedQuerySampler(maxEdits: Int)
 
   def buildFuzzySequenceQuery(tokenizedQuery: TokenizedQuery, searcher: Searcher,
     tables: Map[String, Table]): SpanQuery = {
-    val gs = GeneralizedQuerySampler.buildGeneralizedSpanQuery(tokenizedQuery,
-      searcher, tables, 200)
+    val gs = GeneralizedQuerySampler.buildGeneralizedSpanQuery(
+      tokenizedQuery,
+      searcher, tables, 200
+    )
     if (tokenizedQuery.size < maxEdits) {
       new SpanQueryMinimumValidCaptures(gs, maxEdits, tokenizedQuery.getNames)
     } else {

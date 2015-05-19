@@ -138,7 +138,7 @@ object TokenizedQuery {
   * @throws IllegalArgumentException if capture.size + 1 != nonCapture.size
   */
 case class TokenizedQuery(
-  tokenSequences: Seq[QueryTokenSequence],
+    tokenSequences: Seq[QueryTokenSequence],
     generalizations: Option[Seq[Generalization]] = None
 ) {
 

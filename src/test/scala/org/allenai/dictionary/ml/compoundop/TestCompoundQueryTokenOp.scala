@@ -50,17 +50,21 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     val modified = CompoundQueryOp.applyOps(tokenized, ops).getSeq
     val expected = QueryLanguage.parse("{one, two, a3} (?<capture> {c1, a21, a22} c2)").get
     assertResult(Set(QWord("one"), QWord("two"), add1.qexpr))(
-      modified(0).asInstanceOf[QDisj].qexprs.toSet)
+      modified(0).asInstanceOf[QDisj].qexprs.toSet
+    )
     assertResult(Set(QWord("c1"), add21.qexpr, add22.qexpr))(
-      modified(1).asInstanceOf[QDisj].qexprs.toSet)
+      modified(1).asInstanceOf[QDisj].qexprs.toSet
+    )
   }
 
   "CompoundOp" should "apply remove ops" in {
     val startingQuery = QueryLanguage.parse("p1 p2 (?<capture> c1) s1 s2").get
     val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
     assertResult(QSeq(Seq(QNamed(QWord("c1"), "capture"), QWord("s1")))) {
-      CompoundQueryOp.applyOps(tokenized, Set(RemoveToken(1),
-        RemoveToken(2), RemoveToken(5))).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(
+        RemoveToken(1),
+        RemoveToken(2), RemoveToken(5)
+      )).getQuery
     }
   }
 

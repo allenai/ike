@@ -1,6 +1,6 @@
 package org.allenai.dictionary.ml
 
-import org.allenai.common.testkit.{ScratchDirectory, UnitSpec}
+import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary._
 import org.allenai.dictionary.index.TestData
 import org.allenai.dictionary.ml.Label._
@@ -10,7 +10,7 @@ import org.allenai.dictionary.ml.subsample.GeneralizedQuerySampler
 import scala.collection.immutable.IntMap
 import scala.collection.JavaConverters._
 
-class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
+class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
   TestData.createTestIndex(scratchDir)
   val searcher = TestData.testSearcher(scratchDir)
 
@@ -18,8 +18,7 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
     val query = QueryLanguage.parse("(?<c1> {mango, bananas, not})").get
     val table = Table("test", Seq("c1"),
       Seq(TableRow(Seq(TableValue(Seq(QWord("mango")))))),
-      Seq(TableRow(Seq(TableValue(Seq(QWord("not"))))))
-    )
+      Seq(TableRow(Seq(TableValue(Seq(QWord("not")))))))
     val hits = searcher.find(BlackLabSemantics.blackLabQuery(query))
     assert(hits.size() == 3)
     assertResult(Seq(Positive, Unlabelled, Negative)) {
@@ -45,12 +44,14 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
       QueryMatch(List(token("hate")), true),
       QueryMatch(List(), true)
     )))(matchData(0))
-    assertResult(QueryMatches(QuerySlotData(Some(query.asInstanceOf[QSeq].qexprs(0)),
-      QueryToken(1), false, true, false), Seq(
-        QueryMatch(List(token("It")), true),
-        QueryMatch(List(token("those")), true),
-        QueryMatch(List(token("They")), true)
-      )))(matchData(1))
+    assertResult(QueryMatches(QuerySlotData(
+      Some(query.asInstanceOf[QSeq].qexprs(0)),
+      QueryToken(1), false, true, false
+    ), Seq(
+      QueryMatch(List(token("It")), true),
+      QueryMatch(List(token("those")), true),
+      QueryMatch(List(token("They")), true)
+    )))(matchData(1))
     assertResult(QueryMatches(QuerySlotData(Some(QWildcard()), QueryToken(2),
       true, false, true), Seq(
       QueryMatch(List(token("tastes")), true),
@@ -80,8 +81,7 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
 
     val table = Table("test", Seq("c1"),
       Seq("qwerty", "bananas").map(x => TableRow(Seq(TableValue(Seq(QWord(x)))))),
-      Seq("mango").map(x => TableRow(Seq(TableValue(Seq(QWord(x))))))
-    )
+      Seq("mango").map(x => TableRow(Seq(TableValue(Seq(QWord(x)))))))
 
     // Get the hits
     val hitAnalysis = HitAnalyzer.buildHitAnalysis(
@@ -91,9 +91,9 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
     )
 
     // What gets put in str changes for debug reasons so best to just ignore it
-    assertResult(WeightedExample(Negative, 0, 1.0, 0))(hitAnalysis.examples(0).copy(str=""))
-    assertResult(WeightedExample(Unlabelled, 0, 1.0, 2))(hitAnalysis.examples(1).copy(str=""))
-    assertResult(WeightedExample(Positive, 0, 1.0, 2))(hitAnalysis.examples(2).copy(str=""))
+    assertResult(WeightedExample(Negative, 0, 1.0, 0))(hitAnalysis.examples(0).copy(str = ""))
+    assertResult(WeightedExample(Unlabelled, 0, 1.0, 2))(hitAnalysis.examples(1).copy(str = ""))
+    assertResult(WeightedExample(Positive, 0, 1.0, 2))(hitAnalysis.examples(2).copy(str = ""))
     assertResult(3)(hitAnalysis.examples.size)
 
     val op10 = SetToken(Prefix(1), QPos("VBP"))
@@ -104,25 +104,25 @@ class TestHitAnalyzer  extends UnitSpec with ScratchDirectory {
     assertResult(Set(2))(hitAnalysis.operatorHits.get(op11).get.keySet)
   }
 
-//  it should "build from fuzzy sequences hits correctly" in {
-//    val query = QueryLanguage.parse("(?<c2> I) running (?<c1> {mango, blarg})").get
-//    val tokenized = TokenizedQuery.buildFromQuery(query)
-//    val table = Table("test", Seq("c1", "c2"),
-//      Seq(Seq("like", "mango"), Seq("mango", "i")).map { x =>
-//        TableRow(x.map(y => TableValue(Seq(QWord(y)))))
-//      },
-//      Seq()
-//    )
-//    val hits = FuzzySequenceSampler(1, 1).getLabelledSample(tokenized, searcher, table, Map(), 0, 0)
-//
-//    val hitAnalysis = HitAnalyzer.buildHitAnalysis(Seq(hits), tokenized, 0, 0,
-//      GeneralizingOpGenerator(true, true, false, tokenized.size, true), table)
-//    assertResult(IndexedSeq(WeightedExample(Positive, 1, 1.0, 0)))(
-//      hitAnalysis.examples.map(_.copy(str="")))
-//    // Note VBP will not be suggested because it does not generalize 'running'
-//    val opMap = hitAnalysis.operatorHits
-//    val op2 = SetToken(QueryToken(1), QPos("PRP"))
-//    assertResult(Set(op2))(opMap.keySet)
-//    assertResult(IntMap((0, 0)))(opMap(op2))
-//  }
+  //  it should "build from fuzzy sequences hits correctly" in {
+  //    val query = QueryLanguage.parse("(?<c2> I) running (?<c1> {mango, blarg})").get
+  //    val tokenized = TokenizedQuery.buildFromQuery(query)
+  //    val table = Table("test", Seq("c1", "c2"),
+  //      Seq(Seq("like", "mango"), Seq("mango", "i")).map { x =>
+  //        TableRow(x.map(y => TableValue(Seq(QWord(y)))))
+  //      },
+  //      Seq()
+  //    )
+  //    val hits = FuzzySequenceSampler(1, 1).getLabelledSample(tokenized, searcher, table, Map(), 0, 0)
+  //
+  //    val hitAnalysis = HitAnalyzer.buildHitAnalysis(Seq(hits), tokenized, 0, 0,
+  //      GeneralizingOpGenerator(true, true, false, tokenized.size, true), table)
+  //    assertResult(IndexedSeq(WeightedExample(Positive, 1, 1.0, 0)))(
+  //      hitAnalysis.examples.map(_.copy(str="")))
+  //    // Note VBP will not be suggested because it does not generalize 'running'
+  //    val opMap = hitAnalysis.operatorHits
+  //    val op2 = SetToken(QueryToken(1), QPos("PRP"))
+  //    assertResult(Set(op2))(opMap.keySet)
+  //    assertResult(IntMap((0, 0)))(opMap(op2))
+  //  }
 }
