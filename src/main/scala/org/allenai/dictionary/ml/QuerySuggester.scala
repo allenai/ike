@@ -247,7 +247,7 @@ object QuerySuggester extends Logging {
         TokenizedQuery.buildFromQuery(queryWithNamedCaptures)
       } else {
         val tq = TokenizedQuery.buildWithGeneralizations(queryWithNamedCaptures, searchers, 100)
-        tq.getSeq.zip(tq.generalizations.get).map {
+        tq.getSeq.zip(tq.generalizations.get).foreach {
           case (q, g) => logger.debug(s"Generalize $q => $g")
         }
         tq
@@ -256,7 +256,10 @@ object QuerySuggester extends Logging {
     val hitGatherer = if (narrow) {
       MatchesSampler()
     } else {
-      GeneralizedQuerySampler(Math.min(tokenizedQuery.size - 1, config.depth))
+      GeneralizedQuerySampler(
+        Math.min(tokenizedQuery.size - 1, config.depth),
+        querySuggestionConf.getConfig("broaden").getInt("wordPOSSampleSize")
+      )
     }
 
     logger.debug("Reading unlabelled hits")

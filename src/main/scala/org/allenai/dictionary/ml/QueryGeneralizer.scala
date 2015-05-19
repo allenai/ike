@@ -18,18 +18,25 @@ object Generalization {
 /** Represents a way of generalizing another QExpr*/
 sealed abstract class Generalization()
 
-/** Use any query of the given length */
-case class GeneralizeToAny(min: Int, max: Int) extends Generalization
+/** Generalize to any token sequence of the given length */
+case class GeneralizeToAny(min: Int, max: Int) extends Generalization {
+  require(min >= 0)
+  require(max >= -1)
+  require(max >= min)
+}
 
-/** Use a query from a fixed set */
-case class GeneralizeToDisj(elements: Seq[QExpr]) extends Generalization
+/** Generalize to a query from a fixed set */
+case class GeneralizeToDisj(elements: Seq[QExpr]) extends Generalization {
+  require(elements.nonEmpty)
+}
 
 /** No generalizations possible */
 case class GeneralizeToNone() extends Generalization
 
 object QueryGeneralizer {
-  // TODO make this a class, cache the results per token
 
+  // Map POS tags into groups of tags, so that if the user used a pos within a given group we
+  // will consider suggesting all POS tags in that group as a suggestion
   val posSets = Seq(
     Set("VBZ", "VBP", "VBN", "VBG", "VBD", "VB"),
     Set("NNPS", "NN", "NNP", "NNS"),
@@ -40,7 +47,7 @@ object QueryGeneralizer {
     Set("RBS", "RBR", "RP", "SYM", "RB", "IN", "CD", "MD")
   ).map(_ + "FW")
 
-  /** Suggestions some generalizations for a given query expressions
+  /** Suggestion some generalizations for a given query expressions
     *
     * @param qexpr QExpr to generalize
     * @param searchers Searchers to use when deciding what to generalize
@@ -54,7 +61,7 @@ object QueryGeneralizer {
     sampleSize: Int
   ): Generalization = {
     qexpr match {
-      case QWord(word) =>
+      case QWord(word) => // For words we sample the corpus for some possible POS tags
         val posTags = searchers.map { searcher =>
           val hits = searcher.find(BlackLabSemantics.blackLabQuery(qexpr)).window(0, sampleSize)
           hits.setContextSize(0)

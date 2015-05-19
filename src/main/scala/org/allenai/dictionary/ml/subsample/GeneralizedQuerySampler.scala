@@ -58,7 +58,7 @@ object GeneralizedQuerySampler {
   *
   * @param maxEdits maximum edits a sentence can be from the query to be returned
   */
-case class GeneralizedQuerySampler(maxEdits: Int)
+case class GeneralizedQuerySampler(maxEdits: Int, posSampleSize: Int)
     extends Sampler() {
 
   require(maxEdits >= 0)
@@ -67,7 +67,7 @@ case class GeneralizedQuerySampler(maxEdits: Int)
     tables: Map[String, Table]): SpanQuery = {
     val gs = GeneralizedQuerySampler.buildGeneralizedSpanQuery(
       tokenizedQuery,
-      searcher, tables, 200
+      searcher, tables, posSampleSize
     )
     if (tokenizedQuery.size < maxEdits) {
       new SpanQueryMinimumValidCaptures(gs, maxEdits, tokenizedQuery.getNames)

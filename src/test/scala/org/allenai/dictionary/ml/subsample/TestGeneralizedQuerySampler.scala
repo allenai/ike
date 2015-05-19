@@ -44,7 +44,7 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
     ))
     val tokenized = TokenizedQuery.buildWithGeneralizations(testQuery, Seq(searcher), 10)
     val cnames = tokenized.getNames :+ "c1"
-    val hits = GeneralizedQuerySampler(1).getSample(tokenized, searcher,
+    val hits = GeneralizedQuerySampler(1, 100).getSample(tokenized, searcher,
       Table("", Seq("c1"), Seq(), Seq()), Map())
     // Match I like mango
     assertResult(0)(hits.get(0).doc)
@@ -82,7 +82,10 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
       "I like mango",
       "hate those bananas"
     )
-    val hits = GeneralizedQuerySampler(2).getLabelledSample(tokenized, searcher, table, Map(), 0, 0)
+    val hits = GeneralizedQuerySampler(2, 100).getLabelledSample(
+      tokenized,
+      searcher, table, Map(), 0, 0
+    )
     assertResult(expectedResults)(hitsToStrings(hits))
     assertResult(2)(hits.size)
   }
