@@ -10,7 +10,7 @@ import scala.language.implicitConversions
 
 class TestSpansFuzzySequence extends UnitSpec {
 
-  implicit def tuple2Span(tuple : (Int, Int)) : Span = new Span(tuple._1, tuple._2)
+  implicit def tuple2Span(tuple: (Int, Int)): Span = new Span(tuple._1, tuple._2)
 
   def documentEnds(maxDoc: Int = 20, length: Int = 100): DocFieldLengthGetterStub = {
     new DocFieldLengthGetterStub((0 to maxDoc).map(x => length))
@@ -62,7 +62,7 @@ class TestSpansFuzzySequence extends UnitSpec {
 
     val hits = new SpansFuzzySequence(
       Array(s1, s2, s3),
-      documentEnds(), 2, 2, false ,false, Seq(), false
+      documentEnds(), 2, 2, false, false, Seq(), false
     )
     assert(hits.next())
     assertResult((2, 5))((hits.start, hits.end))
@@ -95,7 +95,7 @@ class TestSpansFuzzySequence extends UnitSpec {
       false
     } else {
       (s1 map (x => if (x != null) (x.start, x.end) else null)) ==
-          (s2 map (x => if (x != null) (x.start, x.end) else null))
+        (s2 map (x => if (x != null) (x.start, x.end) else null))
     }
   }
 
@@ -114,15 +114,15 @@ class TestSpansFuzzySequence extends UnitSpec {
     hits.setHitQueryContext(context)
     assert(context.getCapturedGroupNames.asScala == TokenizedQuery.getTokenNames(4))
 
-//    // No misses in the first match
+    //    // No misses in the first match
     assert(hits.next())
     hits.getCapturedGroups(captureGroups)
-    assert(compareSpans(Seq[Span]((1,2), (2,4), (4,5), (5,6)), captureGroups))
-//
-//    // middle misses on the second match
+    assert(compareSpans(Seq[Span]((1, 2), (2, 4), (4, 5), (5, 6)), captureGroups))
+    //
+    //    // middle misses on the second match
     assert(hits.next())
     hits.getCapturedGroups(captureGroups)
-    assert(compareSpans(Seq((4,5), (-5, -7), (7,8), (8,9)), captureGroups))
+    assert(compareSpans(Seq((4, 5), (-5, -7), (7, 8), (8, 9)), captureGroups))
 
     // start and end miss on the third match
     captureGroups = Array[Span](null, null, null, null)
@@ -130,7 +130,7 @@ class TestSpansFuzzySequence extends UnitSpec {
     hits.getCapturedGroups(captureGroups)
     println(captureGroups.map(x => if (x == null) "null" else (x.start, x.end)).mkString(" "))
     assert(compareSpans(
-      Seq((-1, -2), (2,4), (4,5), (-5,-6)),
+      Seq((-1, -2), (2, 4), (4, 5), (-5, -6)),
       captureGroups
     ))
     assert(!hits.next())
@@ -157,7 +157,7 @@ class TestSpansFuzzySequence extends UnitSpec {
 
     // delete the last two spans
     assert(hits.next())
-    Range(0, captureGroups.size).foreach( i => captureGroups.update(i, null))
+    Range(0, captureGroups.size).foreach(i => captureGroups.update(i, null))
     hits.getCapturedGroups(captureGroups)
     assert(compareSpans(Seq((4, 5), (5, 6), (-1, -1), (-1, -1)), captureGroups))
 

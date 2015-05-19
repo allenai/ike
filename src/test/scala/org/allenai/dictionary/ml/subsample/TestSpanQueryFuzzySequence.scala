@@ -12,8 +12,7 @@ class TestSpanQueryFuzzySequence extends UnitSpec with ScratchDirectory {
 
   def runNoisySeqQuery(searcher: Searcher, seq: Seq[QExpr],
     minMatches: Int,
-    maxMatches: Int, allowDeletions: Boolean = false
-  ): Seq[String] = {
+    maxMatches: Int, allowDeletions: Boolean = false): Seq[String] = {
     val spanQueries = seq.map(x => searcher.createSpanQuery(
       BlackLabSemantics.blackLabQuery(x).rewrite()
     ))
@@ -89,10 +88,12 @@ class TestSpanQueryFuzzySequence extends UnitSpec with ScratchDirectory {
       Seq("I", "like mango", "I like mango"),
       Seq("I", "hate those", "I hate those")
     )) {
-      getFuzzySeqCaptureGroups(searcher,
+      getFuzzySeqCaptureGroups(
+        searcher,
         Seq(QWord("I"), QWord("hate"), QWord("mango")),
         2, 2,
-        Seq(CaptureSpan("1", 0, 1), CaptureSpan("2", 1, 3), CaptureSpan("3", 0, 3)))
+        Seq(CaptureSpan("1", 0, 1), CaptureSpan("2", 1, 3), CaptureSpan("3", 0, 3))
+      )
     }
   }
 

@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.queryop
 
 import org.allenai.common.testkit.UnitSpec
-import org.allenai.dictionary.{QPos, QWord, QueryLanguage}
+import org.allenai.dictionary.{ QPos, QWord, QueryLanguage }
 import org.allenai.dictionary.ml._
 
 import scala.collection.immutable.IntMap
@@ -14,13 +14,13 @@ class TestGeneralizeTokenGenerator extends UnitSpec {
     val generator = GeneralizingOpGenerator(true, true, true, tokenized.size)
 
     val matches = QueryMatches(QuerySlotData(
-      Some(QWord("d")), QueryToken(4), false, false, true), Seq(
-        QueryMatch(Seq(), true),
-        QueryMatch(Seq(), false),
-        QueryMatch(Seq(Token("a", "NN")), true),
-        QueryMatch(Seq(Token("a", "VB")), false)
-      )
-    )
+      Some(QWord("d")), QueryToken(4), false, false, true
+    ), Seq(
+      QueryMatch(Seq(), true),
+      QueryMatch(Seq(), false),
+      QueryMatch(Seq(Token("a", "NN")), true),
+      QueryMatch(Seq(Token("a", "VB")), false)
+    ))
 
     val generated = generator.generate(matches)
     val remove = RemoveToken(4)

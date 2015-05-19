@@ -4,7 +4,7 @@ import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary._
 import org.allenai.dictionary.index.TestData
 import org.allenai.dictionary.ml.TokenizedQuery
-import nl.inl.blacklab.search.{Span, Hits}
+import nl.inl.blacklab.search.{ Span, Hits }
 
 import scala.collection.JavaConverters._
 
@@ -28,8 +28,7 @@ class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
     }).toSeq
   }
 
-  def span2tuple(span : Span) : (Int, Int)= (span.start, span.end)
-
+  def span2tuple(span: Span): (Int, Int) = (span.start, span.end)
 
   def buildTable(positive: Seq[String], negative: Seq[String]): Table = {
     Table("testTable", Seq("testCol"),
@@ -47,14 +46,17 @@ class TestFuzzySequenceSampler extends UnitSpec with ScratchDirectory {
     val hits = FuzzySequenceSampler(0, 1).getSample(tokenized, searcher,
       Table("", Seq("c1"), Seq(), Seq()), Map())
     // Match I like mango
-    assertResult(Seq((2,3), (0,1), (1,2), (-2,-3)))(
-      hits.getCapturedGroups(hits.get(0)).map(span2tuple))
+    assertResult(Seq((2, 3), (0, 1), (1, 2), (-2, -3)))(
+      hits.getCapturedGroups(hits.get(0)).map(span2tuple)
+    )
     // Match I hate those
-    assertResult(Seq((2,3), (0,1), (1,2), (2,3)))(
-      hits.getCapturedGroups(hits.get(1)).map(span2tuple))
+    assertResult(Seq((2, 3), (0, 1), (1, 2), (2, 3)))(
+      hits.getCapturedGroups(hits.get(1)).map(span2tuple)
+    )
     // Match taste not great
-    assertResult(Seq((3,4), (1,2), (-2,-3), (3,4)))(
-      hits.getCapturedGroups(hits.get(2)).map(span2tuple))
+    assertResult(Seq((3, 4), (1, 2), (-2, -3), (3, 4)))(
+      hits.getCapturedGroups(hits.get(2)).map(span2tuple)
+    )
   }
 
   "FuzzySequenceSampler" should "Limit queries correctly" in {
