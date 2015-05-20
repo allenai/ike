@@ -25,10 +25,10 @@ libraryDependencies ++= Seq(
     "com.github.tminglei" %% "slick-pg" % "0.8.2",
     "com.typesafe.play" %% "play-json" % "2.3.8",
     "org.postgresql" % "postgresql" % "9.4-1201-jdbc41",
-    "nl.inl" %% "blacklab" % "1.0-ALLENAI-2",
+    "nl.inl" %% "blacklab" % "1.0-ALLENAI-3",
     scopt)
 
-javaOptions in Revolver.reStart += "-Xmx6G"
+javaOptions in Revolver.reStart += "-Xmx14G"
 
 mainClass in Revolver.reStart := Some("org.allenai.dictionary.DictionaryToolWebapp")
 
