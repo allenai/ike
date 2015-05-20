@@ -138,7 +138,6 @@ var QSeq = React.createClass({
       pos: 0,
       phrases: phraseData
     };
-    console.log(replacement);
     this.updateSelf(replacement);
   },
   similarPhrasesClick: function() {
