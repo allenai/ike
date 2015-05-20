@@ -21,6 +21,7 @@ case class SearchRequest(query: Either[String, QExpr], target: Option[String],
   tables: Map[String, Table], config: SearchConfig)
 case class SearchResponse(qexpr: QExpr, groups: Seq[GroupedBlackLabResult])
 case class CorpusDescription(name: String, description: Option[String])
+case class SimilarPhrasesResponse(phrases: Seq[SimilarPhrase])
 
 case class SearchApp(config: Config) extends Logging {
   val name = config.getString("name")

@@ -106,19 +106,15 @@ var InnerNodeMixin = {
   }
 };
 var similarPhrases = function(phrase, callback) {
-  var url = 'http://ec2-54-149-0-84.us-west-2.compute.amazonaws.com:8080/similarPhrases';
-  var query = {
-    phrase: phrase
-  };
+  var url = '/api/similarPhrases';
   var requestData = {
-    body: JSON.stringify(query),
-    uri: url,
-    method: 'POST'
+    uri: url + "?phrase=" + encodeURIComponent(phrase),
+    method: 'GET'
   };
   var xhrCallback = function(err, resp, body) {
     if (resp.statusCode == 200) {
       var phrases = JSON.parse(body);
-      callback(phrases);
+      callback(phrases.phrases);
     } else {
       alert('Could not similar phrases');
     }
