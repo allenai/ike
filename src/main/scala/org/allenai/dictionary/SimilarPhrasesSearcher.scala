@@ -1,5 +1,6 @@
 package org.allenai.dictionary
 
+import com.medallia.word2vec.Searcher.UnknownWordException
 import com.medallia.word2vec.Word2VecModel
 import com.typesafe.config.Config
 import org.allenai.common.Config._
@@ -16,9 +17,14 @@ class SimilarPhrasesSearcher(config: Config) extends Logging {
   }
 
   def getSimilarPhrases(phrase: String): Seq[SimilarPhrase] = {
-    model.getMatches(phrase, 10).asScala.map { m =>
-      val qwords = m.`match`().split("_").map(QWord)
-      SimilarPhrase(qwords, m.distance())
+    val phraseWithUnderscores = phrase.replace(' ', '_')
+    try {
+      model.getMatches(phraseWithUnderscores, 10).asScala.map { m =>
+        val qwords = m.`match`().split("_").map(QWord)
+        SimilarPhrase(qwords, m.distance())
+      }
+    } catch {
+      case _: UnknownWordException => Seq.empty
     }
   }
 }
