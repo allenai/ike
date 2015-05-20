@@ -19,7 +19,7 @@ class SimilarPhrasesSearcher(config: Config) extends Logging {
   def getSimilarPhrases(phrase: String): Seq[SimilarPhrase] = {
     val phraseWithUnderscores = phrase.replace(' ', '_')
     try {
-      model.getMatches(phraseWithUnderscores, 10).asScala.map { m =>
+      model.getMatches(phraseWithUnderscores, 100).asScala.map { m =>
         val qwords = m.`match`().split("_").map(QWord)
         SimilarPhrase(qwords, m.distance())
       }
