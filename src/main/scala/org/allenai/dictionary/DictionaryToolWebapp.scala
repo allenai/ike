@@ -55,6 +55,15 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   val similarPhrasesSearcher =
     new SimilarPhrasesSearcher(ConfigFactory.load()[Config]("SimilarPhrasesSearcher"))
 
+  implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
+    ExceptionHandler {
+      case NonFatal(e) =>
+        requestUri { uri =>
+          log.error(e, e.getMessage)
+          complete(StatusCodes.InternalServerError -> e.getMessage)
+        }
+    }
+
   val serviceRoute = pathPrefix("api") {
     parameters('corpora.?) { corpora =>
       val searchersFuture = Future.sequence(corpora match {
@@ -180,14 +189,6 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     unmatchedPath { p => getFromFile("public" + p) }
   }
 
-  implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
-    ExceptionHandler {
-      case NonFatal(e) =>
-        requestUri { uri =>
-          log.error(toString, e)
-          complete(StatusCodes.InternalServerError -> e.getMessage)
-        }
-    }
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
   def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoute ~ tablesRoute ~ corporaRoute)
