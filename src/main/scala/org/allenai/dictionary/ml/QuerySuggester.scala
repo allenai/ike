@@ -372,9 +372,9 @@ object QuerySuggester extends Logging {
 
     val opCombiner =
       if (config.allowDisjunctions) {
-        (x: EvaluatedOp) => OpConjunctionOfDisjunctions.apply(x, Int.MaxValue)
+        (x: EvaluatedOp) => OpConjunctionOfDisjunctions(x)
       } else {
-        (x: EvaluatedOp) => OpConjunction.apply(x, Int.MaxValue)
+        (x: EvaluatedOp) => OpConjunction(x)
       }
 
     val unlabelledBiasCorrection =

@@ -33,7 +33,7 @@ object Sampler extends Logging {
 
   /** @param query Query the labelled query will be used to filter
     * @param table to build the query for
-    * @return QExpr that captures rows of the given table
+    * @return QExpr that captures rows of the given table that query might capture
     */
   def buildLabelledQuery(
     query: TokenizedQuery,
@@ -43,7 +43,7 @@ object Sampler extends Logging {
 
     require(filteredRows.size > 0)
 
-    // Reorder row to match the query
+    // Reorder rows to match the query
     val colNameToColumn = table.cols.zip(filteredRows.transpose).toMap
     val captureNames = query.getCaptureGroups.map(_._1)
     val rowsReordered = captureNames.map(colNameToColumn(_)).transpose
@@ -62,7 +62,6 @@ object Sampler extends Logging {
       val rowCaptures = row.zip(captureNames).map {
         case (phrase, columnName) => QNamed(QSeq(phrase), columnName)
       }
-      // TODO we could also limit the starting query to only match a length that could match a row
       // For each row, build a query of the form
       // "phraseInColumn1 . . . phraseInColumn2 .* phraseInColumn2"
       val withWildCards = distanceBetweenCaptures.zip(rowCaptures).map {
@@ -90,7 +89,8 @@ object Sampler extends Logging {
   * start and end values negated.
   *
   * Finally, if a query-token is fixed length and will never fail to match some part of the hit,
-  * subclasses can not register it in the capture groups. This can make some queries more efficient
+  * subclasses can choose to not register it in the capture groups. This can make some queries more
+  * efficient
   */
 abstract class Sampler {
 

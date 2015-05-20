@@ -8,7 +8,8 @@ import org.apache.lucene.util.Bits
 import java.util
 
 /** SpanQuery the filters hits from a query that do not capture and the same spans as another
-  * query. Note the capture groups from the filter query will not be returned
+  * query. Note the capture groups from the filter query will not be returned,
+  * see SpansFilterByCaptureGroups
   *
   * @param _query The query to filter
   * @param _filter The query to filter by
@@ -28,8 +29,6 @@ class SpanQueryFilterByCaptureGroups(
 
   def query: SpanQuery = clauses(0)
   def filter: SpanQuery = clauses(1)
-
-  override def getField: String = query.getField
 
   override def getSpans(context: AtomicReaderContext, acceptDocs: Bits,
     termContexts: util.Map[Term, TermContext]): Spans = {

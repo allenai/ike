@@ -11,12 +11,20 @@ import scala.collection.immutable.IntMap
   *
   * @param suggestPos whether to build operators that add POS in the query
   * @param suggestWord whether to build operators that add words to the query
+  * @param createDisjunctions whether to create disjunctions (turn "NN" -> "{NN,NNS}")
   */
 case class GeneralizingOpGenerator(
     suggestPos: Boolean,
     suggestWord: Boolean,
     createDisjunctions: Boolean
 ) extends OpGenerator {
+
+  private def avoidOp(qexpr: QExpr): Set[QLeaf] = qexpr match {
+    case ql: QLeaf => Set(ql)
+    case QDisj(disj) => disj.map(avoidOp).reduce( (a,b) => a ++ b)
+    case qr: QRepeating => avoidOp(qr.qexpr)
+    case _ => Set()
+  }
 
   private def allowOps(op: QueryOp, query: QExpr): Boolean = {
     (op, query) match {
@@ -53,11 +61,7 @@ case class GeneralizingOpGenerator(
     if (generalizations.isInstanceOf[GeneralizeToNone]) {
       Map()
     } else {
-      val avoid: Set[QLeaf] = query match {
-        case qp: QPos => Set(qp)
-        case _ => Set()
-      }
-      val leaves = QLeafGenerator(pos = true, word = false, avoid)
+      val leafGenerator = QLeafGenerator(pos = true, word = false, avoidOp(query))
       def setToken(qexpr: QExpr): Boolean = qexpr match {
         case QPos(_) => true
         case QWord(_) => true
@@ -65,12 +69,12 @@ case class GeneralizingOpGenerator(
         case _ => false
       }
       val leafOps = if (setToken(query)) {
-        OpGenerator.getSetTokenOps(matches, leaves)
+        OpGenerator.getSetTokenOps(matches, leafGenerator)
       } else {
         Map[QueryOp, IntMap[Int]]()
       }
       val allOps = if (useAddTokenOps) {
-        leafOps ++ OpGenerator.getAddTokenOps(matches, leaves)
+        leafOps ++ OpGenerator.getAddTokenOps(matches, leafGenerator)
       } else {
         leafOps
       }
@@ -79,7 +83,7 @@ case class GeneralizingOpGenerator(
         case GeneralizeToDisj(disj) =>
           val allQueries = matches.queryToken.qexpr.get +: disj
           allOps.filter { case (op, _) => allQueries.exists(q => allowOps(op, q)) }
-        case GeneralizeToNone() => throw new RuntimeException()
+        case GeneralizeToNone() => throw new RuntimeException() // Already handled!
       }
     }
   }

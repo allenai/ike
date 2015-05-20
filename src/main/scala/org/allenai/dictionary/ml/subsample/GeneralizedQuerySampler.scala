@@ -23,7 +23,8 @@ object GeneralizedQuerySampler {
       )
     }
     val generalizations = qexpr.generalizations.get
-    // TODO do this by running the unlabelled query?
+    
+    // Build span queries for each query/generalization
     val generalizingSpanQueries = generalizations.zip(qexpr.getNamedTokens).map {
       case (GeneralizeToDisj(qexprs), (name, original)) =>
         if (qexprs.isEmpty) {
@@ -33,12 +34,14 @@ object GeneralizedQuerySampler {
           val extensions = qexprs.map(buildSpanQuery)
           new SpanQueryTrackingDisjunction(originalSq, extensions, name)
         }
-      // TODO actually use wildcard generalizations
+      // Currently we do not handle GeneralizeToAll
       case (_, (name, original)) => buildSpanQuery(QNamed(original, name))
     }
+    
+    // Group the span queries into chunks and wrap the right chunks in capture groups
     var remaining = generalizingSpanQueries
     var chunked = List[SpanQuery]()
-    qexpr.tokenSequences.map { ts =>
+    qexpr.tokenSequences.foreach { ts =>
       val (chunk, rest) = remaining.splitAt(ts.size)
       remaining = rest
       val next = if (ts.isCaptureGroup) {
@@ -62,8 +65,9 @@ case class GeneralizedQuerySampler(maxEdits: Int, posSampleSize: Int)
     extends Sampler() {
 
   require(maxEdits >= 0)
+  require(posSampleSize > 0)
 
-  def buildFuzzySequenceQuery(tokenizedQuery: TokenizedQuery, searcher: Searcher,
+  def buildGeneralizingQuery(tokenizedQuery: TokenizedQuery, searcher: Searcher,
     tables: Map[String, Table]): SpanQuery = {
     val gs = GeneralizedQuerySampler.buildGeneralizedSpanQuery(
       tokenizedQuery,
@@ -78,7 +82,7 @@ case class GeneralizedQuerySampler(maxEdits: Int, posSampleSize: Int)
 
   override def getSample(qexpr: TokenizedQuery, searcher: Searcher,
     targetTable: Table, tables: Map[String, Table]): Hits = {
-    searcher.find(buildFuzzySequenceQuery(qexpr, searcher, tables))
+    searcher.find(buildGeneralizingQuery(qexpr, searcher, tables))
   }
 
   override def getLabelledSample(
@@ -90,8 +94,8 @@ case class GeneralizedQuerySampler(maxEdits: Int, posSampleSize: Int)
     startFromToken: Int
   ): Hits = {
     val rowQuery = Sampler.buildLabelledQuery(qexpr, targetTable)
-    val sequenceQuery = buildFuzzySequenceQuery(qexpr, searcher, tables)
     val rowSpanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(rowQuery))
+    val sequenceQuery = buildGeneralizingQuery(qexpr, searcher, tables)
     searcher.find(new SpanQueryFilterByCaptureGroups(sequenceQuery, rowSpanQuery,
       targetTable.cols, startFromDoc, startFromToken))
   }

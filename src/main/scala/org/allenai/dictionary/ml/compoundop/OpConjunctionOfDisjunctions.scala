@@ -7,11 +7,10 @@ import scala.collection.immutable.IntMap
 
 object OpConjunctionOfDisjunctions {
   def apply(
-    op: EvaluatedOp,
-    maxRemoves: Int = Int.MaxValue
+    op: EvaluatedOp
   ): Option[OpConjunctionOfDisjunctions] = op.op match {
     case tq: TokenQueryOp => Some(new OpConjunctionOfDisjunctions(Set(tq), op.matches,
-      Map(tq.slot -> op.matches), maxRemoves))
+      Map(tq.slot -> op.matches)))
     case _ => None // Cannot initialize with a non-TokenQueryOp
   }
 }
@@ -24,20 +23,18 @@ object OpConjunctionOfDisjunctions {
   *        sentence
   * @param perSlotEdits Map slots -> maps of sentences indices number of edits made to that sentence
   *            by operations that were applied to that slot.
-  * @param maxRemoves Maximum number of RemoveToken(1) operations that can be added to this
   */
 case class OpConjunctionOfDisjunctions private (
     ops: Set[TokenQueryOp],
     numEdits: IntMap[Int],
-    perSlotEdits: Map[Slot, IntMap[Int]],
-    maxRemoves: Int
+    perSlotEdits: Map[Slot, IntMap[Int]]
 ) extends CompoundQueryOp() {
 
   override def canAdd(op: QueryOp): Boolean = op match {
     case re: RemoveEdge =>
       re.afterRemovals.forall(ops contains RemoveToken(_)) &&
         canAdd(RemoveToken(re.index))
-    case rt: RemoveToken => !(perSlotEdits contains rt.slot) && maxRemoves > 0
+    case rt: RemoveToken => !(perSlotEdits contains rt.slot)
     case tq: TokenQueryOp =>
       if (perSlotEdits contains tq.slot) {
         val otherOps = ops.filter(_.slot == tq.slot)
@@ -84,7 +81,6 @@ case class OpConjunctionOfDisjunctions private (
     } else {
       numEdits.intersectionWith(matches, (_, v1: Int, v2: Int) => v1 + v2)
     }
-    val newMaxRemove = maxRemoves - (if (op.isInstanceOf[RemoveToken]) 1 else 0)
-    new OpConjunctionOfDisjunctions(ops + newOp, newMatches, newPerSlot, newMaxRemove)
+    new OpConjunctionOfDisjunctions(ops + newOp, newMatches, newPerSlot)
   }
 }

@@ -26,9 +26,9 @@ case class MatchesSampler() extends Sampler() {
     startFromDoc: Int,
     startFromToken: Int
   ): Hits = {
-    val rowQuery = Sampler.buildLabelledQuery(qexpr, targetTable)
     val query = QueryLanguage.interpolateTables(qexpr.getNamedQuery, tables).get
     val spanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(query))
+    val rowQuery = Sampler.buildLabelledQuery(qexpr, targetTable)
     val rowSpanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(rowQuery))
     val filteredQuery = new SpanQueryFilterByCaptureGroups(spanQuery, rowSpanQuery,
       targetTable.cols, startFromDoc, startFromToken)

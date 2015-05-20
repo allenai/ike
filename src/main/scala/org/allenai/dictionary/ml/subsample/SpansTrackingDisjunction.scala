@@ -4,13 +4,13 @@ import java.util
 
 import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
-import org.apache.lucene.util.PriorityQueue;
+import nl.inl.blacklab.search.sequences.PerDocumentSortedSpans
+import org.apache.lucene.util.PriorityQueue
 
-/** Disjunction of spans that matches a disjunction of Spans, but ensure that it matches are
-  * unique. Sets a capture group to the span it returned, only negated if firstSpan could not
-  * produce it.
+/** Disjunction of spans that ensures that its matches are unique. Sets a capture group to the span
+  * it returned. The capture span is negated if firstSpan could not match that capture group.
   *
-  * @param firstSpan Span in disjunction that return positive capture groups
+  * @param firstSpan Span in disjunction that returns positive capture groups
   * @param alternatives Spans that return negated capture groups
   * @param captureName Name of the capture group to fill
   */
@@ -21,7 +21,7 @@ class SpansTrackingDisjunction(
     matchEdge: Boolean = false
 ) extends BLSpans {
 
-  /** Contains BLSpans marked with whether it is the firstSpan */
+  /* Contains BLSpans marked with whether it is the firstSpan or not */
   case class SortedSpans(spans: BLSpans, first: Boolean)
 
   class SpanQueue(size: Int) extends PriorityQueue[SortedSpans](size) {
@@ -44,27 +44,40 @@ class SpansTrackingDisjunction(
   }
 
   var more = true
-  var initialized = false
   var queue: SpanQueue = null
+
+  // Where to store our capture group, set by setHitQueryContext
   var captureGroupIndex = -1
 
   def initialize(): Boolean = {
-    initialized = true
-    val allSpans = SortedSpans(firstSpan, true) +: alternatives.map(SortedSpans(_, false))
-    val aliveSpans = allSpans.filter(_.spans.next())
-    if (aliveSpans.isEmpty) {
+    // Can't initialize the queue until the spans are started so we do it here
+    if (!firstSpan.next()) {
       false
     } else {
-      queue = new SpanQueue(aliveSpans.size)
-      aliveSpans.foreach(queue.add(_))
-      true
+      val firstSpanSorted = if (firstSpan.hitsStartPointSorted()) {
+        firstSpan
+      } else {
+        new PerDocumentSortedSpans(firstSpan, false, false)
+      }
+      val alternativeSorted = alternatives.filter(_.next()).map { spans =>
+        if (!spans.hitsStartPointSorted()) {
+          new PerDocumentSortedSpans(spans, false, false)
+        } else {
+          spans
+        }
+      }
+      val allSpans = SortedSpans(firstSpanSorted, first = true) +:
+          alternativeSorted.map(SortedSpans(_, first = false))
+      queue = new SpanQueue(allSpans.size)
+      allSpans.foreach(queue.add)
+      queue.size() > 0
     }
   }
 
   override def next(): Boolean = {
     if (more) {
-      more =
-        if (!initialized) {
+      more = {
+        if (queue == null) {
           initialize()
         } else {
           val (prevStart, prevDoc, prevEnd) = (start(), doc(), end())
@@ -77,17 +90,19 @@ class SpansTrackingDisjunction(
           } while (queue.size() != 0 && prevStart == start && prevEnd == end && prevDoc == doc)
           queue.size() != 0
         }
+      }
     }
     more
   }
 
   override def skipTo(target: Int): Boolean = {
-    var stepTaken = false
-    if (!initialized) {
-      stepTaken = true
-      more = initialize()
-    }
     if (more) {
+      var stepTaken = if (queue == null) {
+        more = initialize()
+        true
+      } else {
+        false
+      }
       while (queue.size() != 0 && top.doc() < target) {
         if (top.skipTo(target)) {
           queue.updateTop()
@@ -96,36 +111,15 @@ class SpansTrackingDisjunction(
         }
         stepTaken = true
       }
-      if (stepTaken) {
-        more = queue.size() != 0
-      } else {
-        more = next()
-      }
+      more = if (stepTaken) queue.size() != 0 else next()
     }
     more
   }
 
-  def top: BLSpans = {
-    queue.top().spans
-  }
-
+  def top: BLSpans = queue.top().spans
   def doc: Int = top.doc()
   def start: Int = top.start()
   def end: Int = top.end()
-
-  override def getPayload: util.Collection[Array[Byte]] = {
-    val topSpans = top
-    if (topSpans != null && topSpans.isPayloadAvailable()) {
-      topSpans.getPayload()
-    } else {
-      new util.ArrayList[Array[Byte]]()
-    }
-  }
-
-  override def isPayloadAvailable: Boolean = {
-    val topSpans = top
-    topSpans != null && topSpans.isPayloadAvailable()
-  }
 
   override def setHitQueryContext(context: HitQueryContext): Unit = {
     captureGroupIndex = context.registerCapturedGroup(captureName)
@@ -152,4 +146,18 @@ class SpansTrackingDisjunction(
   override val hitsHaveUniqueEnd = firstSpan.hitsHaveUniqueEnd() && hitsAllSameLength
   override val hitsHaveUniqueStart = firstSpan.hitsHaveUniqueStart() && hitsAllSameLength
   override val hitsAreUnique = true
+
+  override def getPayload: util.Collection[Array[Byte]] = {
+    val topSpans = top
+    if (topSpans != null && topSpans.isPayloadAvailable) {
+      topSpans.getPayload
+    } else {
+      new util.ArrayList[Array[Byte]]()
+    }
+  }
+
+  override def isPayloadAvailable: Boolean = {
+    val topSpans = top
+    topSpans != null && topSpans.isPayloadAvailable
+  }
 }

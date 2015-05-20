@@ -174,8 +174,6 @@ class SpansFilterByCaptureGroups(
 
   override def hitsAreUnique(): Boolean = query.hitsAreUnique
 
-  override def getSpan: Span = query.getSpan
-
   override def hitsEndPointSorted(): Boolean = query.hitsEndPointSorted
 
   override def getPayload: util.Collection[Array[Byte]] = query.getPayload

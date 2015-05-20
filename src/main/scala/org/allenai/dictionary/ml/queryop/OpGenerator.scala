@@ -61,26 +61,26 @@ object OpGenerator {
     }
   }
 
-  /** @param matches to generate the map for
+  /** @param queryMatches to generate the map for
     * @param leafGenerator that determines which ops to build
     * @return map of AddToken ops to the edit map of that op
     */
   def getAddTokenOps(
-    matches: QueryMatches,
+    queryMatches: QueryMatches,
     leafGenerator: QLeafGenerator
   ): Map[QueryOp, IntMap[Int]] = {
-    require(matches.queryToken.slot.isInstanceOf[QueryToken])
+    require(queryMatches.queryToken.slot.isInstanceOf[QueryToken])
     // AddToken ops implicitly match everything that is currently matched, add that back in
-    val allreadyMatches = IntMap(matches.matches.zipWithIndex.flatMap {
+    val allReadyMatches = IntMap(queryMatches.matches.zipWithIndex.flatMap {
       case (qMatch, index) => if (qMatch.didMatch) Some((index, 0)) else None
     }: _*)
-    OpGenerator.buildLeafMap(leafGenerator, matches.matches).filter {
+    OpGenerator.buildLeafMap(leafGenerator, queryMatches.matches).filter {
       // Filter ops that match every single existing match, in that case we prefer using SetTokenOp
-      case (leaf, matches) => allreadyMatches.intersection(matches).size != allreadyMatches.size
+      case (leaf, matches) => allReadyMatches.intersection(matches).size != allReadyMatches.size
     }.map {
       case (k, v) =>
-        AddToken(matches.queryToken.slot.token, k) ->
-          v.unionWith(allreadyMatches, (_, v1, v2) => v1 + v2)
+        AddToken(queryMatches.queryToken.slot.token, k) ->
+          v.unionWith(allReadyMatches, (_, v1, v2) => v1 + v2)
     }
   }
 }

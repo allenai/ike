@@ -7,6 +7,9 @@ import org.apache.lucene.index.{ TermContext, Term, AtomicReaderContext }
 import org.apache.lucene.search.spans.{ Spans, SpanQuery }
 import org.apache.lucene.util.Bits
 
+/** SpanQuery that filter another query of hits that return too few valid captures, where a valid
+  *  capture is a capture that is non-negative and non-null. See SpansMinimumValidCaptures.
+ */
 class SpanQueryMinimumValidCaptures(
     spans: SpanQuery,
     requiredMatches: Int,
@@ -20,6 +23,6 @@ class SpanQueryMinimumValidCaptures(
   }
 
   override def toString(s: String): String = {
-    s"VALIDATE ${spans.toString(s)}"
+    s"AtLeast($requiredMatches) Captures From ${spans.toString(s)}"
   }
 }

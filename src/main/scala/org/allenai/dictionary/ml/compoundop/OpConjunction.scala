@@ -5,8 +5,8 @@ import org.allenai.dictionary.ml.queryop.TokenCombination._
 import scala.collection.immutable.IntMap
 
 object OpConjunction {
-  def apply(op: EvaluatedOp, maxRemoves: Int = Int.MaxValue): Option[OpConjunction] = op.op match {
-    case tq: TokenQueryOp => Some(new OpConjunction(Set(tq), op.matches, maxRemoves))
+  def apply(op: EvaluatedOp): Option[OpConjunction] = op.op match {
+    case tq: TokenQueryOp => Some(new OpConjunction(Set(tq), op.matches))
     case _ => None
   }
 }
@@ -15,12 +15,11 @@ object OpConjunction {
   */
 case class OpConjunction private (
     ops: Set[TokenQueryOp],
-    numEdits: IntMap[Int],
-    maxRemoves: Int
+    numEdits: IntMap[Int]
 ) extends CompoundQueryOp() {
 
   override def canAdd(op: QueryOp): Boolean = op match {
-    case rt: RemoveToken => !ops.exists(x => x.slot == rt.slot) && maxRemoves > 0
+    case rt: RemoveToken => !ops.exists(x => x.slot == rt.slot)
     case re: RemoveEdge => re.afterRemovals.forall(ops contains RemoveToken(_)) &&
       canAdd(RemoveToken(re.index))
     case tq: TokenQueryOp => !ops.exists(x => x.slot == tq.slot && x.combinable(tq) != AND)
@@ -42,7 +41,6 @@ case class OpConjunction private (
       case RemoveEdge(index, _) => RemoveToken(index)
       case tq: TokenQueryOp => tq
     }
-    val newMaxRemove = maxRemoves - (if (op.isInstanceOf[RemoveToken]) 1 else 0)
-    new OpConjunction(ops + newOp, newNumEdits, newMaxRemove)
+    new OpConjunction(ops + newOp, newNumEdits)
   }
 }

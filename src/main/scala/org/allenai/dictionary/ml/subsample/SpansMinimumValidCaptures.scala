@@ -5,6 +5,13 @@ import java.util
 import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 
+/** Returns spans that have a minimum number of valid capture groups, where a valid capture 
+  * groups is one that is non-null and end is non-negative. 
+  * 
+  * @param clause Spans to filter
+  * @param requiredMatches Number of required matches
+  * @param capturesToCheck Names of the capture groups to check, should be registered by clause
+ */
 class SpansMinimumValidCaptures(
     clause: BLSpans,
     requiredMatches: Int,
@@ -14,23 +21,26 @@ class SpansMinimumValidCaptures(
   var more = true
   var captureGroupHolder: Array[Span] = Array()
   var captureIndicesToCheck: Seq[Int] = Seq()
-  var numCaptures = -1
-  var captureStart = -1
+  var clauseNumCaptureGroups = -1
+  var clauseFirstCaptureGroupIndex = -1
 
   override def passHitQueryContextToClauses(context: HitQueryContext): Unit = {
-    captureStart = context.getCaptureRegisterNumber
+    clauseFirstCaptureGroupIndex = context.getCaptureRegisterNumber
     clause.setHitQueryContext(context)
     captureGroupHolder = Array.fill[Span](context.numberOfCapturedGroups())(null)
-    numCaptures = context.getCaptureRegisterNumber - captureStart
-    captureIndicesToCheck = capturesToCheck.map(context.registerCapturedGroup(_))
+    clauseNumCaptureGroups = context.getCaptureRegisterNumber - clauseFirstCaptureGroupIndex
+    val captureGroupsNames = context.getCapturedGroupNames
+    require(capturesToCheck.forall(captureGroupsNames.contains))
+    captureIndicesToCheck = capturesToCheck.map(captureGroupsNames.indexOf)
   }
 
   override def getCapturedGroups(capturedGroups: Array[Span]): Unit = {
-    System.arraycopy(captureGroupHolder, captureStart,
-      capturedGroups, captureStart, numCaptures)
+    // Any valid hit will have already filled captureGroupHolder
+    System.arraycopy(captureGroupHolder, clauseFirstCaptureGroupIndex,
+      capturedGroups, clauseFirstCaptureGroupIndex, clauseNumCaptureGroups)
   }
 
-  def validate(): Boolean = {
+  def isValid(): Boolean = {
     clause.getCapturedGroups(captureGroupHolder)
     captureIndicesToCheck.count(i => {
       val span = captureGroupHolder(i)
@@ -41,7 +51,7 @@ class SpansMinimumValidCaptures(
   override def skipTo(target: Int): Boolean = {
     if (more) {
       more = clause.skipTo(target)
-      while (more && !validate()) {
+      while (more && !isValid()) {
         more = clause.next()
       }
     }
@@ -51,7 +61,7 @@ class SpansMinimumValidCaptures(
   override def next(): Boolean = {
     if (more) {
       more = clause.next()
-      while (more && !validate()) {
+      while (more && !isValid()) {
         more = clause.next()
       }
     }
@@ -73,8 +83,6 @@ class SpansMinimumValidCaptures(
   override def hitsLength(): Int = clause.hitsLength()
 
   override def hitsAreUnique(): Boolean = clause.hitsAreUnique()
-
-  override def getSpan: Span = clause.getSpan
 
   override def hitsEndPointSorted(): Boolean = clause.hitsEndPointSorted()
 
