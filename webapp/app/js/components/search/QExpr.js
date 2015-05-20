@@ -116,7 +116,7 @@ var similarPhrases = function(phrase, callback) {
       var phrases = JSON.parse(body);
       callback(phrases.phrases);
     } else {
-      alert('Could not similar phrases');
+      alert('Something went wrong while finding similar phrases.');
     }
   };
   var request = xhr(requestData, xhrCallback);
