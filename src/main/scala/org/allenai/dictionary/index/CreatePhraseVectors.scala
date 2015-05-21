@@ -68,6 +68,8 @@ object CreatePhraseVectors extends App with Logging {
         val path = CliUtils.pathFromUri(options.input)
         if (Files.isDirectory(path)) {
           IdText.fromDirectory(path.toFile)
+        } else if (path.toString.endsWith(".gz")) {
+          IdText.fromWikipedia(path.toFile)
         } else {
           IdText.fromFlatFile(path.toFile)
         }

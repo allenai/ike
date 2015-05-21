@@ -1,9 +1,13 @@
 package org.allenai.dictionary.index
 
-import java.io.File
+import java.io.{ FileInputStream, InputStream, InputStreamReader, File }
+import java.net.URL
 import java.nio.charset.MalformedInputException
-import org.allenai.common.{ Resource, Logging }
+import java.util.zip.GZIPInputStream
+import org.allenai.common.{ StreamClosingIterator, Resource, Logging }
 import org.allenai.common.ParIterator._
+import org.allenai.dictionary.index.WikipediaCorpus.DocumentIterator
+import org.apache.commons.io.LineIterator
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.io.Source
@@ -19,7 +23,8 @@ case object IdText extends Logging {
     format match {
       case "flat" => fromFlatFile(file)
       case "directory" => fromDirectory(file)
-      case _ => throw new IllegalArgumentException(s"format must be flat or directory")
+      case "wikipedia" => fromWikipedia(file)
+      case _ => throw new IllegalArgumentException(s"format must be flat, directory, or wikipedia")
     }
   }
 
@@ -41,6 +46,14 @@ case object IdText extends Logging {
     }
   }, 32).flatten
 
+  def fromWikipedia(file: File): Iterator[IdText] =
+    StreamClosingIterator(new FileInputStream(file)) { input =>
+      val documents = new DocumentIterator(new GZIPInputStream(input))
+      documents.map { document =>
+        IdText(document.id.toString, document.body)
+      }
+    }
+
   def recursiveListFiles(f: File): Iterator[File] = {
     val these = f.listFiles
     these.iterator ++ these.iterator.filter(_.isDirectory).flatMap(recursiveListFiles)
@@ -54,5 +67,67 @@ case object IdText extends Logging {
     case _: MalformedInputException =>
       logger.warn(s"Skipping unreadable file ${file.getName}")
       None
+  }
+}
+
+object WikipediaCorpus {
+  case class Document(id: Int, url: URL, title: String, body: String)
+
+  class DocumentIterator(inputStream: InputStream) extends Iterator[Document] {
+    private val lines = new LineIterator(new InputStreamReader(inputStream, "UTF-8"))
+
+    private var nextDocument: Option[Document] = None
+    private def advanceToNextDoc(): Unit = {
+      nextDocument = None
+
+      if (lines.hasNext) {
+        val docLine = lines.next().trim
+
+        val DocLinePattern = """<doc id="(\d+)" url="([^"]*)" title="([^"]*)">""".r
+
+        // pattern matching on Int
+        object Int {
+          def unapply(s: String): Option[Int] = try {
+            Some(s.toInt)
+          } catch {
+            case _: java.lang.NumberFormatException => None
+          }
+        }
+
+        // pattern matching on Url
+        object URL {
+          def unapply(s: String): Option[URL] = try {
+            Some(new URL(s))
+          } catch {
+            case _: java.net.MalformedURLException => None
+          }
+        }
+
+        docLine match {
+          case DocLinePattern(Int(id), URL(url), title) =>
+            // read in the body of the document
+            val body = StringBuilder.newBuilder
+            while (nextDocument.isEmpty && lines.hasNext) {
+              val line = lines.next().trim
+              if (line == "</doc>") {
+                nextDocument = Some(Document(id, url, title, body.mkString.trim))
+              } else {
+                body.append(line)
+                body.append('\n')
+              }
+            }
+        }
+      }
+
+      if (!lines.hasNext)
+        lines.close()
+    }
+    advanceToNextDoc()
+
+    override def hasNext: Boolean = nextDocument.isDefined
+    override def next(): Document = nextDocument match {
+      case None => throw new NoSuchElementException()
+      case Some(doc) => advanceToNextDoc(); doc
+    }
   }
 }
