@@ -183,20 +183,17 @@ object CreatePhraseVectors extends App with Logging {
         }
       }
 
-      val bigUnigramCounts = new concurrent.TrieMap[Phrase, Int]
-      val bigBigramCounts = new concurrent.TrieMap[(Phrase, Phrase), Int]
-      def bumpBigCount[T](map: concurrent.Map[T, Int], key: T, increase: Int): Unit = {
-        val prev = map.putIfAbsent(key, 1)
-        prev match {
-          case Some(count) =>
-            val success = map.replace(key, count, count + increase)
-            if (!success) bumpBigCount(map, key, increase)
-          case None => // yay!
+      val bigUnigramCounts = mutable.Map[Phrase, Int]()
+      val bigBigramCounts = mutable.Map[(Phrase, Phrase), Int]()
+      def bumpBigCount[T](map: mutable.Map[T, Int], key: T, increase: Int): Unit = {
+        map.synchronized {
+          val prev = map.getOrElse(key, 0)
+          map.put(key, prev + increase)
+          if (map.size > 2 * options.vocabSize) reduceMapToVocabSize(map)
         }
-        if (map.size > 2 * options.vocabSize) reduceMapToVocabSize(map)
       }
 
-      idTexts.grouped(1024).parForeach { docs =>
+      idTexts.grouped(16 * 1024).parForeach { docs =>
         val unphrasified = sentences(docs.iterator)
         val phrasified = phrasifiedSentences(phrases, unphrasified)
 
