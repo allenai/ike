@@ -1,13 +1,13 @@
 package org.allenai.dictionary.index
 
-import java.io.{ FileOutputStream, File }
+import java.io._
 import java.util.concurrent.atomic.AtomicLong
 
 import com.medallia.word2vec.Word2VecModel
 import com.medallia.word2vec.Word2VecTrainerBuilder.TrainingProgressListener
 import com.medallia.word2vec.neuralnetwork.NeuralNetworkType
 import com.medallia.word2vec.util.Format
-import org.allenai.common.{ Resource, Logging }
+import org.allenai.common.{StreamClosingIterator, Resource, Logging}
 import org.allenai.common.ParIterator._
 import org.allenai.nlpstack.segment.{ StanfordSegmenter => segmenter }
 import org.allenai.nlpstack.tokenize.{ defaultTokenizer => tokenizer }
@@ -19,11 +19,11 @@ import org.apache.thrift.TSerializer
 
 import scala.collection.immutable.TreeSet
 import scala.collection.mutable
-import scala.collection.concurrent
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.collection.JavaConverters._
 import Ordering.Implicits._
+import scala.io.Source
 import scala.util.Sorting
 
 object CreatePhraseVectors extends App with Logging {
@@ -34,7 +34,8 @@ object CreatePhraseVectors extends App with Logging {
   case class Options(
     input: URI = null,
     destination: File = null,
-    vocabSize: Int = 100000000
+    vocabSize: Int = 100000000,
+    phrases: Option[File] = None
   )
 
   val parser = new scopt.OptionParser[Options](this.getClass.getSimpleName.stripSuffix("$")) {
@@ -49,6 +50,10 @@ object CreatePhraseVectors extends App with Logging {
     opt[Int]('v', "vocabSize") action { (v, o) =>
       o.copy(vocabSize = v)
     } text "the maximum size of the vocabulary"
+
+    opt[File]('p', "phrases") action { (p, o) =>
+      o.copy(phrases = Some(p))
+    } text "File to read phrase definitions from if it exists, or write them to if it doesn't."
 
     help("help")
   }
@@ -217,12 +222,12 @@ object CreatePhraseVectors extends App with Logging {
           }
         }
 
-        unigramCounts.foreach {
-          case (unigram, count) =>
+          unigramCounts.foreach {
+            case (unigram, count) =>
             bumpBigCount(bigUnigramCounts, unigram, count)
         }
-        bigramCounts.foreach {
-          case (bigram, count) =>
+          bigramCounts.foreach {
+            case (bigram, count) =>
             bumpBigCount(bigBigramCounts, bigram, count)
         }
       }
@@ -266,13 +271,31 @@ object CreatePhraseVectors extends App with Logging {
     }
 
     // update phrases three times
-    // Maybe it would be better if we ran this until we don't find any new phrases?
-    val phrases = (0 until 3).foldLeft(new OrderedPrefixSet) {
-      case (p, i) =>
-        logger.info(s"Starting round ${i + 1} of making phrases.")
-        val result = updatePhrases(p, startThreshold / (1 << i))
-        logger.info(s"Found ${result.size} phrases")
+    def makePhrases = (0 until 3).foldLeft(new OrderedPrefixSet) { case (p, i) =>
+      logger.info(s"Starting round ${i + 1} of making phrases.")
+      val result = updatePhrases(p, startThreshold / (1 << i))
+      logger.info(s"Found ${result.size} phrases")
+      result
+    }
+
+    val phrases = options.phrases match {
+      case None => makePhrases
+      case Some(phrasesFile) if !phrasesFile.exists() =>
+        val result = makePhrases
+        logger.info(s"Writing phrases to $phrasesFile")
+        Resource.using(new PrintWriter(phrasesFile, "UTF-8")) { writer =>
+          result.foreach { phrase =>
+            writer.println(phrase.mkString("_"))
+          }
+        }
         result
+      case Some(phrasesFile) =>
+        val lines = StreamClosingIterator(new FileInputStream(phrasesFile)) { is =>
+          Source.fromInputStream(is, "UTF-8").getLines()
+        }
+        lines.map(_.split("_")).foldLeft(new OrderedPrefixSet) { case (set, phrase) =>
+          set + phrase
+        }
     }
 
     logger.info("Building vectors based on the phrases")
