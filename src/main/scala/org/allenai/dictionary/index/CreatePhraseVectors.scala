@@ -1,6 +1,7 @@
 package org.allenai.dictionary.index
 
 import java.io._
+import java.util
 import java.util.concurrent.atomic.AtomicLong
 import java.util.zip.{ GZIPInputStream, GZIPOutputStream }
 
@@ -419,7 +420,8 @@ object CreatePhraseVectors extends App with Logging {
     val tokensIterable = new java.lang.Iterable[java.util.List[String]] {
       override def iterator = new java.util.Iterator[java.util.List[String]] {
         private val inner = phrasifiedCorpus.iterator
-        override def next(): java.util.List[String] = inner.next().toList.asJava
+        override def next(): java.util.List[String] =
+          new util.ArrayList[String](inner.next().toList.asJava)
         override def hasNext: Boolean = inner.hasNext
       }
     }
