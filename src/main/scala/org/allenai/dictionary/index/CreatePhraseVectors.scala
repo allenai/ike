@@ -2,12 +2,13 @@ package org.allenai.dictionary.index
 
 import java.io._
 import java.util.concurrent.atomic.AtomicLong
+import java.util.zip.{ GZIPInputStream, GZIPOutputStream }
 
 import com.medallia.word2vec.Word2VecModel
 import com.medallia.word2vec.Word2VecTrainerBuilder.TrainingProgressListener
 import com.medallia.word2vec.neuralnetwork.NeuralNetworkType
 import com.medallia.word2vec.util.Format
-import org.allenai.common.{StreamClosingIterator, Resource, Logging}
+import org.allenai.common.{ StreamClosingIterator, Resource, Logging }
 import org.allenai.common.ParIterator._
 import org.allenai.nlpstack.segment.{ StanfordSegmenter => segmenter }
 import org.allenai.nlpstack.tokenize.{ defaultTokenizer => tokenizer }
@@ -35,7 +36,9 @@ object CreatePhraseVectors extends App with Logging {
     input: URI = null,
     destination: File = null,
     vocabSize: Int = 100000000,
-    phrases: Option[File] = None
+    sentencesFile: Option[File] = None,
+    phrasesFile: Option[File] = None,
+    phrasifiedCorpusFile: Option[File] = None
   )
 
   val parser = new scopt.OptionParser[Options](this.getClass.getSimpleName.stripSuffix("$")) {
@@ -51,9 +54,18 @@ object CreatePhraseVectors extends App with Logging {
       o.copy(vocabSize = v)
     } text "the maximum size of the vocabulary"
 
+    opt[File]('s', "sentences") action { (s, o) =>
+      o.copy(sentencesFile = Some(s))
+    } text "File to read pre-tokenized sentences for, one sentence per line. If the file does " +
+      "not exist, it is created."
+
     opt[File]('p', "phrases") action { (p, o) =>
-      o.copy(phrases = Some(p))
+      o.copy(phrasesFile = Some(p))
     } text "File to read phrase definitions from if it exists, or write them to if it doesn't."
+
+    opt[File]("phrasifiedCorpus") action { (p, o) =>
+      o.copy(phrasifiedCorpusFile = Some(p))
+    } text "File to read the phrasified corpus from. If it does not exist, it is created."
 
     help("help")
   }
@@ -108,8 +120,8 @@ object CreatePhraseVectors extends App with Logging {
 
     /** Turns the documents into an iterator of sentences
       */
-    def sentences(docs: Iterator[IdText]): Iterator[Seq[String]] = {
-      docs.map { idText =>
+    def makeSentences(docs: Iterator[IdText]): Iterator[Seq[String]] = {
+      docs.parMap { idText =>
         try {
           segmenter.segment(idText.text).map { sentence =>
             tokenizer.tokenize(sentence.text).map { token =>
@@ -126,6 +138,55 @@ object CreatePhraseVectors extends App with Logging {
       }.flatten
     }
 
+    /** Writes tokenized sentences to a file, so we can read them from there quickly afterwards
+      * @param sentences the tokenized sentences
+      * @param sentencesCacheFile the file to write to
+      */
+    def writeSentencesCacheFile(sentences: Iterator[Seq[String]], sentencesCacheFile: File): Unit = {
+      Resource.using(new FileOutputStream(sentencesCacheFile)) { os =>
+        val gzipStream = new GZIPOutputStream(os)
+        val writer = new BufferedWriter(new OutputStreamWriter(gzipStream, "UTF-8"))
+
+        sentences.foreach { sentence =>
+          sentence.foreach { token =>
+            writer.write(token)
+            writer.write(' ')
+          }
+          writer.write('\n')
+        }
+
+        writer.flush()
+        gzipStream.finish()
+        os.flush()
+      }
+    }
+
+    def readSentencesCacheFile(sentencesCacheFile: File): Iterator[Seq[String]] = {
+      StreamClosingIterator(new GZIPInputStream(new FileInputStream(sentencesCacheFile))) { is =>
+        val lines = new ProgressLoggingIterator(Source.fromInputStream(is, "UTF-8").getLines())
+        lines.map(_.split(" "))
+      }
+    }
+
+    lazy val sentencesCacheFile = options.sentencesFile match {
+      case None =>
+        val file = File.createTempFile("CreatePhraseVectors.SentencesCache-", ".txt.gz")
+        file.deleteOnExit()
+        logger.info(s"Making a cache of tokenized sentences at $file")
+        writeSentencesCacheFile(makeSentences(idTexts), file)
+        file
+      case Some(file) =>
+        if (!file.exists()) {
+          logger.info(s"Making a cache of tokenized sentences at $file")
+          writeSentencesCacheFile(makeSentences(idTexts), file)
+        } else {
+          logger.info(s"Reading tokenized sentences from $file")
+        }
+        file
+    }
+
+    def sentencesFromCache = readSentencesCacheFile(sentencesCacheFile)
+
     type Phrase = Seq[String]
     type OrderedPrefixSet = TreeSet[Phrase]
 
@@ -141,25 +202,25 @@ object CreatePhraseVectors extends App with Logging {
       *
       * @param phrases the phrases we know about
       */
-    def phrasifiedSentences(phrases: OrderedPrefixSet, sentences: Iterator[Phrase]) =
-      sentences.map { sentence =>
-        // phrasifies sentences greedily
-        def phrasesStartingWith(start: Phrase) = phrases.from(start).takeWhile(_.startsWith(start))
+    def phrasifySentence(phrases: OrderedPrefixSet, sentence: Seq[String]) = {
+      // phrasifies sentences greedily
+      def phrasesStartingWith(start: Seq[String]) =
+        phrases.from(start).takeWhile(_.startsWith(start))
 
-        val result = mutable.Buffer[Phrase]()
-        var prefix = Seq.empty[String]
-        for (token <- sentence) {
-          val newPrefix = prefix :+ token
-          if (phrasesStartingWith(newPrefix).isEmpty) {
-            if (prefix.nonEmpty) result += prefix
-            prefix = Seq(token)
-          } else {
-            prefix = newPrefix
-          }
+      val result = mutable.Buffer[Phrase]()
+      var prefix = Seq.empty[String]
+      for (token <- sentence) {
+        val newPrefix = prefix :+ token
+        if (phrasesStartingWith(newPrefix).isEmpty) {
+          if (prefix.nonEmpty) result += prefix
+          prefix = Seq(token)
+        } else {
+          prefix = newPrefix
         }
-        result += prefix
-        result.toSeq
       }
+      result += prefix
+      result.toSeq
+    }
 
     /** Counts phrases in the input
       * @param phrases the phrases we know about
@@ -169,7 +230,7 @@ object CreatePhraseVectors extends App with Logging {
       def reduceMapToVocabSize[T](map: mutable.Map[T, Int]): Unit = map.synchronized {
         // Have to check twice. All threads will get here, only one reduces the vocab while
         // the others wait.
-        if (map.size > 2 * options.vocabSize) {
+        if (map.size > options.vocabSize) {
           // This would be a prime example for the QuickSelect algorithm, which can do this in
           // O(n), but in practice the difference between O(n) and O(n log n) isn't worth the
           // trouble.
@@ -191,16 +252,13 @@ object CreatePhraseVectors extends App with Logging {
       val bigUnigramCounts = mutable.Map[Phrase, Int]()
       val bigBigramCounts = mutable.Map[(Phrase, Phrase), Int]()
       def bumpBigCount[T](map: mutable.Map[T, Int], key: T, increase: Int): Unit = {
-        map.synchronized {
-          val prev = map.getOrElse(key, 0)
-          map.put(key, prev + increase)
-          if (map.size > 2 * options.vocabSize) reduceMapToVocabSize(map)
-        }
+        val prev = map.getOrElse(key, 0)
+        map.put(key, prev + increase)
+        if (map.size > 2 * options.vocabSize) reduceMapToVocabSize(map)
       }
 
-      idTexts.grouped(16 * 1024).parForeach { docs =>
-        val unphrasified = sentences(docs.iterator)
-        val phrasified = phrasifiedSentences(phrases, unphrasified)
+      sentencesFromCache.grouped(16 * 1024).parForeach { unphrasifiedSentences =>
+        val phrasifiedSentences = unphrasifiedSentences.map(phrasifySentence(phrases, _))
 
         val unigramCounts = mutable.Map[Phrase, Int]()
         val bigramCounts = mutable.Map[(Phrase, Phrase), Int]()
@@ -212,7 +270,7 @@ object CreatePhraseVectors extends App with Logging {
           if (map.size > 2 * options.vocabSize) reduceMapToVocabSize(map)
         }
 
-        phrasified.foreach { sentence =>
+        phrasifiedSentences.foreach { sentence =>
           sentence.foreach(bumpCount(unigramCounts, _))
           if (sentence.length >= 2) {
             sentence.sliding(2).foreach {
@@ -222,19 +280,24 @@ object CreatePhraseVectors extends App with Logging {
           }
         }
 
+        bigUnigramCounts.synchronized {
           unigramCounts.foreach {
             case (unigram, count) =>
-            bumpBigCount(bigUnigramCounts, unigram, count)
+              bumpBigCount(bigUnigramCounts, unigram, count)
+          }
         }
+
+        bigBigramCounts.synchronized {
           bigramCounts.foreach {
             case (bigram, count) =>
-            bumpBigCount(bigBigramCounts, bigram, count)
+              bumpBigCount(bigBigramCounts, bigram, count)
+          }
         }
       }
 
-      def applyMinWordCount[T](map: mutable.Map[T, Int]) =
-        map.filter { case (_, count) => count >= minWordCount }
-      (applyMinWordCount(bigUnigramCounts), applyMinWordCount(bigBigramCounts))
+      reduceMapToVocabSize(bigUnigramCounts)
+      reduceMapToVocabSize(bigUnigramCounts)
+      (bigUnigramCounts, bigBigramCounts)
     }
 
     /** Given a set of phrases and a threshold, returns a new set of longer phrases.
@@ -271,14 +334,15 @@ object CreatePhraseVectors extends App with Logging {
     }
 
     // update phrases three times
-    def makePhrases = (0 until 3).foldLeft(new OrderedPrefixSet) { case (p, i) =>
-      logger.info(s"Starting round ${i + 1} of making phrases.")
-      val result = updatePhrases(p, startThreshold / (1 << i))
-      logger.info(s"Found ${result.size} phrases")
-      result
+    def makePhrases = (0 until 3).foldLeft(new OrderedPrefixSet) {
+      case (p, i) =>
+        logger.info(s"Starting round ${i + 1} of making phrases.")
+        val result = updatePhrases(p, startThreshold / (1 << i))
+        logger.info(s"Found ${result.size} phrases")
+        result
     }
 
-    val phrases = options.phrases match {
+    lazy val phrases = options.phrasesFile match {
       case None => makePhrases
       case Some(phrasesFile) if !phrasesFile.exists() =>
         val result = makePhrases
@@ -290,23 +354,72 @@ object CreatePhraseVectors extends App with Logging {
         }
         result
       case Some(phrasesFile) =>
+        logger.info(s"Reading phrases from $phrasesFile")
         val lines = StreamClosingIterator(new FileInputStream(phrasesFile)) { is =>
           Source.fromInputStream(is, "UTF-8").getLines()
         }
-        lines.map(_.split("_")).foldLeft(new OrderedPrefixSet) { case (set, phrase) =>
-          set + phrase
+        lines.map(_.split("_")).foldLeft(new OrderedPrefixSet) {
+          case (set, phrase) =>
+            set + phrase
         }
+    }
+
+    def writePhrasifiedCorpusCache(
+      phrasifiedSentences: Iterator[Seq[Phrase]],
+      phrasifiedCorpusCacheFile: File
+    ): Unit = Resource.using(new FileOutputStream(phrasifiedCorpusCacheFile)) { os =>
+      logger.info(s"Making a cache of the phrasified corpus at $phrasifiedCorpusCacheFile")
+      val gzipStream = new GZIPOutputStream(os)
+      val writer = new BufferedWriter(new OutputStreamWriter(gzipStream, "UTF-8"))
+
+      phrasifiedSentences.foreach { sentence =>
+        sentence.foreach { phrase =>
+          writer.write(phrase.mkString("_"))
+          writer.write(' ')
+        }
+        writer.write('\n')
+      }
+
+      writer.flush()
+      gzipStream.finish()
+      os.flush()
+    }
+
+    def readPhrasifiedCorpusCache(phrasifiedCorpusCacheFile: File): Iterator[Seq[String]] = {
+      StreamClosingIterator(new GZIPInputStream(new FileInputStream(phrasifiedCorpusCacheFile))) { is =>
+        val lines = new ProgressLoggingIterator(Source.fromInputStream(is, "UTF-8").getLines())
+        lines.map(_.split(" "))
+      }
+    }
+
+    val phrasifiedCorpus: Iterable[Seq[String]] = {
+      def makePhrasifiedCorpus = sentencesFromCache.parMap(phrasifySentence(phrases, _))
+      val cacheFile = options.phrasifiedCorpusFile match {
+        case None =>
+          val file = File.createTempFile("CreatePhraseVectors.PhrasifiedCorpusCache-", ".txt.gz")
+          file.deleteOnExit()
+          writePhrasifiedCorpusCache(makePhrasifiedCorpus, file)
+          file
+        case Some(file) =>
+          if (!file.exists()) {
+            writePhrasifiedCorpusCache(makePhrasifiedCorpus, file)
+          } else {
+            logger.info(s"Reading phrasified corpus from $file")
+          }
+          file
+      }
+
+      new Iterable[Seq[String]] {
+        override def iterator: Iterator[Seq[String]] = readPhrasifiedCorpusCache(cacheFile)
+      }
     }
 
     logger.info("Building vectors based on the phrases")
 
     val tokensIterable = new java.lang.Iterable[java.util.List[String]] {
       override def iterator = new java.util.Iterator[java.util.List[String]] {
-        private val unphrasified = sentences(idTexts)
-        private val inner = phrasifiedSentences(phrases, unphrasified)
-
-        override def next(): java.util.List[String] =
-          inner.next().map(_.mkString("_")).toList.asJava
+        private val inner = phrasifiedCorpus.iterator
+        override def next(): java.util.List[String] = inner.next().toList.asJava
         override def hasNext: Boolean = inner.hasNext
       }
     }
@@ -338,5 +451,35 @@ object CreatePhraseVectors extends App with Logging {
     val modelByteArray = new TSerializer().serialize(model.toThrift)
     Resource.using(new FileOutputStream(options.destination))(_.write(modelByteArray))
     logger.info(s"Wrote ${modelByteArray.length} bytes to ${options.destination}")
+  }
+}
+
+class ProgressLoggingIterator(inner: Iterator[String]) extends Iterator[String] with Logging {
+  private val byteCount = new AtomicLong()
+  private var oldByteCount: Long = 0
+  private val lastMessagePrinted = new AtomicLong(System.currentTimeMillis())
+
+  override def hasNext: Boolean = {
+    val result = inner.hasNext
+    if (!result)
+      logger.info("Done reading strings")
+    result
+  }
+  override def next(): String = {
+    val result = inner.next()
+
+    val currentByteCount = byteCount.addAndGet(result.length)
+    val last = lastMessagePrinted.get()
+    val now = System.currentTimeMillis()
+    val elapsed = (now - last).toDouble / 1000
+    if (elapsed > 5 && lastMessagePrinted.compareAndSet(last, now)) {
+      val bytesProcessed = currentByteCount - oldByteCount
+      oldByteCount = currentByteCount
+      val kbps = bytesProcessed.toDouble / elapsed / 1000
+
+      logger.info("Read strings at %1.2f kb/s".format(kbps))
+    }
+
+    result
   }
 }
