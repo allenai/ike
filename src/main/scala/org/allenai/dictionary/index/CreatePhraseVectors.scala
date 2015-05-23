@@ -315,7 +315,9 @@ object CreatePhraseVectors extends App with Logging {
         case ((left, right), bigramCount) =>
           for {
             leftCount <- unigramCounts.get(left)
+            if leftCount > 0
             rightCount <- unigramCounts.get(right)
+            if rightCount > 0
             score = (wordCount * (bigramCount - minWordCount)) / (leftCount * rightCount)
             if score > threshold
           } yield {
