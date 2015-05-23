@@ -258,7 +258,7 @@ object CreatePhraseVectors extends App with Logging {
         if (map.size > 2 * options.vocabSize) reduceMapToVocabSize(map)
       }
 
-      sentencesFromCache.grouped(16 * 1024).parForeach { unphrasifiedSentences =>
+      sentencesFromCache.grouped(1024).parForeach({ unphrasifiedSentences =>
         val phrasifiedSentences = unphrasifiedSentences.map(phrasifySentence(phrases, _))
 
         val unigramCounts = mutable.Map[Phrase, Int]()
@@ -294,7 +294,7 @@ object CreatePhraseVectors extends App with Logging {
               bumpBigCount(bigBigramCounts, bigram, count)
           }
         }
-      }
+      }, 8)
 
       reduceMapToVocabSize(bigUnigramCounts)
       reduceMapToVocabSize(bigUnigramCounts)
@@ -343,11 +343,11 @@ object CreatePhraseVectors extends App with Logging {
         result
     }
 
-    lazy val phrases = options.phrasesFile match {
+    val phrases = options.phrasesFile match {
       case None => makePhrases
       case Some(phrasesFile) if !phrasesFile.exists() =>
-        val result = makePhrases
         logger.info(s"Writing phrases to $phrasesFile")
+        val result = makePhrases
         Resource.using(new PrintWriter(phrasesFile, "UTF-8")) { writer =>
           result.foreach { phrase =>
             writer.println(phrase.mkString("_"))
@@ -427,7 +427,7 @@ object CreatePhraseVectors extends App with Logging {
     }
 
     // train the model
-    val model: Word2VecModel = Word2VecModel.trainer.
+    val trainer = Word2VecModel.trainer.
       setMinVocabFrequency(minWordCount).
       setWindowSize(8).
       `type`(NeuralNetworkType.CBOW).
@@ -447,7 +447,9 @@ object CreatePhraseVectors extends App with Logging {
             )
           }
         }
-      }).train(tokensIterable)
+      })
+
+    val model: Word2VecModel = trainer.train(tokensIterable)
 
     // store the model
     val modelByteArray = new TSerializer().serialize(model.toThrift)
