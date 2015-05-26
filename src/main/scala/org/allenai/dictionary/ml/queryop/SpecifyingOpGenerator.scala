@@ -61,11 +61,11 @@ case class SpecifyingOpGenerator(
         val setMinOps = nRepeats.filter(_ != repeatingOp.min).map { n =>
           (SetMin(index, n), IntMap(editsWithSize.filter(_.repeats >= n).
             map(x => (x.index, x.required)): _*))
-        }
+        }.filter(_._1.min <= repeatingOp.max)
         val setMaxOps = nRepeats.filter(_ != repeatingOp.max).map { n =>
           (SetMax(index, n), IntMap(editsWithSize.filter(_.repeats <= n).
             map(x => (x.index, x.required)): _*))
-        }
+        }.filter(_._1.max >= repeatingOp.min)
         val leafGenerator = getLeafGenerator(Some(repeatingOp.qexpr), isCapture)
         val leafOps = OpGenerator.getSetTokenOps(matches, leafGenerator).
           asInstanceOf[Map[QueryOp, IntMap[Int]]]
