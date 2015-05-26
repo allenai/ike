@@ -18,6 +18,9 @@ case class QPos(value: String) extends QLeaf
 case class QDict(value: String) extends QLeaf
 case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])
   extends QLeaf
+case class SimilarPhrase(qwords: Seq[QWord], similarity: Double)
+case class QSimilarPhrases(qwords: Seq[QWord], pos: Int, phrases: Seq[SimilarPhrase])
+  extends QLeaf
 case class QWildcard() extends QLeaf
 case class QNamed(qexpr: QExpr, name: String) extends QCapture
 case class QUnnamed(qexpr: QExpr) extends QCapture

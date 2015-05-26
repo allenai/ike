@@ -4,7 +4,7 @@ import spray.json.DefaultJsonProtocol._
 import spray.json._
 
 object JsonSerialization {
-  implicit val qexprFormat = QExprJsonSerialization.QExprFormat
+  import QExprJsonSerialization._
   implicit val wordDataFormat = jsonFormat2(WordData.apply)
   implicit val blackLabResultFormat = jsonFormat4(BlackLabResult.apply)
   implicit val keyedBlackLabResultFormat = jsonFormat2(KeyedBlackLabResult.apply)
@@ -23,4 +23,5 @@ object JsonSerialization {
   implicit val scoredQuery = jsonFormat3(ScoredStringQuery.apply)
   implicit val inferQueryResponse = jsonFormat1(SuggestQueryResponse.apply)
   implicit val corpusDescription = jsonFormat2(CorpusDescription.apply)
+  implicit val similarPhrasesResponse = jsonFormat1(SimilarPhrasesResponse.apply)
 }

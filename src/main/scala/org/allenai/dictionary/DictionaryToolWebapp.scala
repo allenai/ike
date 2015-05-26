@@ -4,7 +4,7 @@ import akka.actor.{ Actor, ActorContext, ActorSystem, Props }
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ Config, ConfigFactory }
 import org.allenai.common.Logging
 import org.allenai.dictionary.persistence.Tablestore
 import spray.can.Http
@@ -12,6 +12,7 @@ import spray.http.{ CacheDirectives, HttpHeaders, StatusCodes }
 import spray.httpx.SprayJsonSupport
 import spray.routing.{ ExceptionHandler, HttpService }
 import spray.util.LoggingContext
+import org.allenai.common.Config._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.DurationInt
@@ -51,6 +52,17 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   val searchApps = config.getConfigList("DictionaryToolWebapp.indices").asScala.map { config =>
     config.getString("name") -> Future { SearchApp(config) }
   }.toMap
+  val similarPhrasesSearcher =
+    new SimilarPhrasesSearcher(ConfigFactory.load()[Config]("SimilarPhrasesSearcher"))
+
+  implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
+    ExceptionHandler {
+      case NonFatal(e) =>
+        requestUri { uri =>
+          log.error(e, e.getMessage)
+          complete(StatusCodes.InternalServerError -> e.getMessage)
+        }
+    }
 
   val serviceRoute = pathPrefix("api") {
     parameters('corpora.?) { corpora =>
@@ -116,6 +128,10 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
             }
           }
         }
+    } ~ path("similarPhrases") {
+      parameters('phrase) { phrase =>
+        complete(SimilarPhrasesResponse(similarPhrasesSearcher.getSimilarPhrases(phrase)))
+      }
     }
   }
 
@@ -173,14 +189,6 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     unmatchedPath { p => getFromFile("public" + p) }
   }
 
-  implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
-    ExceptionHandler {
-      case NonFatal(e) =>
-        requestUri { uri =>
-          log.error(toString, e)
-          complete(StatusCodes.InternalServerError -> e.getMessage)
-        }
-    }
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
   def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoute ~ tablesRoute ~ corporaRoute)

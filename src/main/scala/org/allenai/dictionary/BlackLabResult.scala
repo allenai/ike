@@ -9,7 +9,8 @@ case class BlackLabResult(
     wordData: Seq[WordData],
     matchOffset: Interval,
     captureGroups: Map[String, Interval],
-    corpusName: String) {
+    corpusName: String
+) {
   def matchData: Seq[WordData] = wordData.slice(matchOffset.start, matchOffset.end)
   def matchWords: Seq[String] = matchData.map(_.word)
 }

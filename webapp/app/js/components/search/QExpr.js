@@ -105,9 +105,74 @@ var InnerNodeMixin = {
     return <div>{name}<Tree>{this.childComponents()}</Tree></div>;
   }
 };
+var similarPhrases = function(phrase, callback) {
+  var url = '/api/similarPhrases';
+  var requestData = {
+    uri: url + "?phrase=" + encodeURIComponent(phrase),
+    method: 'GET'
+  };
+  var xhrCallback = function(err, resp, body) {
+    if (resp.statusCode == 200) {
+      var phrases = JSON.parse(body);
+      callback(phrases.phrases);
+    } else {
+      alert('Something went wrong while finding similar phrases.');
+    }
+  };
+  var request = xhr(requestData, xhrCallback);
+};
+
 var QSeq = React.createClass({
-  mixins: [InnerNodeMixin],
-  name: 'Sequence'
+  mixins: [QExprMixin],
+  phrase: function() {
+    var children = this.children();
+    var words = children.map(function(child) { return child.value });
+    var phrase = words.join(" ");
+    return phrase;
+  },
+  replaceWithSimilarPhrases: function(phraseData) {
+    var children = this.children();
+    var replacement = {
+      type: 'QSimilarPhrases',
+      qwords: children,
+      pos: 0,
+      phrases: phraseData
+    };
+    this.updateSelf(replacement);
+  },
+  similarPhrasesClick: function() {
+    similarPhrases(this.phrase(), this.replaceWithSimilarPhrases);
+  },
+  childTypes: function() {
+    return this.children().map(function(child) {
+      return child.type;
+    });
+  },
+  hasQWordChildren: function() {
+    return this.childTypes().every(function(type) { return type == 'QWord' });
+  },
+  menuButton: function() {
+    return (
+      <div>
+      <DropdownButton bsStyle="link" title="Sequence">
+        <MenuItem eventKey={1} onClick={this.similarPhrasesClick}>
+          Phrases similar to "{this.phrase()}"...
+        </MenuItem>
+      </DropdownButton>
+      </div>
+    );
+  },
+  renderLabel: function() {
+    if (this.hasQWordChildren()) {
+      return this.menuButton();
+    } else {
+      return <span>Sequence</span>;
+    }
+  },
+  render: function() {
+    var label = this.renderLabel();
+    return <div>{label}<Tree>{this.childComponents()}</Tree></div>;
+  }
 });
 var QDisj = React.createClass({
   mixins: [InnerNodeMixin],
@@ -159,12 +224,28 @@ var QWord = React.createClass({
     var replace = this.replaceWithPosFromWord;
     this.getWordInfo(replace);
   },
+  replaceWithSimilarPhrases: function(phraseData) {
+    var children = [this.props.qexpr]
+    var replacement = {
+      type: 'QSimilarPhrases',
+      qwords: children,
+      pos: 0,
+      phrases: phraseData
+    };
+    this.updateSelf(replacement);
+  },
+  toSimilarPhrases: function() {
+    var replace = this.replaceWithSimilarPhrases;
+    var phrase = this.props.qexpr.value;
+    similarPhrases(phrase, replace);
+  },
   render: function() {
     var value = this.props.qexpr.value;
     var button = (
       <div>
       <DropdownButton bsStyle="link" title={value}>
         <MenuItem eventKey={1} onClick={this.toPosFromWord}>Generalize by POS tag...</MenuItem>
+        <MenuItem eventKey={1} onClick={this.toSimilarPhrases}>Generalize to similar phrases...</MenuItem>
       </DropdownButton>
       </div>
     );
@@ -195,6 +276,51 @@ var QNamed = React.createClass({
 var QUnnamed = React.createClass({
   mixins: [InnerNodeMixin],
   name: 'Capture'
+});
+var QSimilarPhrases = React.createClass({
+  mixins: [QExprMixin],
+  numPhrases: function() {
+    return this.props.qexpr.phrases.length;
+  },
+  pos: function() {
+    return this.props.qexpr.pos;
+  },
+  phrase: function() {
+    var qwords = this.props.qexpr.qwords;
+    var words = qwords.map(function(qw) { return qw.value; });
+    return words.join(" ");
+  },
+  handleChange: function(e) {
+    var value = e.target.value;
+    var qexpr = this.props.qexpr;
+    var max = this.numPhrases();
+    qexpr.pos = max - Number(value);
+    this.updateSelf(qexpr);
+  },
+  renderSlider: function() {
+    var max = this.numPhrases();
+    var value = max - this.pos();
+    var slider =
+      <input
+        ref="slider"
+        type="range"
+        className="vslider"
+        min={0}
+        max={max}
+        step={1}
+        value={value}
+        onChange={this.handleChange}/>;
+    return slider;
+  },
+  render: function() {
+  return (
+      <Panel header={this.phrase()}>
+        More Similar
+        {this.renderSlider()}
+        Less Similar
+      </Panel>
+    );
+  }
 });
 var QNonCap = React.createClass({
   mixins: [InnerNodeMixin],
@@ -256,6 +382,7 @@ var QExpr = React.createClass({
   },
   qexprComponents: {
     QWord: QWord,
+    QSimilarPhrases: QSimilarPhrases,
     QPos: QPos,
     QSeq: QSeq,
     QDict: QDict,
