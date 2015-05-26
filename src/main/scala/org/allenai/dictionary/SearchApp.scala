@@ -129,8 +129,8 @@ object SearchApp extends Logging {
     original = suggestion.original
     originalString = ScoredStringQuery(QueryLanguage.getQueryString(original.query), original.score,
       original.positiveScore, original.negativeScore, original.unlabelledScore)
-    totalDocs = searchApps.map(_.searcher.getIndexReader.numDocs()).sum.toDouble
+    totalDocs = searchApps.map(_.searcher.getIndexReader.numDocs()).sum
     response = SuggestQueryResponse(originalString, stringQueries,
-      suggestion.docsSampledFrom / totalDocs)
+      suggestion.docsSampledFrom / totalDocs.toDouble)
   } yield response
 }

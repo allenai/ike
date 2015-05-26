@@ -278,15 +278,18 @@ object QuerySuggester extends Logging {
       return Suggestions(ScoredQuery(startingQuery, 0, 0, 0, 0), Seq(), 0)
     }
 
-    // Number of documents we searched for unlabelled hits from
-    val numUnlabelledDocs = unlabelledHits.zip(numDocsPerSearcher).map {
+    // Number of documents we searched for unlabelled hits from, per each searcher
+    val numUnlabelledDocsPerSearcher = unlabelledHits.zip(numDocsPerSearcher).map {
       case (hits, totalDocs) =>
         if (hits.size() < maxUnlabelledPerSearcher) {
+          // We must have scanned the entire index
           totalDocs
         } else {
-          hits.numberOfDocs()
+          // We use getOriginalHits since HitWindow does not return this count correctly
+          hits.getOriginalHits.countSoFarDocsCounted()
         }
-    }.sum
+    }
+    val numUnlabelledDocs = numUnlabelledDocsPerSearcher.sum
     val unlabelledEndPoints = unlabelledHits.map { hits =>
       if (hits.last() == -1) {
         (0, 0)
@@ -309,12 +312,14 @@ object QuerySuggester extends Logging {
 
     // Number of documents we searched for labelled hits from
     val numDocs = numUnlabelledDocs +
-      (labelledHits, numDocsPerSearcher).zipped.map {
-        case (hits, totalDocs) =>
+      (labelledHits, numDocsPerSearcher, numUnlabelledDocsPerSearcher).zipped.map {
+        case (hits, totalDocs, numUnlabelledDocs) =>
           if (hits.size < maxLabelledPerSearcher) {
-            totalDocs
+            // We must have scanned the entire index
+            totalDocs  - numUnlabelledDocs
           } else {
-            hits.numberOfDocs()
+            // We use getOriginalHits since HitWindow does not return this count correctly
+            hits.getOriginalHits.countSoFarDocsCounted()
           }
       }.sum
 
@@ -379,7 +384,7 @@ object QuerySuggester extends Logging {
 
     val unlabelledBiasCorrection =
       Math.min(
-        numUnlabelledDocs / numDocs.toDouble,
+        numDocs.toDouble / numUnlabelledDocs,
         querySuggestionConf.getDouble("maxUnlabelledBiasCorrection")
       )
     val evalFunction =
