@@ -11,7 +11,8 @@ object BlackLabSemantics {
     def blqHelper(qexpr: QExpr): TextPattern = qexpr match {
       case QWord(w) => new TextPatternTerm(w)
       case QPos(p) => new TextPatternProperty("pos", new TextPatternTerm(p))
-      case QDict(d) => throw notImplemented
+      case QDict(_) => throw notImplemented
+      case QGeneralizePhrase(_, _) => throw notImplemented
       case QWildcard() => new TextPatternAnyToken(1, 1)
       case QNamed(e: QExpr, name: String) => new TextPatternCaptureGroup(blqHelper(e), name)
       case QUnnamed(e) =>

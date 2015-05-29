@@ -294,16 +294,16 @@ object HitAnalyzer extends Logging {
 
     logger.debug("Calculating match data...")
     val (opMap, opMaptime) = Timing.time {
-      val matchData = hits.map(h => getMatchData(h, query, prefixCounts, suffixCounts))
-      val opMaps = matchData.transpose.map { matchList =>
-        assert(matchList.forall(_.queryToken == matchList.head.queryToken))
-        QueryMatches(matchList.head.queryToken, matchList.map(_.matches).flatten)
+      val matchDataPerSearcher = hits.map(h => getMatchData(h, query, prefixCounts, suffixCounts))
+      val matchDataPerSlot = matchDataPerSearcher.transpose.map { slotMatchData =>
+        assert(slotMatchData.forall(_.queryToken == slotMatchData.head.queryToken))
+        QueryMatches(slotMatchData.head.queryToken, slotMatchData.map(_.matches).flatten)
       }
-      opMaps.foldLeft(Map[QueryOp, IntMap[Int]]()) {
-        case (acc, data) =>
-          val newOps = generator.generate(data)
-          assert(acc.keySet.intersect(newOps.keySet).size == 0)
-          acc ++ newOps
+      matchDataPerSlot.foldLeft(Map[QueryOp, IntMap[Int]]()) {
+        case (accumulatedOpMap, queryMatches) =>
+          val newOps = generator.generate(queryMatches, examples)
+          assert(accumulatedOpMap.keySet.intersect(newOps.keySet).isEmpty)
+          accumulatedOpMap ++ newOps
       }
     }
     logger.debug(s"Got match data in ${opMaptime.toMillis / 1000.0} seconds")

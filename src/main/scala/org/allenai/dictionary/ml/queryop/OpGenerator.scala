@@ -12,7 +12,7 @@ object OpGenerator {
     matches: Seq[QueryMatch]
   ): Map[QLeaf, IntMap[Int]] = {
     val operatorMap = scala.collection.mutable.Map[QLeaf, List[(Int, Int)]]()
-    matches.zipWithIndex.foreach {
+    matches.view.zipWithIndex.foreach {
       case (queryMatch, index) =>
         val tokens = queryMatch.tokens
         val leaves = leafGenerator.generateLeaves(tokens)
@@ -24,15 +24,16 @@ object OpGenerator {
     operatorMap.map { case (k, v) => k -> IntMap(v: _*) }.toMap
   }
 
+
   def getRepeatedOpMatch(
     matches: QueryMatches,
     leafGenerator: QLeafGenerator
-  ): Map[QueryOp, IntMap[Int]] = {
+  ): Map[SetRepeatedToken, IntMap[Int]] = {
     val operatorMap = scala.collection.mutable.Map[SetRepeatedToken, List[(Int, Int)]]()
-    matches.matches.zipWithIndex.foreach {
+    matches.matches.view.zipWithIndex.foreach {
       case (queryMatch, matchIndex) =>
         val tokens = queryMatch.tokens
-        tokens.zipWithIndex.foreach {
+        tokens.view.zipWithIndex.foreach {
           case (token, tokenIndex) =>
             leafGenerator.generateLeaves(token).foreach { qLeaf =>
               val op = SetRepeatedToken(matches.queryToken.slot, tokenIndex + 1, qLeaf)
@@ -63,7 +64,7 @@ object OpGenerator {
   ): Map[QueryOp, IntMap[Int]] = {
     require(queryMatches.queryToken.slot.isInstanceOf[QueryToken])
     // AddToken ops implicitly match everything that is currently matched, add that back in
-    val allReadyMatches = IntMap(queryMatches.matches.zipWithIndex.flatMap {
+    val allReadyMatches = IntMap(queryMatches.matches.view.zipWithIndex.flatMap {
       case (qMatch, index) => if (qMatch.didMatch) Some((index, 0)) else None
     }: _*)
     OpGenerator.buildLeafMap(leafGenerator, queryMatches.matches).filter {
@@ -81,6 +82,7 @@ object OpGenerator {
   * to a query and calculates what sentences that operation would a starting query to match
   */
 abstract class OpGenerator {
-  def generate(matches: QueryMatches): Map[QueryOp, IntMap[Int]]
+  def generate(matches: QueryMatches, examples: IndexedSeq[WeightedExample]):
+  Map[QueryOp, IntMap[Int]]
 }
 

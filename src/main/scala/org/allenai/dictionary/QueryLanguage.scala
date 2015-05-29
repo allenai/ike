@@ -19,8 +19,11 @@ case class QDict(value: String) extends QLeaf
 case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])
   extends QLeaf
 case class SimilarPhrase(qwords: Seq[QWord], similarity: Double)
+case class QGeneralizePhrase(qwords: Seq[QWord], pos: Int) extends QLeaf
 case class QSimilarPhrases(qwords: Seq[QWord], pos: Int, phrases: Seq[SimilarPhrase])
-  extends QLeaf
+  extends QLeaf {
+  override def toString(): String = s"QSimilarPhrases(${qwords.map(_.value).mkString(" ")},$pos)"
+}
 case class QWildcard() extends QLeaf
 case class QNamed(qexpr: QExpr, name: String) extends QCapture
 case class QUnnamed(qexpr: QExpr) extends QCapture
@@ -62,19 +65,26 @@ object QExprParser extends RegexParsers {
   val posTagRegex = posTagSet.map(Pattern.quote).mkString("|").r
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
-  def wordRegex = """[^|\]\[\^$(){}\s*+,]+""".r
+  def integer = """-?[0-9]+""".r ^^ { _.toInt }
+  def positiveInteger = "[1-9][0-9]*".r ^^ { _.toInt }
+  def wordRegex = """[^|\]\[\^$(){}\s*+,"~]+""".r
   def word = wordRegex ^^ QWord
+  def generalizedWord = (word <~ "~") ~ integer ^^ { x =>
+    QGeneralizePhrase(Seq(x._1), x._2)
+  }
+  def generalizedPhrase = (("\"" ~> rep1(word)) <~ "\"~") ~ integer ^^ { x =>
+    QGeneralizePhrase(x._1, x._2)
+  }
   def pos = posTagRegex ^^ QPos
   def dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
   def wildcard = "\\.".r ^^^ QWildcard()
-  def atom = wildcard | pos | dict | word
+  def atom = wildcard | pos | dict | generalizedWord | generalizedPhrase | word
   def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
   def named = "(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) }
   def unnamed = "(" ~> expr <~ ")" ^^ QUnnamed
   def nonCap = "(?:" ~> expr <~ ")" ^^ QNonCap
   def curlyDisj = "{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq
   def operand = named | nonCap | unnamed | curlyDisj | atom
-  def integer = """-?[0-9]+""".r ^^ { _.toInt }
   def repetition = (operand <~ "[") ~ ((integer <~ ",") ~ (integer <~ "]")) ^^ { x =>
     QRepetition(x._1, x._2._1, x._2._2)
   }
@@ -97,6 +107,7 @@ object QueryLanguage {
       val exception = new ParseException(message, next.pos.column)
       Failure(exception)
   }
+
   def interpolateTables(expr: QExpr, tables: Map[String, Table]): Try[QExpr] = {
     def interp(value: String): QDisj = tables.get(value) match {
       case Some(table) if table.cols.size == 1 =>
@@ -114,6 +125,72 @@ object QueryLanguage {
         throw new IllegalArgumentException(s"Could not find dictionary '$value'")
     }
     def recurse(expr: QExpr): QExpr = expr match {
+      case QDict(value) => interp(value)
+      case l: QLeaf => l
+      case QSeq(children) => QSeq(children.map(recurse))
+      case QDisj(children) => QDisj(children.map(recurse))
+      case QNamed(expr, name) => QNamed(recurse(expr), name)
+      case QNonCap(expr) => QNonCap(recurse(expr))
+      case QPlus(expr) => QPlus(recurse(expr))
+      case QStar(expr) => QStar(recurse(expr))
+      case QUnnamed(expr) => QUnnamed(recurse(expr))
+      case QAnd(expr1, expr2) => QAnd(recurse(expr1), recurse(expr2))
+      case QRepetition(expr, min, max) => QRepetition(recurse(expr), min, max)
+    }
+    Try(recurse(expr))
+  }
+
+  def interpolateSimilarPhrases(expr: QExpr,
+      similarPhrasesSearcher: SimilarPhrasesSearcher): QExpr = {
+    def recurse(expr: QExpr): QExpr = expr match {
+      case QGeneralizePhrase(phrase, pos) =>
+        val similarPhrases =
+          similarPhrasesSearcher.getSimilarPhrases(phrase.map(_.value).mkString(" "))
+        QSimilarPhrases(phrase, pos, similarPhrases)
+      case l: QLeaf => l
+      case QSeq(children) => QSeq(children.map(recurse))
+      case QDisj(children) => QDisj(children.map(recurse))
+      case QNamed(expr, name) => QNamed(recurse(expr), name)
+      case QNonCap(expr) => QNonCap(recurse(expr))
+      case QPlus(expr) => QPlus(recurse(expr))
+      case QStar(expr) => QStar(recurse(expr))
+      case QUnnamed(expr) => QUnnamed(recurse(expr))
+      case QAnd(expr1, expr2) => QAnd(recurse(expr1), recurse(expr2))
+      case QRepetition(expr, min, max) => QRepetition(recurse(expr), min, max)
+    }
+    recurse(expr)
+  }
+
+  /** Replaces QDict and QGeneralizePhrases expressions within a QExpr with
+    * QDisj and QSimilarPhrase
+    *
+    * @param expr QExpr to interpolate
+    * @param tables tables to use when replacing QDict expressions
+    * @param similarPhrasesSearcher searcher to use when replacing QGeneralizePhrase expressions
+    * @return the attempt to interpolated the query
+    */
+  def interpolateQuery(expr: QExpr, tables: Map[String, Table],
+    similarPhrasesSearcher: SimilarPhrasesSearcher): Try[QExpr] = {
+    def interp(value: String): QDisj = tables.get(value) match {
+      case Some(table) if table.cols.size == 1 =>
+        val rowExprs = for {
+          row <- table.positive
+          value <- row.values
+          qseq = QSeq(value.qwords)
+        } yield qseq
+        QDisj(rowExprs)
+      case Some(table) =>
+        val name = table.name
+        val ncol = table.cols.size
+        throw new IllegalArgumentException(s"1-col table required: Table '$name' has $ncol columns")
+      case None =>
+        throw new IllegalArgumentException(s"Could not find dictionary '$value'")
+    }
+    def recurse(expr: QExpr): QExpr = expr match {
+      case QGeneralizePhrase(phrase, pos) =>
+        val similarPhrases =
+          similarPhrasesSearcher.getSimilarPhrases(phrase.map(_.value).mkString(" "))
+        QSimilarPhrases(phrase, pos, similarPhrases)
       case QDict(value) => interp(value)
       case l: QLeaf => l
       case QSeq(children) => QSeq(children.map(recurse))
@@ -150,6 +227,20 @@ object QueryLanguage {
       case QPlus(expr) => modifiableString(expr) + "+"
       case QStar(expr) => modifiableString(expr) + "*"
       case QRepetition(expr, min, max) => s"${modifiableString(expr)}[$min,$max]"
+      case QGeneralizePhrase(phrase, pos) =>
+        if (phrase.size == 1) {
+          s"${recurse(phrase.head)}~$pos"
+        } else {
+          // Use triple quote syntax since scala's single quote interpolation has a bug with \"
+          s""""${phrase.map(recurse).mkString(" ")}"~$pos"""
+        }
+      case QSimilarPhrases(phrase, pos, _) =>
+        if (phrase.size == 1) {
+          s"${recurse(phrase.head)}~$pos"
+        } else {
+          // Use triple quote syntax since scala's single quote interpolation has a bug with \"
+          s""""${phrase.map(recurse).mkString(" ")}"~$pos"""
+        }
       case _ => ???
     }
 

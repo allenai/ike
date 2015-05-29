@@ -3,7 +3,7 @@ package org.allenai.dictionary.ml.subsample
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary._
 import org.allenai.dictionary.index.TestData
-import org.allenai.dictionary.ml.TokenizedQuery
+import org.allenai.dictionary.ml.{SimilarPhrasesSearcherStub, TokenizedQuery}
 import nl.inl.blacklab.search.{ Span, Hits }
 
 import scala.collection.JavaConverters._
@@ -12,6 +12,7 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
 
   TestData.createTestIndex(scratchDir)
   val searcher = TestData.testSearcher(scratchDir)
+  val ss = new SimilarPhrasesSearcherStub()
 
   def hitToCaptures(hits: Hits, captureName: String): Seq[String] = {
     hits.asScala.map(hit => {
@@ -42,7 +43,7 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
       QDisj(Seq(QWord("like"), QWord("tastes"))),
       QNamed(QDisj(Seq(QPos("DT"), QPos("JJ"), QPos("NNS"))), "c1")
     ))
-    val tokenized = TokenizedQuery.buildWithGeneralizations(testQuery, Seq(searcher), 10)
+    val tokenized = TokenizedQuery.buildWithGeneralizations(testQuery, Seq(searcher), ss, 10)
     val cnames = tokenized.getNames :+ "c1"
     val hits = GeneralizedQuerySampler(1, 100).getSample(tokenized, searcher,
       Table("", Seq("c1"), Seq(), Seq()), Map())
@@ -77,7 +78,7 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
         TableRow(Seq(TableValue(Seq(QWord("hate"))), TableValue(Seq(QWord("bananas")))))
       )
     )
-    val tokenized = TokenizedQuery.buildWithGeneralizations(startingQuery, Seq(searcher), 10)
+    val tokenized = TokenizedQuery.buildWithGeneralizations(startingQuery, Seq(searcher), ss, 10)
     val expectedResults = Seq(
       "I like mango",
       "hate those bananas"

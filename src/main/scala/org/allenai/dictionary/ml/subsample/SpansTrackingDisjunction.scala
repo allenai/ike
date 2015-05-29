@@ -51,27 +51,28 @@ class SpansTrackingDisjunction(
 
   def initialize(): Boolean = {
     // Can't initialize the queue until the spans are started so we do it here
-    if (!firstSpan.next()) {
-      false
+    val firstSpanHasNext = firstSpan.next()
+    val firstSpanSorted = if (firstSpan.hitsStartPointSorted()) {
+      firstSpan
     } else {
-      val firstSpanSorted = if (firstSpan.hitsStartPointSorted()) {
-        firstSpan
-      } else {
-        new PerDocumentSortedSpans(firstSpan, false, false)
-      }
-      val alternativeSorted = alternatives.filter(_.next()).map { spans =>
-        if (!spans.hitsStartPointSorted()) {
-          new PerDocumentSortedSpans(spans, false, false)
-        } else {
-          spans
-        }
-      }
-      val allSpans = SortedSpans(firstSpanSorted, first = true) +:
-          alternativeSorted.map(SortedSpans(_, first = false))
-      queue = new SpanQueue(allSpans.size)
-      allSpans.foreach(queue.add)
-      queue.size() > 0
+      new PerDocumentSortedSpans(firstSpan, false, false)
     }
+    val alternativeSorted = alternatives.filter(_.next()).map { spans =>
+      if (!spans.hitsStartPointSorted()) {
+        new PerDocumentSortedSpans(spans, false, false)
+      } else {
+        spans
+      }
+    }
+    val allSpans = if (firstSpanHasNext) {
+      SortedSpans(firstSpanSorted, first = true) +:
+          alternativeSorted.map(SortedSpans(_, first = false))
+    } else {
+      alternativeSorted.map(SortedSpans(_, first = false))
+    }
+    queue = new SpanQueue(allSpans.size)
+    allSpans.foreach(queue.add)
+    queue.size() > 0
   }
 
   override def next(): Boolean = {

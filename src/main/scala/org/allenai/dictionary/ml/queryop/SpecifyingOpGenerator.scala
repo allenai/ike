@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.queryop
 
 import org.allenai.dictionary._
-import org.allenai.dictionary.ml.QueryMatches
+import org.allenai.dictionary.ml.{WeightedExample, QueryMatches}
 
 import scala.collection.immutable.IntMap
 
@@ -79,7 +79,8 @@ case class SpecifyingOpGenerator(
     }
   }
 
-  def generate(matches: QueryMatches): Map[QueryOp, IntMap[Int]] = {
+  override def generate(matches: QueryMatches, examples: IndexedSeq[WeightedExample]):
+  Map[QueryOp, IntMap[Int]] = {
     matches.queryToken.qexpr match {
       case None => generateForQLeaf(None, matches)
       case Some(ql: QLeaf) => generateForQLeaf(Some(ql), matches)

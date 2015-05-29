@@ -141,11 +141,13 @@ object TokenizedQuery {
   def buildWithGeneralizations(
     qexpr: QExpr,
     searchers: Seq[Searcher],
+    similarPhrasesSearcher: SimilarPhrasesSearcher,
     sampleSize: Int
   ): TokenizedQuery = {
     val tq = buildFromQuery(qexpr)
     val generalizations =
-      tq.getSeq.map(QueryGeneralizer.queryGeneralizations(_, searchers, sampleSize))
+      tq.getSeq.map(QueryGeneralizer.queryGeneralizations(_, searchers,
+        similarPhrasesSearcher, sampleSize))
     tq.copy(generalizations = Some(generalizations))
   }
 }

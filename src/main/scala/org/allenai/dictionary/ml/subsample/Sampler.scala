@@ -102,8 +102,12 @@ abstract class Sampler {
     * @param tables map of string->Table, used for interpolating queries
     * @return Hits object containing the samples
     */
-  def getSample(qexpr: TokenizedQuery, searcher: Searcher, targetTable: Table,
-    tables: Map[String, Table]): Hits
+  def getSample(
+      qexpr: TokenizedQuery,
+      searcher: Searcher,
+      targetTable: Table,
+      tables: Map[String, Table]
+  ): Hits
 
   /** Gets a sample of hits from a corpus that are 'close' to a given query, and that are
     * also limited to hits that capture terms from a particular table

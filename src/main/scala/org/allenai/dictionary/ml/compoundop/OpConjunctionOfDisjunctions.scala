@@ -39,10 +39,7 @@ case class OpConjunctionOfDisjunctions private (
       if (perSlotEdits contains tq.slot) {
         val otherOps = ops.filter(_.slot == tq.slot)
         val combinations = otherOps.map(x => x.combinable(tq))
-        // We do not allow OR if this is the only slot because it is usually preferable to
-        // suggest two separate queries in this case
-        combinations.forall(_ == AND) ||
-          (combinations.forall(_ == OR) && perSlotEdits.size != 1)
+        combinations.forall(_ == AND) || combinations.forall(_ == OR)
       } else {
         true
       }

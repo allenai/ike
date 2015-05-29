@@ -55,7 +55,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     config.getString("name") -> Future { SearchApp(config) }
   }.toMap
   val similarPhrasesSearcher =
-    new SimilarPhrasesSearcher(ConfigFactory.load()[Config]("SimilarPhrasesSearcher"))
+    new WordVecPhraseSearcher(ConfigFactory.load()[Config]("SimilarPhrasesSearcher"))
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
@@ -77,11 +77,16 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
         post {
           entity(as[SearchRequest]) { req =>
             complete {
+              val query = SearchApp.parse(req).get
+              val interpolatedQuery = QueryLanguage.interpolateQuery(
+                query, req.tables, similarPhrasesSearcher
+              ).get
               val resultsFuture = searchersFuture.map { searchers =>
-                val parResult = searchers.par.flatMap { searcher => searcher.search(req).get }
+                val parResult = searchers.par.flatMap { searcher =>
+                  searcher.search(interpolatedQuery, req.config).get
+                }
                 parResult.seq
               }
-
               val groupedFuture = for {
                 results <- resultsFuture
               } yield {
@@ -90,9 +95,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
                   case None => SearchResultGrouper.identityGroupResults(req, results)
                 }
               }
-
               val qexpr = SearchApp.parse(req).get
-
               groupedFuture.map { grouped => SearchResponse(qexpr, grouped) }
             }
           }
@@ -127,7 +130,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
               val timeout = config.getConfig("QuerySuggester").
                 getDuration("timeoutInSeconds", TimeUnit.SECONDS)
               complete(searchersFuture.map { searchers =>
-                SearchApp.suggestQuery(searchers.toSeq, req, timeout)
+                SearchApp.suggestQuery(searchers.toSeq, req, similarPhrasesSearcher, timeout)
               })
             }
           }
@@ -192,7 +195,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   } ~ get {
     unmatchedPath { p => getFromFile("public" + p) }
   }
-  
+
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
   def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoute ~ tablesRoute ~ corporaRoute)

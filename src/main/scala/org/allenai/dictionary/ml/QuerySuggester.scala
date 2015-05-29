@@ -211,6 +211,7 @@ object QuerySuggester extends Logging {
     * @param searchers Searchers to use when suggesting new queries
     * @param startingQuery Starting query to build suggestion from
     * @param tables Tables to use when building the query
+    *
     * @param target Name of the table to optimize the suggested queries for
     * @param narrow Whether the suggestions should narrow or broaden the starting
     * query
@@ -222,19 +223,21 @@ object QuerySuggester extends Logging {
     searchers: Seq[Searcher],
     startingQuery: QExpr,
     tables: Map[String, Table],
+    similarPhrasesSearcher: SimilarPhrasesSearcher,
     target: String,
     narrow: Boolean,
     config: SuggestQueryConfig
   ): Suggestions = {
-    val percentUnlabelled = querySuggestionConf.getDouble("percentUnlabelled")
     val targetTable = tables.get(target) match {
       case Some(table) => table
       case None => throw new IllegalArgumentException("Target table not found")
     }
     require(QueryLanguage.getCaptureGroups(startingQuery).size == targetTable.cols.size)
 
+    val percentUnlabelled = querySuggestionConf.getDouble("percentUnlabelled")
+
     val queryWithNamedCaptures = QueryLanguage.nameCaptureGroups(
-      startingQuery,
+      QueryLanguage.interpolateSimilarPhrases(startingQuery, similarPhrasesSearcher),
       targetTable.cols
     )
 
@@ -246,7 +249,8 @@ object QuerySuggester extends Logging {
       if (narrow) {
         TokenizedQuery.buildFromQuery(queryWithNamedCaptures)
       } else {
-        val tq = TokenizedQuery.buildWithGeneralizations(queryWithNamedCaptures, searchers, 100)
+        val tq = TokenizedQuery.buildWithGeneralizations(queryWithNamedCaptures, searchers,
+          similarPhrasesSearcher, 100)
         tq.getSeq.zip(tq.generalizations.get).foreach {
           case (q, g) => logger.debug(s"Generalize $q => $g")
         }
@@ -257,7 +261,7 @@ object QuerySuggester extends Logging {
       MatchesSampler()
     } else {
       GeneralizedQuerySampler(
-        Math.min(tokenizedQuery.size - 1, config.depth),
+        Math.min(tokenizedQuery.size, config.depth),
         querySuggestionConf.getConfig("broaden").getInt("wordPOSSampleSize")
       )
     }
@@ -338,7 +342,7 @@ object QuerySuggester extends Logging {
         GeneralizingOpGenerator(
           selectConf.getBoolean("suggestPos"),
           selectConf.getBoolean("suggestWord"),
-          selectConf.getBoolean("createDisjunctions")
+          selectConf.getInt("minSimilarityDifference")
         )
       }
       val (prefixCounts, suffixCounts) = if (narrow) {

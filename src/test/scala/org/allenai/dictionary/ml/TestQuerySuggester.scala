@@ -14,7 +14,7 @@ import scala.collection.immutable.IntMap
 class TestQuerySuggester extends UnitSpec with ScratchDirectory {
   TestData.createTestIndex(scratchDir)
   val searcher = TestData.testSearcher(scratchDir)
-
+  val ss = new SimilarPhrasesSearcherStub()
   def buildMap(ints: Seq[Int]): IntMap[Int] = {
     IntMap[Int](ints.map((_, 0)): _*)
   }
@@ -136,7 +136,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       Seq())
     val startingQuery = QueryLanguage.parse("I (?<c1> like)").get
     val suggestions =
-      QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table),
+      QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table), ss,
         "test", false, SuggestQueryConfig(5, 2, 100, 10, 0, -0.1, false)).suggestions
     val bestSuggestions = suggestions.take(2).map(_.query)
     assert(bestSuggestions contains QueryLanguage.parse("PRP (?<c1> VBP)").get)
@@ -153,7 +153,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       })
     val startingQuery = QueryLanguage.parse("(?<c1> {I, like, hate, it}+)").get
     val suggestions =
-      QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table),
+      QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table), ss,
         "test", true, SuggestQueryConfig(5, 2, 100, 1, -5, 0, false)).suggestions
     val bestScore = suggestions.head.score
     val bestSuggestions = suggestions.filter(_.score == bestScore)
@@ -171,7 +171,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       })
     val startingQuery = QueryLanguage.parse("(?<c1> .+) {mango, those, great}").get
     val suggestions =
-      QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table),
+      QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table), ss,
         "test", true, SuggestQueryConfig(5, 1, 100, 1, -5, -5, false))
     val bestScore = suggestions.suggestions.head.score
     // Fuzzy match to 1 to account for size penalties and the like
@@ -188,7 +188,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       Seq())
     val startingQuery = QueryLanguage.parse("(.[1,3])").get
     val suggestions =
-      QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table),
+      QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table), ss,
         "test", true, SuggestQueryConfig(10, 2, 100, 100, -1, -1, true)).suggestions
     val bestScore = suggestions(0).score
     val bestQueries = suggestions.filter(_.score == bestScore)

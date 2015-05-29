@@ -26,14 +26,10 @@ object GeneralizedQuerySampler {
     
     // Build span queries for each query/generalization
     val generalizingSpanQueries = generalizations.zip(qexpr.getNamedTokens).map {
-      case (GeneralizeToDisj(qexprs), (name, original)) =>
-        if (qexprs.isEmpty) {
-          buildSpanQuery(QNamed(original, name))
-        } else {
+      case (GeneralizeToDisj(qpos, qsimiliar, _), (name, original)) =>
           val originalSq = buildSpanQuery(original)
-          val extensions = qexprs.map(buildSpanQuery)
+          val extensions = (qpos ++ qsimiliar).map(buildSpanQuery)
           new SpanQueryTrackingDisjunction(originalSq, extensions, name)
-        }
       // Currently we do not handle GeneralizeToAll
       case (_, (name, original)) => buildSpanQuery(QNamed(original, name))
     }
