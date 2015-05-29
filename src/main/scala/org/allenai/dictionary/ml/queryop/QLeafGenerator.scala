@@ -28,10 +28,27 @@ case class QLeafGenerator(pos: Boolean, word: Boolean,
     if (tokens.isEmpty) {
       Seq()
     } else {
-      val leaves = generateLeaves(tokens.head).toSet
-      tokens.drop(1).foldLeft(leaves) {
-        case (acc, next) => acc.intersect(generateLeaves(next).toSet)
+      val posOp = if (pos) {
+        val head = tokens.head.pos
+        if (tokens.drop(1).forall(_.pos == head) && QLeafGenerator.validPos(head)) {
+          Some(QPos(head))
+        } else {
+          None
+        }
+      } else {
+        None
       }
+      val wordOp = if (word) {
+        val head = tokens.head.word
+        if (tokens.drop(1).forall(_.word == word) && QLeafGenerator.validWord(head)) {
+          Some(QWord(head))
+        } else {
+          None
+        }
+      } else {
+        None
+      }
+      (posOp ++ wordOp).filter(!avoidSuggesting.contains(_))
     }
   }
 
@@ -47,12 +64,6 @@ case class QLeafGenerator(pos: Boolean, word: Boolean,
     } else {
       None
     }
-
-    val allOps = posOp ++ wordOp
-    if (avoidSuggesting.isEmpty) {
-      allOps
-    } else {
-      allOps.filter(!avoidSuggesting.contains(_))
-    }
+    (posOp ++ wordOp).filter(!avoidSuggesting.contains(_))
   }
 }
