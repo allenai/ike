@@ -177,7 +177,7 @@ var TableManager = {
       method: 'DELETE'
     }, function(err, response, body) {
       if(response.statusCode !== 200) {
-        console.log("Unexpected response deleting a table: " + response);
+        console.log("Unexpected response deleting a table: " + JSON.stringify(response));
       }
     });
   },
@@ -190,7 +190,7 @@ var TableManager = {
       json: tables[tableName]
     }, function(err, response, body) {
       if(response.statusCode !== 200) {
-        console.log("Unexpected response writing a table: " + response);
+        console.log("Unexpected response writing a table: " + JSON.stringify(response));
       }
     });
   },
@@ -205,7 +205,7 @@ var TableManager = {
       if(response.statusCode === 200) {
         self.createTable(JSON.parse(body), true);
       } else {
-        console.log("Unexpected response requesting a table: " + response);
+        console.log("Unexpected response requesting a table: " + JSON.stringify(response));
       }
     });
   },

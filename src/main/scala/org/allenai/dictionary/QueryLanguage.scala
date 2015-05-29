@@ -21,15 +21,28 @@ case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[S
 case class SimilarPhrase(qwords: Seq[QWord], similarity: Double)
 case class QGeneralizePhrase(qwords: Seq[QWord], pos: Int) extends QLeaf
 case class QSimilarPhrases(qwords: Seq[QWord], pos: Int, phrases: Seq[SimilarPhrase])
-  extends QLeaf
+  extends QLeaf {
+  override def toString(): String = s"QSimilarPhrases(${qwords.map(_.value).mkString(" ")},$pos)"
+}
 case class QWildcard() extends QLeaf
 case class QNamed(qexpr: QExpr, name: String) extends QCapture
 case class QUnnamed(qexpr: QExpr) extends QCapture
 case class QNonCap(qexpr: QExpr) extends QAtom
-case class QStar(qexpr: QExpr) extends QAtom
-case class QPlus(qexpr: QExpr) extends QAtom
-case class QRepetition(qexpr: QExpr, min: Int, max: Int) extends QAtom
 case class QSeq(qexprs: Seq[QExpr]) extends QExpr
+
+sealed trait QRepeating extends QAtom {
+  def min: Int
+  def max: Int
+}
+case class QRepetition(qexpr: QExpr, min: Int, max: Int) extends QRepeating
+case class QStar(qexpr: QExpr) extends QRepeating {
+  def min: Int = 0
+  def max: Int = -1
+}
+case class QPlus(qexpr: QExpr) extends QRepeating {
+  def min: Int = 1
+  def max: Int = -1
+}
 case object QSeq {
   def fromSeq(seq: Seq[QExpr]): QExpr = seq match {
     case expr :: Nil => expr
@@ -54,7 +67,8 @@ object QExprParser extends RegexParsers {
   // scalastyle:off
   def integer = """-?[0-9]+""".r ^^ { _.toInt }
   def positiveInteger = "[1-9][0-9]*".r ^^ { _.toInt }
-  def word = """[^|\]\[\^$(){}\s*+,"~]+""".r ^^ QWord
+  def wordRegex = """[^|\]\[\^$(){}\s*+,"~]+""".r
+  def word = wordRegex ^^ QWord
   def generalizedWord = (word <~ "~") ~ integer ^^ { x =>
     QGeneralizePhrase(Seq(x._1), x._2)
   }
@@ -92,6 +106,59 @@ object QueryLanguage {
     case parser.NoSuccess(message, next) =>
       val exception = new ParseException(message, next.pos.column)
       Failure(exception)
+  }
+
+  def interpolateTables(expr: QExpr, tables: Map[String, Table]): Try[QExpr] = {
+    def interp(value: String): QDisj = tables.get(value) match {
+      case Some(table) if table.cols.size == 1 =>
+        val rowExprs = for {
+          row <- table.positive
+          value <- row.values
+          qseq = QSeq(value.qwords)
+        } yield qseq
+        QDisj(rowExprs)
+      case Some(table) =>
+        val name = table.name
+        val ncol = table.cols.size
+        throw new IllegalArgumentException(s"1-col table required: Table '$name' has $ncol columns")
+      case None =>
+        throw new IllegalArgumentException(s"Could not find dictionary '$value'")
+    }
+    def recurse(expr: QExpr): QExpr = expr match {
+      case QDict(value) => interp(value)
+      case l: QLeaf => l
+      case QSeq(children) => QSeq(children.map(recurse))
+      case QDisj(children) => QDisj(children.map(recurse))
+      case QNamed(expr, name) => QNamed(recurse(expr), name)
+      case QNonCap(expr) => QNonCap(recurse(expr))
+      case QPlus(expr) => QPlus(recurse(expr))
+      case QStar(expr) => QStar(recurse(expr))
+      case QUnnamed(expr) => QUnnamed(recurse(expr))
+      case QAnd(expr1, expr2) => QAnd(recurse(expr1), recurse(expr2))
+      case QRepetition(expr, min, max) => QRepetition(recurse(expr), min, max)
+    }
+    Try(recurse(expr))
+  }
+
+  def interpolateSimilarPhrases(expr: QExpr,
+      similarPhrasesSearcher: SimilarPhrasesSearcher): QExpr = {
+    def recurse(expr: QExpr): QExpr = expr match {
+      case QGeneralizePhrase(phrase, pos) =>
+        val similarPhrases =
+          similarPhrasesSearcher.getSimilarPhrases(phrase.map(_.value).mkString(" "))
+        QSimilarPhrases(phrase, pos, similarPhrases)
+      case l: QLeaf => l
+      case QSeq(children) => QSeq(children.map(recurse))
+      case QDisj(children) => QDisj(children.map(recurse))
+      case QNamed(expr, name) => QNamed(recurse(expr), name)
+      case QNonCap(expr) => QNonCap(recurse(expr))
+      case QPlus(expr) => QPlus(recurse(expr))
+      case QStar(expr) => QStar(recurse(expr))
+      case QUnnamed(expr) => QUnnamed(recurse(expr))
+      case QAnd(expr1, expr2) => QAnd(recurse(expr1), recurse(expr2))
+      case QRepetition(expr, min, max) => QRepetition(recurse(expr), min, max)
+    }
+    recurse(expr)
   }
 
   /** Replaces QDict and QGeneralizePhrases expressions within a QExpr with
@@ -150,7 +217,7 @@ object QueryLanguage {
     def recurse(qexpr: QExpr): String = qexpr match {
       case QWord(value) => value
       case QPos(value) => value
-      case QDict(value) => value
+      case QDict(value) => "$" + value
       case QWildcard() => "."
       case QSeq(children) => children.map(getQueryString).mkString(" ")
       case QDisj(children) => "{" + children.map(getQueryString).mkString(",") + "}"
@@ -161,6 +228,13 @@ object QueryLanguage {
       case QStar(expr) => modifiableString(expr) + "*"
       case QRepetition(expr, min, max) => s"${modifiableString(expr)}[$min,$max]"
       case QGeneralizePhrase(phrase, pos) =>
+        if (phrase.size == 1) {
+          s"${recurse(phrase.head)}~$pos"
+        } else {
+          // Use triple quote syntax since scala's single quote interpolation has a bug with \"
+          s""""${phrase.map(recurse).mkString(" ")}"~$pos"""
+        }
+      case QSimilarPhrases(phrase, pos, _) =>
         if (phrase.size == 1) {
           s"${recurse(phrase.head)}~$pos"
         } else {
@@ -191,52 +265,55 @@ object QueryLanguage {
   }
 
   /** @param qexpr query to evaluate
-    * @return number of tokens the query will match, or -1 if the query
-    *      can match a variable number of tokens'
+    * @return range of tokens the query will match, ends with -1 if the query
+    * can match a variable number of tokens'
     */
-  def getQueryLength(qexpr: QExpr): Int = qexpr match {
-    case QDict(_) => -1
-    case QPlus(_) => -1
-    case QStar(_) => -1
-    case l: QLeaf => 1
-    case QSeq(seq) => {
-      val lengths = seq.map(getQueryLength)
-      if (lengths.forall(_ != -1)) lengths.sum else -1
+  def getQueryLength(qexpr: QExpr): (Int, Int) = qexpr match {
+    case QDict(_) => (0, -1)
+    case qr: QRepeating => {
+      val (baseMin, baseMax) = getQueryLength(qr.qexpr)
+      val max = if (baseMax == -1 || qr.max == -1) -1 else baseMax * qr.max
+      (baseMin * qr.min, max)
     }
+    case l: QLeaf => (1, 1)
+    case QSeq(seq) =>
+      val (mins, maxes) = seq.map(getQueryLength(_)).unzip
+      val max = if (maxes.forall(_ != -1)) maxes.sum else -1
+      (mins.sum, max)
     case QDisj(seq) =>
-      val lengths = seq.map(getQueryLength)
-      if (lengths.forall(_ == lengths.head)) lengths.head else -1
-    case QRepetition(expr, min, max) => if (min == max) {
-      val exprLength = getQueryLength(expr)
-      if (exprLength == -1) -1 else exprLength * min
-    } else {
-      -1
-    }
+      val (mins, maxes) = seq.map(getQueryLength(_)).unzip
+      val max = if (maxes.forall(_ != -1)) maxes.max else -1
+      (mins.min, max)
+    case QAnd(q1, q2) =>
+      val (min1, max1) = getQueryLength(q1)
+      val (min2, max2) = getQueryLength(q2)
+      (Math.min(min1, min2), math.max(max1, max2))
     case q: QAtom => getQueryLength(q.qexpr)
-    case QAnd(q1, q2) => math.min(getQueryLength(q1), getQueryLength(q2))
   }
 
   /** Ensures that all capture groups in QExpr are named capture groups with names corresponding
     * to a column in tableCols. If QExpr contains unnamed capture groups they will be replaced with
-    * named capture groups with names taken from tableCols in the order they appear.
+    * named capture groups with names taken from tableCols in the order they appear
     *
     * @param qexpr Query expression to name capture groups within
     * @param tableCols Sequence of the columns in a table to be used to name unnamed capture
-    *                groups
+    *          groups
     * @throws IllegalArgumentException if QExpr contains a mix of named and unnamed capture groups,
-    *                                if the name capture group do not have names corresponding
-    *                                to the columns in tableCols, or if the query has the wrong
-    *                                number of capture groups.
+    *                          if the name capture group do not have names corresponding
+    *                          to the columns in tableCols, or if the query has the wrong
+    *                          number of capture groups
     */
   def nameCaptureGroups(qexpr: QExpr, tableCols: Seq[String]): QExpr = {
-    var unnamedCounts = 0
+    var columnsLeft = tableCols
     def recurse(qexpr: QExpr): QExpr = qexpr match {
       case QNamed(q, name) =>
+        require(columnsLeft contains name)
+        columnsLeft = columnsLeft.filter(_ != name)
         require(tableCols contains name)
         QNamed(recurse(q), name)
       case QUnnamed(q) =>
-        val name = tableCols(unnamedCounts)
-        unnamedCounts += 1
+        val name = columnsLeft.head
+        columnsLeft = columnsLeft.drop(1)
         QNamed(recurse(q), name)
       case QStar(q) => QStar(recurse(q))
       case QPlus(q) => QPlus(recurse(q))
@@ -248,7 +325,28 @@ object QueryLanguage {
       case q: QLeaf => q
     }
     val output = recurse(qexpr)
-    require(unnamedCounts == 0 || unnamedCounts == tableCols.size)
     output
+  }
+
+  /** Convert a QRepetition to a QStar or QPlus if possible, None if it can be deleted */
+  def convertRepetition(qexpr: QRepetition): Option[QExpr] = qexpr match {
+    case QRepetition(expr, 0, -1) => Some(QStar(expr))
+    case QRepetition(expr, 1, -1) => Some(QPlus(expr))
+    case QRepetition(expr, 1, 1) => Some(expr)
+    case QRepetition(expr, 0, 0) => None
+    case _ => Some(qexpr)
+  }
+
+  /** @return If qexpr is a QSeq an equivalent QSeq that has no QSeq as children, otherwise qexpr */
+  def flatten(qexpr: QExpr): QExpr = qexpr match {
+    case QSeq(seq) => if (seq.size == 1) {
+      flatten(seq.head)
+    } else {
+      QSeq(seq.map {
+        case QSeq(childSeq) => childSeq.map(flatten)
+        case child => Seq(child)
+      }.flatten)
+    }
+    case _ => qexpr
   }
 }

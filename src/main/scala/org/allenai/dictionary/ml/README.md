@@ -12,16 +12,20 @@ queries will match less sentences than original query), and 'Broadening' makes t
 suggested queries will match more sentences than the original query).
 
 ### Limitations
-Currently only fixed length queries are supported, which means queries that contain control
- characters like '*' or '+' are not supported.
-Only one column tables are supported.
-Currently only the following changes can be made to a user's query
+For 'narrowing' we support any type of query. The following changes can be made to a user's query
 1. Adding a prefix to the original query (ex. "fat cat" => "the fat cat")
 2. Adding a suffix to the original query (ex. "fat cat" => "fat cat ran")
 3. Replace a token in the original query (ex. "fat cat" => "fat NN")
-4. Replacing a token with a disjunction (ex. "fat cat" => "{fat, lazy} cat")
+4. 1-3 can also suggest disjunctions (ex. "cat" => "{fat, lazy} fat", "NN" => "{cat, dog}")
+5. Removing a star or plus operator (ex "cat*" => "cat")
+6. Removing star operator (ex "the cat*" => "the")
+7. Changing a star to a plus (ex "cat*" => "cat+")
 
-prefixes, suffixes, or new tokens can be words or part of speech tags.
+For 'broadening' we only support fixed length queries, meaning queries that will always match a 
+particular number of tokens. For this queries we support:
+1. Replacing a token within the original query
+2. Removing tokens from the start or end the query (ex "the (cat)" => "(cat)")
+3. Adding a token to make a disjunction within the query (ex "cat" => "{cat, dog}")
 
 ## Implementation
 We view the task of suggesting queries as the task of finding 'Query Operators', or functions that takes as 
@@ -51,21 +55,27 @@ that combine several primitive operations we can then take the intersection of t
  primitive operation matches to find out what sentences the combined operation would match.
  
 An additional concept we need when dealing with 'broadening' queries is that of the edit distance
- between a query and a sentence. The edit distance is defined to be the number of operators
- required to make a particular query match a particular sentence. For example, if our query is 
- "a fast horse", to make the query match the phrase "a slow horse" we will need to edit at least
-  one of the symbols in that query, (for example, replace the word "slow" in the query with the 
-  word "fast"). The distance from the same query to the sentence "a slow cow" would be 2. During 
-  subsampling we record the edit distance from our query of each sentence in our subsample.
-  
-In addition, we keep track of which operators are capable of reducing the edit 
-distance from our query to each sentence. We say an operator that reduces the edit
- distance of our staring query to a given sentence is 'required' for that sentence, otherwise it 
- is not required. To give a more detailed example consider the following scenario:
+between a query and a sentence. First we understand queries as being broken up into a sequence of  
+individual "query-tokens". For example the query "we {saw, head} a cat*" would be broken up into
+the following query-tokens: "we", "{saw, head}", "a", "cat*". Then we define the edit distance
+between a query and a sentence to be the number of query-tokens that would need to be altered for 
+the query to match that sentence For example, if our query is "a fast horse", to make the query 
+match the phrase "a slow horse" we
+will need to edit at least one of the symbols in that query, (for example, replace the word 
+"slow" in the query with the word "fast") so the edit distance is one. The distance from the same 
+query to the sentence "a slow cow" would be 2. 
+
+During subsampling we record the edit distance from our query of each sentence in our subsample.
+In addition, we keep track of which operators are capable of reducing the edit distance from our 
+query to each sentence. We say an operator that reduces the edit distance of our staring query to
+a given sentence is 'required' for that sentence, otherwise it is not required. This means that 
+if a sentence had an edit distance of '3' from our query, we would need to apply 3 'required' 
+operators to that query (that each changed different query-tokens within that query) for that 
+query to now match that sentence. To give a more detailed example consider the following scenario:
 
 Our starting query is "a cat"
 
-Our query operation replaces "a" with "DT" (so our new query would "DT cat") 
+Our query operation replaces "a" with "DT" (so our new query would be "DT cat")
 
 We have three sentences:
 1. "a cat"
@@ -86,17 +96,17 @@ And our operator
 * does not match sentence 4
 
 It is left to the compound operators to calculate the number of required operators for each 
-sentences will be made by applying all their primitive operators, and in particular to avoid 
-"double counting" requirements if multiple operators would, for example, edit the same word 
+sentences that will be made by applying all their primitive operators, and in particular to avoid
+"double counting" requirements if multiple operators would, for example, edit the same query-token
 within a query.
  
 Implementation-wise we record this information using an map of integers to integers, where the keys 
-are integers corresponding to particular sentences and the values are 0, if the given operation 
-does not fulfill a requirement for a particular sentence, 1 if it fulfills one requirement, 2 if
- it fulfills 2 and so on. By comparing the number of requirement a operator has fulfilled for a
+are integers corresponding to particular sentences and the values are the number of required
+edits made to that sentence.
+By comparing the number of requirement a operator has fulfilled for a
 particular sentence to the edit distance from the starting query to that sentence we can quickly 
-deduce whether the starting query would match then sentence if that set of operators were applied
-. In the above example this means the operator would be associated with:
+deduce whether the starting query would match then sentence if that set of operators were applied. 
+In the above example this means the operator would be associated with:
 
 IntMap(1 -> 0, 2 -> 1, 3 -> 1)
 
@@ -106,8 +116,11 @@ We use IntMap rather then Seq\[(Int, Int)\] or Map\[Int, Int\] because:
 
 ## Code
 1. subsample package handles the subsampling phase.
-2. primitiveop package defines what a primitive query operation is and how to generate them from a subsample.
+2. queryop package defines what a primitive query operation is and how to generate them from a 
+subsample.
 3. compoundop package defines how primitive query operations can be combined into compound operations.
 4. QueryEvaluator.scala defines the evaluation functions to use.
 5. TokenizedQuery.scala breaks queries into sequences of smaller queries as a preprocessing step.
-6. QuerySuggester.scala 'glues' these pieces together and implements the actual beam search.
+7. HitAnalyzer.scala preprocesses Hits by calculating their labels and grouping the tokens
+within each hit so that they can be used by queryop.OpGenerator
+6. QuerySuggester.scala glues these pieces together and implements the actual beam search.

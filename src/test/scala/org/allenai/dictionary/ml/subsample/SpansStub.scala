@@ -5,24 +5,40 @@ import java.util
 import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
 
+object SpansStub {
+  def apply(docs: Seq[Int], s: Seq[Int], e: Seq[Int]): SpansStub =
+    new SpansStub(docs.toIndexedSeq, s.toIndexedSeq, e.toIndexedSeq, Seq(), IndexedSeq())
+
+  def apply(data: (Seq[Int], Seq[Int], Seq[Int])): SpansStub = apply(data._1, data._2, data._3)
+
+  def apply(data: Seq[(Int, Int, Int)]): SpansStub = apply(data.unzip3)
+
+  def apply(data: Seq[(Int, Int)], length: Int): SpansStub =
+    apply(data.map((x => (x._1, x._2, x._2 + length))))
+
+  def withCaptures(
+    data: Seq[(Int, Int, Int)], captures: Seq[Seq[Span]], names: Seq[String]
+  ): SpansStub = {
+    val (d, s, e) = data.unzip3
+    new SpansStub(d.toIndexedSeq, s.toIndexedSeq, e.toIndexedSeq, names, captures.toIndexedSeq)
+  }
+}
 /** Stub Spans class for testing
   */
-case class SpansStub(
-    private val docs: IndexedSeq[Int],
-    private val starts: IndexedSeq[Int],
-    private val ends: IndexedSeq[Int]
+class SpansStub(
+    val docs: IndexedSeq[Int],
+    val starts: IndexedSeq[Int],
+    val ends: IndexedSeq[Int],
+    val captureNames: Seq[String],
+    val captures: IndexedSeq[Seq[Span]]
 ) extends BLSpans {
 
-  def this(docs: Seq[Int], s: Seq[Int], e: Seq[Int]) =
-    this(docs.toIndexedSeq, s.toIndexedSeq, e.toIndexedSeq)
-
-  def this(data: (Seq[Int], Seq[Int], Seq[Int])) = this(data._1, data._2, data._3)
-
-  def this(data: Seq[(Int, Int, Int)]) = this(data.unzip3)
-
-  def this(data: Seq[(Int, Int)], length: Int) = this(data.map((x => (x._1, x._2, x._2 + length))))
-
   private var current = -1
+  private var captureNumbers = Seq[Int]()
+
+  def expected(index: Int): (Int, Int, Int) = {
+    (docs(index), starts(index), ends(index))
+  }
 
   override def hitsLength(): Int = {
     if (docs.size > 0) {
@@ -34,9 +50,18 @@ case class SpansStub(
     }
   }
 
+  override def setHitQueryContext(context: HitQueryContext): Unit = {
+    captureNumbers = captureNames.map(context.registerCapturedGroup(_))
+  }
+
   override def passHitQueryContextToClauses(context: HitQueryContext): Unit = {}
 
-  override def getCapturedGroups(capturedGroups: Array[Span]): Unit = {}
+  override def getCapturedGroups(capturedGroups: Array[Span]): Unit = {
+    val onCaptures = captures(current)
+    captureNumbers.zip(onCaptures).foreach {
+      case (i, span) => capturedGroups.update(i, span)
+    }
+  }
 
   override def doc(): Int = docs(current)
 

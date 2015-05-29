@@ -4,16 +4,23 @@ import com.typesafe.config.Config
 import nl.inl.blacklab.search.{ HitsWindow, Searcher, TextPattern }
 import org.allenai.common.Config.EnhancedConfig
 import org.allenai.common.Logging
-import org.allenai.dictionary.ml.QuerySuggester
+import org.allenai.dictionary.ml.{ Suggestions, QuerySuggester }
 
 import scala.util.{ Success, Try }
 
+import java.util.concurrent.{ TimeoutException, TimeUnit, Executors, Callable }
+
 case class SuggestQueryRequest(query: String, tables: Map[String, Table],
   target: String, narrow: Boolean, config: SuggestQueryConfig)
-case class SuggestQueryConfig(beamSize: Int, depth: Int, maxSampleSize: Int,
-  pWeight: Double, nWeight: Double, uWeight: Double, allowDisjunctions: Boolean)
-case class ScoredStringQuery(query: String, score: Double, msg: String)
-case class SuggestQueryResponse(scoredQueries: Seq[ScoredStringQuery])
+case class SuggestQueryConfig(beamSize: Int, depth: Int, maxSampleSize: Int, pWeight: Double,
+  nWeight: Double, uWeight: Double, allowDisjunctions: Boolean)
+case class ScoredStringQuery(query: String, score: Double, positiveScore: Double,
+  negativeScore: Double, unlabelledScore: Double)
+case class SuggestQueryResponse(
+  original: ScoredStringQuery,
+  suggestions: Seq[ScoredStringQuery],
+  samplePercent: Double
+)
 case class WordInfoRequest(word: String, config: SearchConfig)
 case class WordInfoResponse(word: String, posTags: Map[String, Int])
 case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1)
@@ -36,8 +43,6 @@ case class SearchApp(config: Config) extends Logging {
     BlackLabResult.fromHits(hits, name).toSeq
   }
   def semantics(query: QExpr): Try[TextPattern] = Try(BlackLabSemantics.blackLabQuery(query))
-  def suggestQuery(request: SuggestQueryRequest): Try[SuggestQueryResponse] =
-    SearchApp.suggestQuery(Seq(this), request)
   def search(qexpr: QExpr, searchConfig: SearchConfig): Try[Seq[BlackLabResult]] = for {
     textPattern <- semantics(qexpr)
     hits <- blackLabHits(textPattern, searchConfig.limit)
@@ -74,23 +79,50 @@ case class SearchApp(config: Config) extends Logging {
   } yield res
 }
 
-object SearchApp {
+object SearchApp extends Logging {
+
   def parse(r: SearchRequest): Try[QExpr] = r.query match {
     case Left(queryString) => QueryLanguage.parse(queryString)
     case Right(qexpr) => Success(qexpr)
   }
 
-  def suggestQuery(searchApps: Seq[SearchApp], request: SuggestQueryRequest): Try[SuggestQueryResponse] = for {
+  def suggestQuery(
+    searchApps: Seq[SearchApp],
+    request: SuggestQueryRequest,
+    similarPhrasesSearcher: SimilarPhrasesSearcher,
+    timeoutInSeconds: Long
+  ): Try[SuggestQueryResponse] = for {
     query <- QueryLanguage.parse(request.query)
-    suggestion <- Try(
-      QuerySuggester.suggestQuery(searchApps.map(_.searcher), query, request.tables, request.target,
-        request.narrow, request.config)
-    )
+    suggestion <- Try {
+      val callableSuggestsion = new Callable[Suggestions] {
+        override def call(): Suggestions = {
+          QuerySuggester.suggestQuery(searchApps.map(_.searcher), query,
+            request.tables, similarPhrasesSearcher, request.target,
+            request.narrow, request.config)
+        }
+      }
+      val exService = Executors.newSingleThreadExecutor()
+      val future = exService.submit(callableSuggestsion)
+      try {
+        future.get(timeoutInSeconds, TimeUnit.SECONDS)
+      } catch {
+        case to: TimeoutException =>
+          logger.info(s"Suggestion for ${request.query} times out")
+          future.cancel(true) // Interrupt the suggestions
+          throw new TimeoutException("Query suggestion timed out")
+      }
+    }
     stringQueries <- Try(
-      suggestion.map(x => {
-        ScoredStringQuery(QueryLanguage.getQueryString(x.query), x.score, x.msg)
+      suggestion.suggestions.map(x => {
+        ScoredStringQuery(QueryLanguage.getQueryString(x.query), x.score, x.positiveScore,
+          x.negativeScore, x.unlabelledScore)
       })
     )
-    response = SuggestQueryResponse(stringQueries)
+    original = suggestion.original
+    originalString = ScoredStringQuery(QueryLanguage.getQueryString(original.query), original.score,
+      original.positiveScore, original.negativeScore, original.unlabelledScore)
+    totalDocs = searchApps.map(_.searcher.getIndexReader.numDocs()).sum
+    response = SuggestQueryResponse(originalString, stringQueries,
+      suggestion.docsSampledFrom / totalDocs.toDouble)
   } yield response
 }

@@ -7,7 +7,11 @@ import org.allenai.common.Config._
 import org.allenai.common.Logging
 import scala.collection.JavaConverters._
 
-class SimilarPhrasesSearcher(config: Config) extends Logging {
+trait SimilarPhrasesSearcher {
+  def getSimilarPhrases(phrase: String): Seq[SimilarPhrase]
+}
+
+class WordVecPhraseSearcher(config: Config) extends Logging with SimilarPhrasesSearcher {
   private val model = {
     logger.info("Loading phrase vectors ...")
     val file = DataFile.fromDatastore(config[Config]("vectors"))
@@ -16,7 +20,7 @@ class SimilarPhrasesSearcher(config: Config) extends Logging {
     result
   }
 
-  def getSimilarPhrases(phrase: String): Seq[SimilarPhrase] = {
+  override def getSimilarPhrases(phrase: String): Seq[SimilarPhrase] = {
     val phraseWithUnderscores = phrase.replace(' ', '_')
     try {
       model.getMatches(phraseWithUnderscores, 100).asScala.map { m =>

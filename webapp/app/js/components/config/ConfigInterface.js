@@ -41,6 +41,9 @@ var ConfigInterface = React.createClass({
     var pWeightChange = this.onChange('pWeight', parseFloat, 'ml')
     var nWeightChange = this.onChange('nWeight', parseFloat, 'ml')
     var uWeightChange = this.onChange('uWeight', parseFloat, 'ml')
+    var pWeightChangeNarrow = this.onChange('pWeightNarrow', parseFloat, 'ml')
+    var nWeightChangeNarrow = this.onChange('nWeightNarrow', parseFloat, 'ml')
+    var uWeightChangeNarrow = this.onChange('uWeightNarrow', parseFloat, 'ml')
     var allowDisjunctionChange = this.toggleCheckbox('allowDisjunctions', 'ml')
     var disable = this.toggleCheckbox('disable', 'ml')
     return (
@@ -119,33 +122,66 @@ var ConfigInterface = React.createClass({
                   value={config.ml.maxSampleSize}
                   min='1'>
                 </Input>
+                <PanelGroup accordion>
+                <Panel header='Broaden Scoring' collapsed='True'>
                 <Input
                     type='range'
                     label={'Positive Weight ' + config.ml.pWeight.toFixed(2)}
                     value={config.ml.pWeight}
                     onChange={pWeightChange}
-                    step='0.5'
-                    min='-20'
-                    max='20'>
+                    step='0.2'
+                    min='-5'
+                    max='5'>
                 </Input>
                 <Input
                     type='range'
                     label={'Negative Weight ' + config.ml.nWeight.toFixed(2)}
                     value={config.ml.nWeight}
                     onChange={nWeightChange}
-                    step='0.5'
-                    min='-20'
-                    max='20'>
+                    step='0.2'
+                    min='-5'
+                    max='5'>
                 </Input>
                 <Input
                     type='range'
                     label={'Unlabelled Weight ' + config.ml.uWeight.toFixed(2)}
                     value={config.ml.uWeight}
                     onChange={uWeightChange}
-                    step='0.5'
-                    min='-20'
-                    max='20'>
+                    step='0.001'
+                    min='-1'
+                    max='1'>
                 </Input>
+                </Panel>
+                <Panel header='Narrow Scoring' collapsed='True'>
+                <Input
+                    type='range'
+                    label={'Positive Weight ' + config.ml.pWeightNarrow.toFixed(2)}
+                    value={config.ml.pWeightNarrow}
+                    onChange={pWeightChangeNarrow}
+                    step='0.2'
+                    min='-5'
+                    max='5'>
+                </Input>
+                <Input
+                    type='range'
+                    label={'Negative Weight ' + config.ml.nWeightNarrow.toFixed(2)}
+                    value={config.ml.nWeightNarrow}
+                    onChange={nWeightChangeNarrow}
+                    step='0.2'
+                    min='-5'
+                    max='5'>
+                </Input>
+                <Input
+                    type='range'
+                    label={'Unlabelled Weight ' + config.ml.uWeightNarrow.toFixed(2)}
+                    value={config.ml.uWeightNarrow}
+                    onChange={uWeightChangeNarrow}
+                    step='0.001'
+                    min='-1'
+                    max='1'>
+                </Input>
+                </Panel>
+                </PanelGroup>
             </Panel>
         </PanelGroup>
       </div>
