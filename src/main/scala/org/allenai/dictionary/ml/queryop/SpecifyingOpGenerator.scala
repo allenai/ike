@@ -28,14 +28,27 @@ case class SpecifyingOpGenerator(
     case _ => QLeafGenerator(pos = false, word = false)
   }
 
-  def generateForQSimilarPhrases(qsim: QSimilarPhrases, matches: QueryMatches,
-    examples: IndexedSeq[WeightedExample]): Map[QueryOp, IntMap[Int]] = {
+  def generateForQSimilarPhrases(
+      qsim: QSimilarPhrases,
+      matches: QueryMatches,
+      examples: IndexedSeq[WeightedExample],
+      repeats: Option[(Int, Int)]
+  ): Map[QueryOp, IntMap[Int]] = {
     val phraseMap = new SimilarPhraseMatchTracker(qsim)
     val slot = matches.queryToken.slot
-    matches.matches.view.zipWithIndex.foreach {
-      case (queryMatch, index) =>
-        val phrase = queryMatch.tokens.map(_.word)
-        phraseMap.addPhrase(phrase, queryMatch.didMatch, index)
+    if (repeats.isEmpty) {
+      matches.matches.view.zipWithIndex.foreach {
+        case (queryMatch, index) =>
+          val phrase = queryMatch.tokens.map(_.word)
+          phraseMap.addPhrase(phrase, queryMatch.didMatch, index)
+      }
+    } else {
+      val (min, max) = repeats.get
+      matches.matches.view.zipWithIndex.foreach {
+        case (queryMatch, index) =>
+          val phrase = queryMatch.tokens.map(_.word).toIndexedSeq
+          phraseMap.addPhrases(phrase, queryMatch.didMatch, index, min, max)
+      }
     }
     val thresholds2Edit = phraseMap.generateOps(0, qsim.pos, minSimilarityDifference, examples)
     thresholds2Edit.map {
@@ -53,13 +66,23 @@ case class SpecifyingOpGenerator(
     OpGenerator.getSetTokenOps(matches, getLeafGenerator(qleafOpt, isCapture))
   }
 
-  def generateForQRepeating(repeatingOp: QRepeating, matches: QueryMatches): Map[QueryOp, IntMap[Int]] = {
+  def generateForQRepeating(
+      repeatingOp: QRepeating,
+      matches: QueryMatches,
+      examples: IndexedSeq[WeightedExample]
+  ): Map[QueryOp, IntMap[Int]] = {
     val index = matches.queryToken.slot.token
     val isCapture = matches.queryToken.isCapture
 
     // Get ops the involve changing the child token
     val leafGenerator = getLeafGenerator(repeatingOp.qexpr, isCapture)
-    val setTokenOps = OpGenerator.getSetTokenOps(matches, leafGenerator)
+    val setChildOps = repeatingOp.qexpr match {
+      case qsp: QSimilarPhrases =>
+        generateForQSimilarPhrases(
+          qsp, matches, examples, Some((repeatingOp.min, repeatingOp.max))
+        )
+      case _ => OpGenerator.getSetTokenOps(matches, leafGenerator)
+    }
 
     // Get ops that involve removing the token
     val (childMin, childMax) = QueryLanguage.getQueryLength(repeatingOp.qexpr)
@@ -87,7 +110,7 @@ case class SpecifyingOpGenerator(
     if (childMin != childMax) {
       // In this case it is harder to reason about the # of repetitions the query needs to match
       // each token sequence, so currently we stop here
-      setTokenOps ++ removeOps
+      setChildOps ++ removeOps
     } else {
       // Gets op that involves changing the number of repetitions and tokens within a repetition
       case class Repetitions(index: Int, repeats: Int, required: Int)
@@ -110,16 +133,17 @@ case class SpecifyingOpGenerator(
       } else {
         Seq()
       }
-      (setMinOps ++ setMaxOps ++ removeOps ++ setTokenOps ++ repeatedOps).toMap
+      (setMinOps ++ setMaxOps ++ removeOps ++ setChildOps ++ repeatedOps).toMap
     }
   }
 
-  override def generate(matches: QueryMatches, examples: IndexedSeq[WeightedExample]): Map[QueryOp, IntMap[Int]] = {
+  override def generate(matches: QueryMatches, examples: IndexedSeq[WeightedExample]):
+  Map[QueryOp, IntMap[Int]] = {
     matches.queryToken.qexpr match {
       case None => generateForNone(matches)
-      case Some(qs: QSimilarPhrases) => generateForQSimilarPhrases(qs, matches, examples)
+      case Some(qs: QSimilarPhrases) => generateForQSimilarPhrases(qs, matches, examples, None)
       case Some(ql: QLeaf) => generateForQLeaf(ql, matches)
-      case Some(qr: QRepeating) => generateForQRepeating(qr, matches)
+      case Some(qr: QRepeating) => generateForQRepeating(qr, matches, examples)
       case _ => Map()
     }
   }

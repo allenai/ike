@@ -1,6 +1,6 @@
 package org.allenai.dictionary.ml.queryop
 
-import org.allenai.dictionary.QSimilarPhrases
+import org.allenai.dictionary.{SimilarPhrase, QSimilarPhrases}
 import org.allenai.dictionary.ml.Label._
 import org.allenai.dictionary.ml.WeightedExample
 
@@ -15,61 +15,95 @@ class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
   private var hits: List[(Int, Int, Int)] = List()
 
   // Maps phrases -> minPos needed for qSimilarPhrases to match that rank
-  private val similarities =
-    qSimilarPhrases.phrases.sortBy(_.similarity).reverse.zipWithIndex.map {
+  private val phraseToRank = {
+    val allPhrases = SimilarPhrase(qSimilarPhrases.qwords, 0) +: qSimilarPhrases.phrases
+    allPhrases.sortBy(_.similarity).reverse.zipWithIndex.map {
       case (phrases, index) => phrases.qwords.map(_.value) -> (index + 1)
     }.toMap + (qSimilarPhrases.qwords.map(_.value) -> 0)
+  }
 
   lazy val maxPhraseLength = qSimilarPhrases.phrases.map(_.qwords.size).max
 
   def addPhrase(phrase: Seq[String], didMatch: Boolean, index: Int): Unit = {
-    if (similarities.contains(phrase)) {
-      val posNeeded = similarities(phrase)
+    if (phraseToRank.contains(phrase)) {
+      val posNeeded = phraseToRank(phrase)
       hits = (index, if (didMatch) 0 else 1, posNeeded) :: hits
+    }
+  }
+
+  def minSimForPhrases(phrases: IndexedSeq[String], min: Int, max: Int): Int = {
+    if (phrases.isEmpty) {
+      0
+    } else if (phrases.size == 1) {
+      phraseToRank(phrases)
+    } else {
+      // Solve a dynamic programming problem to decide the min setting needed to match the
+      // token sequence.
+
+      val adjustedMax = if (max == -1) {
+        phrases.size
+      } else {
+        Math.min(max, phrases.size)
+      }
+
+      // Stores (word matched up to, #phrases used) -> minPosSetting needed
+      val minRank = Array.fill[Array[Int]](phrases.size + 1)(Array.fill[Int](adjustedMax + 1)(-1))
+
+      // Initialize (rank 0, word 0) -> 0 phrases needed
+      minRank(0)(0) = 0
+
+      // Precompute (word matched up to) -> min and max #phrases we could use to reach that word
+      // and still match the whole sequence using an allowable number of phrases
+      val wordToPhrasesUsedLimits = (0 until phrases.size).map { word =>
+        val wordsLeft = phrases.size - word
+        val maxPhrasesNeeded = word
+        val minPhrasesNeeded = word / maxPhraseLength
+        val minRankPossible = Math.max(
+          min - wordsLeft,
+          minPhrasesNeeded
+        )
+        val maxRankPossible = Math.min(
+          adjustedMax - (wordsLeft + maxPhraseLength - 1) / maxPhraseLength,
+          maxPhrasesNeeded)
+        (minRankPossible, maxRankPossible)
+      }
+
+      var stuck = false
+      var forWord = 1
+      while (!stuck && forWord < phrases.size + 1) {
+        var anyFound = false
+        (Math.max(0, forWord - maxPhraseLength) until forWord).foreach { fromWord =>
+          val slice = phrases.slice(fromWord, forWord)
+          if (phraseToRank contains slice) {
+            val sim = phraseToRank(slice)
+            val (minPhrasesUsed, maxPhrasesUsed) = wordToPhrasesUsedLimits(fromWord)
+            (minPhrasesUsed to maxPhrasesUsed).foreach { fromRank =>
+              if (minRank(fromWord)(fromRank) != -1) {
+                minRank(forWord)(fromRank + 1) = Math.max(minRank(fromWord)(fromRank), sim)
+                anyFound = true
+              }
+            }
+          }
+        }
+        if (!anyFound) {
+          stuck = true
+        }
+        forWord += 1
+      }
+      val filtered = minRank.last.filter(_ != -1)
+      if (filtered.nonEmpty) {
+        filtered.min
+      } else {
+        -1
+      }
     }
   }
 
   def addPhrases(phrases: IndexedSeq[String], didMatch: Boolean, index: Int, min: Int,
     max: Int): Unit = {
-
-    val adjustedMax = if (max == -1) {
-      phrases.size
-    } else {
-      Math.min(max, phrases.size)
-    }
-
-    // Solve a mini dynamic programming problem to decide the min setting needed
-    // Store (#words match, #matches used) -> minPosSetting needed to match up to that word using
-    // that number of sequences
-    val minRank = Array.fill[Array[Int]](phrases.size + 1)(Array.fill[Int](adjustedMax)(-1))
-    minRank(0) = Array.fill[Int](adjustedMax)(0)
-    var stuck = false
-    var forWord = 1
-    while (!stuck && forWord < phrases.size) {
-      var anyFound = false
-      (Math.max(0, forWord - maxPhraseLength) until forWord).foreach { fromWord =>
-        val slice = phrases.slice(fromWord, forWord)
-        if (similarities contains slice) {
-          val sim = similarities(slice)
-          val wordsLeft = phrases.size - forWord
-          val minRankPossible = Math.max(1, min - wordsLeft)
-          val maxRankPossible = adjustedMax - wordsLeft
-          (minRankPossible to maxRankPossible).foreach { fromRank =>
-            if (minRank(fromWord)(fromRank - 1) != -1) {
-              minRank(forWord)(fromRank) = Math.max(minRank(fromWord)(fromRank - 1), sim)
-              anyFound = true
-            }
-          }
-        }
-      }
-      if (!anyFound) {
-        stuck = true
-      }
-      forWord += 1
-    }
-    val mindistance = minRank.last.filter(_ != -1).min
-    if (mindistance > -1) {
-      hits = (index, if (didMatch) 0 else 1, mindistance) :: hits
+    val minDistance = minSimForPhrases(phrases, min, max)
+    if (minDistance > -1) {
+      hits = (index, if (didMatch) 0 else 1, minDistance) :: hits
     }
   }
 
