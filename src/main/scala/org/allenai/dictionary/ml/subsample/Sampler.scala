@@ -103,10 +103,10 @@ abstract class Sampler {
     * @return Hits object containing the samples
     */
   def getSample(
-      qexpr: TokenizedQuery,
-      searcher: Searcher,
-      targetTable: Table,
-      tables: Map[String, Table]
+    qexpr: TokenizedQuery,
+    searcher: Searcher,
+    targetTable: Table,
+    tables: Map[String, Table]
   ): Hits
 
   /** Gets a sample of hits from a corpus that are 'close' to a given query, and that are

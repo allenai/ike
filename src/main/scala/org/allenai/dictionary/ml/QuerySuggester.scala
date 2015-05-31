@@ -320,7 +320,7 @@ object QuerySuggester extends Logging {
         case (hits, totalDocs, numUnlabelledDocs) =>
           if (hits.size < maxLabelledPerSearcher) {
             // We must have scanned the entire index
-            totalDocs  - numUnlabelledDocs
+            totalDocs - numUnlabelledDocs
           } else {
             // We use getOriginalHits since HitWindow does not return this count correctly
             hits.getOriginalHits.countSoFarDocsCounted()

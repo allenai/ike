@@ -11,7 +11,7 @@ import org.apache.lucene.search.spans.{ Spans, SpanQuery }
 
 /** Disjunction of SpanQueries that tracks whether firstSpan created each Span it returns of if
   * one of the alternative Spans did so. See SpansTrackingDisjunction
-*/
+  */
 class SpanQueryTrackingDisjunction(
     firstSpan: SpanQuery,
     alternatives: Seq[SpanQuery],

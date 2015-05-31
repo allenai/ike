@@ -25,7 +25,8 @@ case class GeneralizeToAny(min: Int, max: Int) extends Generalization {
 }
 
 /** Generalize to a query to match either itself of a different query from a fixed set.
-  * Currently */
+  * Currently
+  */
 case class GeneralizeToDisj(pos: Seq[QPos], phrase: Seq[QSimilarPhrases], fullyGeneralizes: Boolean)
     extends Generalization {
   require(pos.nonEmpty || phrase.nonEmpty)
@@ -48,8 +49,7 @@ object QueryGeneralizer {
     Set("RBS", "RBR", "RP", "SYM", "RB", "IN", "CD", "MD")
   ).map(_ + "FW")
 
-  private def getWordPosTags(qexpr: QExpr, searchers: Seq[Searcher], sampleSize: Int):
-  Seq[String] = {
+  private def getWordPosTags(qexpr: QExpr, searchers: Seq[Searcher], sampleSize: Int): Seq[String] = {
     val posTags = searchers.flatMap { searcher =>
       val hits = searcher.find(BlackLabSemantics.blackLabQuery(qexpr)).window(0, sampleSize)
       hits.setContextSize(0)
@@ -61,7 +61,7 @@ object QueryGeneralizer {
       }
     }
     posTags
-//    posSets.filter(pSet => posTags.exists(pSet.contains)).reduce( (a, b) => a ++ b).toSeq
+    //    posSets.filter(pSet => posTags.exists(pSet.contains)).reduce( (a, b) => a ++ b).toSeq
   }
 
   /** Suggestion some generalizations for a given query expressions
@@ -109,14 +109,15 @@ object QueryGeneralizer {
               case _ => None
             }
             val (allPos, allPhrase) = candidates
-                .reduce( (g1, g2) => (g1._1 ++ g2._1, g1._2 ++ g2._2))
+              .reduce((g1, g2) => (g1._1 ++ g2._1, g1._2 ++ g2._2))
             val existingPos = qexprs.flatMap {
               case qp: QPos => Some(qp)
               case _ => None
             }
             Generalization.to(
               (allPos.toSet -- existingPos.toSet).toSeq,
-              allPhrase, false)
+              allPhrase, false
+            )
           } else {
             val (min, max) = QueryLanguage.getQueryLength(qexpr)
             GeneralizeToAny(min, max)

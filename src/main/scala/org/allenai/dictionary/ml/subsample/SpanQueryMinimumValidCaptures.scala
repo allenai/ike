@@ -8,8 +8,8 @@ import org.apache.lucene.search.spans.{ Spans, SpanQuery }
 import org.apache.lucene.util.Bits
 
 /** SpanQuery that filter another query of hits that return too few valid captures, where a valid
-  *  capture is a capture that is non-negative and non-null. See SpansMinimumValidCaptures.
- */
+  * capture is a capture that is non-negative and non-null. See SpansMinimumValidCaptures.
+  */
 class SpanQueryMinimumValidCaptures(
     spans: SpanQuery,
     requiredMatches: Int,

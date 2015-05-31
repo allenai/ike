@@ -21,7 +21,7 @@ case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[S
 case class SimilarPhrase(qwords: Seq[QWord], similarity: Double)
 case class QGeneralizePhrase(qwords: Seq[QWord], pos: Int) extends QLeaf
 case class QSimilarPhrases(qwords: Seq[QWord], pos: Int, phrases: Seq[SimilarPhrase])
-  extends QLeaf {
+    extends QLeaf {
   override def toString(): String = s"QSimilarPhrases(${qwords.map(_.value).mkString(" ")},$pos)"
 }
 case class QWildcard() extends QLeaf
@@ -140,8 +140,10 @@ object QueryLanguage {
     Try(recurse(expr))
   }
 
-  def interpolateSimilarPhrases(expr: QExpr,
-      similarPhrasesSearcher: SimilarPhrasesSearcher): QExpr = {
+  def interpolateSimilarPhrases(
+    expr: QExpr,
+    similarPhrasesSearcher: SimilarPhrasesSearcher
+  ): QExpr = {
     def recurse(expr: QExpr): QExpr = expr match {
       case QGeneralizePhrase(phrase, pos) =>
         val similarPhrases =

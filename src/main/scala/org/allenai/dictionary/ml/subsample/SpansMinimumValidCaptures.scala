@@ -5,13 +5,13 @@ import java.util
 import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 
-/** Returns spans that have a minimum number of valid capture groups, where a valid capture 
-  * groups is one that is non-null and end is non-negative. 
-  * 
+/** Returns spans that have a minimum number of valid capture groups, where a valid capture
+  * groups is one that is non-null and end is non-negative.
+  *
   * @param clause Spans to filter
   * @param requiredMatches Number of required matches
   * @param capturesToCheck Names of the capture groups to check, should be registered by clause
- */
+  */
 class SpansMinimumValidCaptures(
     clause: BLSpans,
     requiredMatches: Int,

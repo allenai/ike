@@ -12,7 +12,8 @@ class TestQueryGeneralizer extends UnitSpec with ScratchDirectory {
   val ss = new SimilarPhrasesSearcherStub(Map(
     "I" -> Seq(
       SimilarPhrase(Seq(QWord("It")), 0.8),
-      SimilarPhrase(Seq(QWord("like")), 0.4))
+      SimilarPhrase(Seq(QWord("like")), 0.4)
+    )
   ))
   val qsimForI = QSimilarPhrases(Seq(QWord("I")), 2, ss.getSimilarPhrases("I"))
 
@@ -50,7 +51,7 @@ class TestQueryGeneralizer extends UnitSpec with ScratchDirectory {
         QPos("NN"), QSimilarPhrases(Seq(QWord("I")), 1, ss.getSimilarPhrases("I"))
       ))
       val gens = QueryGeneralizer.queryGeneralizations(testQuery, searchers, ss, 10).
-          asInstanceOf[GeneralizeToDisj]
+        asInstanceOf[GeneralizeToDisj]
       assert(gens.pos.map(_.value).toSet == (QueryGeneralizer.posSets(1) - "NN" + "PRP"))
       assert(gens.phrase == Seq(qsimForI))
       assert(!gens.fullyGeneralizes)
