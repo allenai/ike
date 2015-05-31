@@ -99,6 +99,7 @@ class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
     val op10 = SetToken(Prefix(1), QPos("VBP"))
     val op11 = SetToken(Prefix(1), QPos("DT"))
 
+    println(hitAnalysis.operatorHits.keySet.mkString("\n"))
     assertResult(Set(op10, op11))(hitAnalysis.operatorHits.keySet)
     assertResult(Set(0, 1))(hitAnalysis.operatorHits.get(op10).get.keySet)
     assertResult(Set(2))(hitAnalysis.operatorHits.get(op11).get.keySet)

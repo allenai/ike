@@ -22,18 +22,30 @@ object GeneralizedQuerySampler {
         BlackLabSemantics.blackLabQuery(QueryLanguage.interpolateTables(qexpr, tables).get)
       )
     }
+    def phrase2QExpr(phrase: Seq[QWord]): QExpr = {
+      if (phrase.size == 1) {
+        phrase.head
+      } else {
+        QSeq(phrase)
+      }
+    }
     val generalizations = qexpr.generalizations.get
-    
+
     // Build span queries for each query/generalization
     val generalizingSpanQueries = generalizations.zip(qexpr.getNamedTokens).map {
       case (GeneralizeToDisj(qpos, qsimiliar, _), (name, original)) =>
-          val originalSq = buildSpanQuery(original)
-          val extensions = (qpos ++ qsimiliar).map(buildSpanQuery)
-          new SpanQueryTrackingDisjunction(originalSq, extensions, name)
+        val originalSq = buildSpanQuery(original)
+        // 'Flatten' the qSimQueries into individual QExpr, this gives us the chance to filter
+        // out repeats and minimize nesting of Disjunction queries
+        val qSimQueries = qsimiliar.flatMap { qsim =>
+          phrase2QExpr(qsim.qwords) +: qsim.phrases.map(sp => phrase2QExpr(sp.qwords))
+        }
+        val extensions = (qpos ++ qSimQueries).distinct.map(buildSpanQuery)
+        new SpanQueryTrackingDisjunction(originalSq, extensions, name)
       // Currently we do not handle GeneralizeToAll
       case (_, (name, original)) => buildSpanQuery(QNamed(original, name))
     }
-    
+
     // Group the span queries into chunks and wrap the right chunks in capture groups
     var remaining = generalizingSpanQueries
     var chunked = List[SpanQuery]()

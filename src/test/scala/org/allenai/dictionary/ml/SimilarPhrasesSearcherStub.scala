@@ -1,6 +1,6 @@
 package org.allenai.dictionary.ml
 
-import org.allenai.dictionary.{SimilarPhrase, SimilarPhrasesSearcher}
+import org.allenai.dictionary.{ SimilarPhrase, SimilarPhrasesSearcher }
 
 class SimilarPhrasesSearcherStub(phrases: Map[String, Seq[SimilarPhrase]] = Map())
     extends SimilarPhrasesSearcher {

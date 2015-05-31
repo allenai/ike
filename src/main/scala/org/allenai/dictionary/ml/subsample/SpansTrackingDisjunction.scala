@@ -66,7 +66,7 @@ class SpansTrackingDisjunction(
     }
     val allSpans = if (firstSpanHasNext) {
       SortedSpans(firstSpanSorted, first = true) +:
-          alternativeSorted.map(SortedSpans(_, first = false))
+        alternativeSorted.map(SortedSpans(_, first = false))
     } else {
       alternativeSorted.map(SortedSpans(_, first = false))
     }

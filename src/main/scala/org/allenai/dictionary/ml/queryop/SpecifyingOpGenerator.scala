@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.queryop
 
 import org.allenai.dictionary._
-import org.allenai.dictionary.ml.{WeightedExample, QueryMatches}
+import org.allenai.dictionary.ml.{ WeightedExample, QueryMatches }
 
 import scala.collection.immutable.IntMap
 
@@ -13,77 +13,112 @@ import scala.collection.immutable.IntMap
 case class SpecifyingOpGenerator(
     suggestPos: Boolean,
     suggestWord: Boolean,
-    setRepeatedOp: Boolean = false
+    setRepeatedOp: Boolean = false,
+    minSimilarityDifference: Int = 0
 ) extends OpGenerator {
 
+  // Helper method the build a QLeafGenerator the gathers ops that would
+  // specify the given input token
   private def getLeafGenerator(
-    qexprOption: Option[QExpr],
+    qexpr: QExpr,
     isCapture: Boolean
-  ): QLeafGenerator = qexprOption match {
-    case None => QLeafGenerator(suggestPos, suggestWord) // Prefix/Suffix slot
-    case Some(qexpr) => qexpr match {
-      case QPos(_) => QLeafGenerator(pos = false, suggestWord && !isCapture)
-      case QWildcard() => QLeafGenerator(suggestPos, suggestWord && !isCapture)
-      case _ => QLeafGenerator(pos = false, word = false)
+  ): QLeafGenerator = qexpr match {
+    case QPos(_) => QLeafGenerator(pos = false, suggestWord && !isCapture)
+    case QWildcard() => QLeafGenerator(suggestPos, suggestWord && !isCapture)
+    case _ => QLeafGenerator(pos = false, word = false)
+  }
+
+  def generateForQSimilarPhrases(qsim: QSimilarPhrases, matches: QueryMatches,
+    examples: IndexedSeq[WeightedExample]): Map[QueryOp, IntMap[Int]] = {
+    val phraseMap = new SimilarPhraseMatchTracker(qsim)
+    val slot = matches.queryToken.slot
+    matches.matches.view.zipWithIndex.foreach {
+      case (queryMatch, index) =>
+        val phrase = queryMatch.tokens.map(_.word)
+        phraseMap.addPhrase(phrase, queryMatch.didMatch, index)
     }
+    val thresholds2Edit = phraseMap.generateOps(0, qsim.pos, minSimilarityDifference, examples)
+    thresholds2Edit.map {
+      case (threshold, edits) =>
+        (SetToken(slot, qsim.copy(pos = threshold)), edits)
+    }.toMap
   }
 
-  def generateForQLeaf(qleafOpt: Option[QLeaf], matches: QueryMatches):
-    Map[QueryOp, IntMap[Int]] = {
+  def generateForNone(matches: QueryMatches): Map[QueryOp, IntMap[Int]] = {
+    OpGenerator.getSetTokenOps(matches, QLeafGenerator(suggestPos, suggestWord))
+  }
+
+  def generateForQLeaf(qleafOpt: QLeaf, matches: QueryMatches): Map[QueryOp, IntMap[Int]] = {
     val isCapture = matches.queryToken.isCapture
-    val tmp = OpGenerator.getSetTokenOps(matches, getLeafGenerator(qleafOpt, isCapture))
-    tmp
+    OpGenerator.getSetTokenOps(matches, getLeafGenerator(qleafOpt, isCapture))
   }
 
-  def generateForQRepeating(repeatingOp: QRepeating, matches: QueryMatches):
-  Map[QueryOp, IntMap[Int]] = {
+  def generateForQRepeating(repeatingOp: QRepeating, matches: QueryMatches): Map[QueryOp, IntMap[Int]] = {
     val index = matches.queryToken.slot.token
     val isCapture = matches.queryToken.isCapture
+
+    // Get ops the involve changing the child token
+    val leafGenerator = getLeafGenerator(repeatingOp.qexpr, isCapture)
+    val setTokenOps = OpGenerator.getSetTokenOps(matches, leafGenerator)
+
+    // Get ops that involve removing the token
     val (childMin, childMax) = QueryLanguage.getQueryLength(repeatingOp.qexpr)
+    val removeOps =
+      if (repeatingOp.min == 0) {
+        val zeroMatches = matches.matches.view.zipWithIndex.filter {
+          case (queryMatch, index) => queryMatch.tokens.isEmpty
+        }.map {
+          case (queryMatch, index) =>
+            (index, if (queryMatch.didMatch) 1 else 0)
+        }
+        val zeroMatchesEditMap = IntMap(zeroMatches: _*)
+        if (zeroMatchesEditMap.nonEmpty) {
+          Seq((
+            RemoveToken(index),
+            zeroMatchesEditMap
+          ))
+        } else {
+          Seq()
+        }
+      } else {
+        Seq()
+      }
+
     if (childMin != childMax) {
-      Map()
+      // In this case it is harder to reason about the # of repetitions the query needs to match
+      // each token sequence, so currently we stop here
+      setTokenOps ++ removeOps
     } else {
+      // Gets op that involves changing the number of repetitions and tokens within a repetition
       case class Repetitions(index: Int, repeats: Int, required: Int)
       val editsWithSize = matches.matches.zipWithIndex.map {
         case (qMatch, matchIndex) =>
           Repetitions(matchIndex, qMatch.tokens.size / childMax,
             if (qMatch.didMatch) 0 else 1)
       }
-      val removeOps =
-        if (repeatingOp.min == 0) {
-          Seq((
-              RemoveToken(index),
-              IntMap(editsWithSize.filter(_.repeats == 0).map(x => (x.index, x.required)): _*)
-              ))
-        } else {
-          Seq()
-        }
       val nRepeats = editsWithSize.map(_.repeats).distinct
       val setMinOps = nRepeats.filter(_ != repeatingOp.min).map { n =>
         (SetMin(index, n), IntMap(editsWithSize.filter(_.repeats >= n).
-            map(x => (x.index, x.required)): _*))
+          map(x => (x.index, x.required)): _*))
       }.filter(_._1.min <= repeatingOp.max)
       val setMaxOps = nRepeats.filter(_ != repeatingOp.max).map { n =>
         (SetMax(index, n), IntMap(editsWithSize.filter(_.repeats <= n).
-            map(x => (x.index, x.required)): _*))
+          map(x => (x.index, x.required)): _*))
       }.filter(_._1.max >= repeatingOp.min)
-      val leafGenerator = getLeafGenerator(Some(repeatingOp.qexpr), isCapture)
-      val leafOps = OpGenerator.getSetTokenOps(matches, leafGenerator).
-          asInstanceOf[Map[QueryOp, IntMap[Int]]]
       val repeatedOps = if (setRepeatedOp) {
         OpGenerator.getRepeatedOpMatch(matches, leafGenerator)
       } else {
         Seq()
       }
-      (setMinOps ++ setMaxOps ++ removeOps ++ leafOps ++ repeatedOps).toMap
+      (setMinOps ++ setMaxOps ++ removeOps ++ setTokenOps ++ repeatedOps).toMap
     }
   }
 
-  override def generate(matches: QueryMatches, examples: IndexedSeq[WeightedExample]):
-  Map[QueryOp, IntMap[Int]] = {
+  override def generate(matches: QueryMatches, examples: IndexedSeq[WeightedExample]): Map[QueryOp, IntMap[Int]] = {
     matches.queryToken.qexpr match {
-      case None => generateForQLeaf(None, matches)
-      case Some(ql: QLeaf) => generateForQLeaf(Some(ql), matches)
+      case None => generateForNone(matches)
+      case Some(qs: QSimilarPhrases) => generateForQSimilarPhrases(qs, matches, examples)
+      case Some(ql: QLeaf) => generateForQLeaf(ql, matches)
       case Some(qr: QRepeating) => generateForQRepeating(qr, matches)
       case _ => Map()
     }

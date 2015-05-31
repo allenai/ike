@@ -46,20 +46,23 @@ class TestGeneralizingOpGenerator extends UnitSpec with ScratchDirectory {
     assertResult(IntMap(1 -> 0))(m2(setPosNN))
     assertResult(1)(m2.size)
 
-   val simPhrases = QSimilarPhrases(Seq(QWord("d")), 4,
+    val simPhrases = QSimilarPhrases(Seq(QWord("d")), 4,
       Seq(("a1", 0.9), ("a2", 0.8), ("a3", 0.7), ("a4", 0.6)).
-          map(x => SimilarPhrase(Seq(QWord(x._1)), x._2)
-    ))
+        map(x => SimilarPhrase(Seq(QWord(x._1)), x._2)))
     val m3 = getWithGeneralization(GeneralizeToDisj(Seq(), Seq(simPhrases), true))
+
     // Match a1
     assertResult(IntMap(0 -> 1, 1 -> 0, 3 -> 0, 4 -> 0))(
-      m3(SetToken(slot, simPhrases.copy(pos=1))))
+      m3(SetToken(slot, simPhrases.copy(pos = 1)))
+    )
     // match a1,a2,a3
     assertResult(IntMap(0 -> 1, 1 -> 0, 3 -> 0, 4 -> 0, 5 -> 1, 7 -> 1))(
-      m3(SetToken(slot, simPhrases.copy(pos=3))))
+      m3(SetToken(slot, simPhrases.copy(pos = 3)))
+    )
     // match a1,a2,a3,a4
     assertResult(IntMap(0 -> 1, 1 -> 0, 3 -> 0, 4 -> 0, 5 -> 1, 7 -> 1, 2 -> 1))(
-      m3(SetToken(slot, simPhrases.copy(pos=4))))
+      m3(SetToken(slot, simPhrases.copy(pos = 4)))
+    )
 
     // Note there will not be an op that matches a1,a2 because a2 and a3 add elements to the
     // possible hits that have the same label so they should be merged together
@@ -68,7 +71,8 @@ class TestGeneralizingOpGenerator extends UnitSpec with ScratchDirectory {
     generator = GeneralizingOpGenerator(true, true, 4)
     val m4 = getWithGeneralization(GeneralizeToDisj(Seq(), Seq(simPhrases), true))
     assertResult(IntMap(0 -> 1, 1 -> 0, 3 -> 0, 4 -> 0, 5 -> 1, 7 -> 1))(
-      m4(SetToken(slot, simPhrases.copy(pos=3))))
+      m4(SetToken(slot, simPhrases.copy(pos = 3)))
+    )
     assertResult(1)(m4.size)
   }
 }
