@@ -48,7 +48,18 @@ object CompoundQueryOp {
       if (leafOps.exists(_.isInstanceOf[AddToken])) {
         // If there are any AddToken Ops keep the original QExpr
         current match {
-          case QDisj(exprs) => QDisj(exprs ++ allExpressions)
+          case QDisj(exprs) =>
+            // Remove terms made redundant by a new QSimilarPhrases
+            val newQSimPhrases = allExpressions.flatMap {
+              case qs: QSimilarPhrases => Some(qs.qwords)
+              case _ => None
+            }
+            val filteredExprs = exprs.filter {
+              case qw: QWord => !newQSimPhrases.contains(Seq(qw))
+              case qs: QSimilarPhrases => !newQSimPhrases.contains(qs.qwords)
+              case _ => true
+            }
+            QDisj(filteredExprs ++ allExpressions)
           case _ => QDisj(current :: allExpressions)
         }
       } else {
