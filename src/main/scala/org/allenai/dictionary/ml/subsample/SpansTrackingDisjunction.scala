@@ -142,10 +142,10 @@ class SpansTrackingDisjunction(
   override val hitsAllSameLength: Boolean =
     firstSpan.hitsAllSameLength() && alternatives.forall(_.hitsLength() == firstSpan.hitsLength())
   override val hitsLength: Int = if (hitsAllSameLength) firstSpan.hitsLength() else -1
-  override val hitsEndPointSorted = firstSpan.hitsEndPointSorted() && hitsAllSameLength
+  override val hitsEndPointSorted = hitsAllSameLength
   override val hitsStartPointSorted = true
-  override val hitsHaveUniqueEnd = firstSpan.hitsHaveUniqueEnd() && hitsAllSameLength
-  override val hitsHaveUniqueStart = firstSpan.hitsHaveUniqueStart() && hitsAllSameLength
+  override val hitsHaveUniqueEnd = hitsAllSameLength
+  override val hitsHaveUniqueStart = hitsAllSameLength
   override val hitsAreUnique = true
 
   override def getPayload: util.Collection[Array[Byte]] = {
