@@ -7,19 +7,6 @@ import org.allenai.dictionary.ml.{ QueryToken, Slot }
   */
 sealed abstract class QueryOp()
 
-/** Remove a token as long as it is an 'edge', meaning all tokens before or after it have
-  * also been removed
-  */
-case class RemoveEdge(index: Int, edge: Int) extends QueryOp {
-
-  /** @return which tokens need to be removed from the starting query before this can be applied */
-  def afterRemovals: Range = if (edge < index) {
-    Range(edge, index)
-  } else {
-    Range.inclusive(edge, index + 1, -1)
-  }
-}
-
 /** Ways two TokenQueryOps can be combined if they apply to the same Slot. NONE means the ops
   * are incompatible, AND mean the resulting query will match a sentence if both ops matched that
   * sentence and OR means the resulting query will match sentences that either op matched
@@ -40,7 +27,6 @@ sealed abstract class TokenQueryOp() extends QueryOp {
 object RemoveToken {
   def apply(index: Int): RemoveToken = RemoveToken(QueryToken(index))
 }
-
 /** Remove the query-token at the specified slot */
 case class RemoveToken(slot: QueryToken) extends TokenQueryOp() {
   def combinable(other: TokenQueryOp): TokenCombination = NONE
@@ -51,8 +37,11 @@ sealed abstract class ChangeRepetition extends TokenQueryOp()
 
 /** Changes a QDisj or QLeaf, that is possibly being modifier by a * or + operator */
 sealed abstract class ChangeLeaf extends TokenQueryOp {
+
+  def combinable(other: ChangeLeaf): TokenCombination
+
   def combinable(other: TokenQueryOp): TokenCombination = other match {
-    case cl: ChangeLeaf => if (other == this) NONE else OR
+    case cl: ChangeLeaf => combinable(cl)
     case cm: ChangeRepetition => AND
     case rt: RemoveToken => NONE
     case str: SetRepeatedToken => NONE
@@ -110,16 +99,45 @@ case class SetRepeatedToken(slot: Slot, index: Int, qexpr: QExpr) extends TokenQ
   * prefix depending on slot. If applied to a QStar or QPlus operator changes the child
   * of that operator
   */
-case class SetToken(slot: Slot, qexpr: QExpr) extends ChangeLeaf()
+case class SetToken(slot: Slot, qexpr: QExpr) extends ChangeLeaf() {
+  override def combinable(other: ChangeLeaf): TokenCombination = {
+    if (other != this) {
+      other match {
+        case AddToken(_, _) => OR
+        case SetToken(_, _) => OR
+        case _ => NONE
+      }
+    } else {
+      NONE
+    }
+  }
+}
 
 /** Adds a token to a query as a disjunction with the existing token */
 object AddToken {
   def apply(index: Int, qexpr: QExpr): AddToken = AddToken(QueryToken(index), qexpr)
 }
-case class AddToken(slot: QueryToken, qexpr: QExpr) extends ChangeLeaf()
+case class AddToken(slot: QueryToken, qexpr: QExpr) extends ChangeLeaf() {
+  override def combinable(other: ChangeLeaf): TokenCombination = {
+    if (other != this) {
+      other match {
+        case AddToken(_, _) => OR
+        case SetToken(_, _) => OR
+        case _ => NONE
+      }
+    } else {
+      NONE
+    }
+  }
+}
 
-/** TokenQueryOp that has been marked as required (meaning the query will
-  * match the hit only if the operator is used) or not (meaning the query
-  * will match the hit whether not the operator is applied).
-  */
-case class MarkedOp(op: TokenQueryOp, required: Boolean)
+/** Remove a token form an existing disjunction */
+object RemoveFromDisj {
+  def apply(index: Int, qexpr: QExpr): RemoveFromDisj = RemoveFromDisj(QueryToken(index), qexpr)
+}
+case class RemoveFromDisj(slot: QueryToken, qexpr: QExpr) extends ChangeLeaf() {
+  override def combinable(other: ChangeLeaf): TokenCombination = other match {
+    case rd: RemoveFromDisj if rd != this => AND
+    case _ => NONE
+  }
+}

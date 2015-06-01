@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.queryop
 
 import org.allenai.common.testkit.UnitSpec
-import org.allenai.dictionary.{SimilarPhrase, QWord, QSimilarPhrases}
+import org.allenai.dictionary.{ SimilarPhrase, QWord, QSimilarPhrases }
 
 class TestSimilarPhraseTracker extends UnitSpec {
 
@@ -22,8 +22,10 @@ class TestSimilarPhraseTracker extends UnitSpec {
       ("a", 0.1)
     )
     val strRanks = ("e" :: simStrs.map(_._1)).zipWithIndex.toMap
-    val simPhrases = simStrs.map{ case (str, sim) =>
-      SimilarPhrase(str.split(" ").map(QWord), sim) }.toSeq
+    val simPhrases = simStrs.map {
+      case (str, sim) =>
+        SimilarPhrase(str.split(" ").map(QWord), sim)
+    }.toSeq
     val qSimilarPhrases = QSimilarPhrases(Seq(QWord("e")), simPhrases.size, simPhrases)
     val tracker = new SimilarPhraseMatchTracker(qSimilarPhrases)
 

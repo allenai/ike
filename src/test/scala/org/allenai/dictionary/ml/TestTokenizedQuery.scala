@@ -80,12 +80,12 @@ class TestTokenizedQuery extends UnitSpec with ScratchDirectory {
     val query = QueryLanguage.parse("a (?<c1> b c) d e (?<c2> f)").get
     val tokenized = TokenizedQuery.buildFromQuery(query)
     val expectedResults = Seq(
-      QuerySlotData(Some(QWord("a")), QueryToken(1), false, true, false),
-      QuerySlotData(Some(QWord("b")), QueryToken(2), true, false, false),
-      QuerySlotData(Some(QWord("c")), QueryToken(3), true, false, false),
-      QuerySlotData(Some(QWord("d")), QueryToken(4), false, false, false),
-      QuerySlotData(Some(QWord("e")), QueryToken(5), false, false, false),
-      QuerySlotData(Some(QWord("f")), QueryToken(6), true, false, true)
+      QuerySlotData(Some(QWord("a")), QueryToken(1), false),
+      QuerySlotData(Some(QWord("b")), QueryToken(2), true),
+      QuerySlotData(Some(QWord("c")), QueryToken(3), true),
+      QuerySlotData(Some(QWord("d")), QueryToken(4), false),
+      QuerySlotData(Some(QWord("e")), QueryToken(5), false),
+      QuerySlotData(Some(QWord("f")), QueryToken(6), true)
     )
     assertResult(expectedResults)(tokenized.getAnnotatedSeq)
   }

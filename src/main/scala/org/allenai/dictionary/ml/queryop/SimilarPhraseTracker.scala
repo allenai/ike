@@ -1,6 +1,6 @@
 package org.allenai.dictionary.ml.queryop
 
-import org.allenai.dictionary.{SimilarPhrase, QSimilarPhrases}
+import org.allenai.dictionary.{ SimilarPhrase, QSimilarPhrases }
 import org.allenai.dictionary.ml.Label._
 import org.allenai.dictionary.ml.WeightedExample
 
@@ -64,7 +64,8 @@ class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
         )
         val maxRankPossible = Math.min(
           adjustedMax - (wordsLeft + maxPhraseLength - 1) / maxPhraseLength,
-          maxPhrasesNeeded)
+          maxPhrasesNeeded
+        )
         (minRankPossible, maxRankPossible)
       }
 

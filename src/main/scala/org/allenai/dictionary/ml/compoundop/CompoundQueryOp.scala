@@ -39,6 +39,16 @@ object CompoundQueryOp {
   private def changeLeaf(leafOps: Iterable[ChangeLeaf], current: QExpr): QExpr = {
     if (leafOps.isEmpty) {
       current
+    } else if (leafOps.exists(_.isInstanceOf[RemoveFromDisj])) {
+      require(leafOps.forall(_.isInstanceOf[RemoveFromDisj]))
+      require(current.isInstanceOf[QDisj])
+      val cur = current.asInstanceOf[QDisj].qexprs
+      val newQexpr = cur.toSet -- leafOps.map(_.asInstanceOf[RemoveFromDisj].qexpr)
+      if (newQexpr.size == 1) {
+        newQexpr.head
+      } else {
+        QDisj(newQexpr.toSeq)
+      }
     } else {
       val allExpressions = leafOps.map {
         case SetToken(_, q) => q
@@ -105,7 +115,7 @@ object CompoundQueryOp {
           val castSetROps = setRepeatedOps.asInstanceOf[Iterable[SetRepeatedToken]]
           val maxIndex = castSetROps.map(_.index).max
           var prev = 0
-          val newExpression = castSetROps.toSeq.sortBy(_.index).map { op =>
+          val newExpression = castSetROps.toSeq.sortBy(_.index).flatMap { op =>
             val nextTokens = if (prev == op.index - 1) {
               Seq(op.qexpr)
             } else if (prev == op.index - 2) {
@@ -116,7 +126,7 @@ object CompoundQueryOp {
             }
             prev = op.index
             nextTokens
-          }.flatten
+          }
           val newMax = if (setRepetitions.isEmpty) {
             repeatOp.max
           } else {

@@ -31,9 +31,6 @@ case class OpConjunctionOfDisjunctions private (
 ) extends CompoundQueryOp() {
 
   override def canAdd(op: QueryOp): Boolean = op match {
-    case re: RemoveEdge =>
-      re.afterRemovals.forall(ops contains RemoveToken(_)) &&
-        canAdd(RemoveToken(re.index))
     case rt: RemoveToken => !(perSlotEdits contains rt.slot)
     case tq: TokenQueryOp =>
       if (perSlotEdits contains tq.slot) {
@@ -49,7 +46,6 @@ case class OpConjunctionOfDisjunctions private (
     require(canAdd(op))
     val newOp = op match {
       case tq: TokenQueryOp => tq
-      case RemoveEdge(index, _) => RemoveToken(index)
     }
 
     val (newPerSlot, recalculate) =

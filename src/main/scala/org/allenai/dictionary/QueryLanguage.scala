@@ -338,17 +338,4 @@ object QueryLanguage {
     case QRepetition(expr, 0, 0) => None
     case _ => Some(qexpr)
   }
-
-  /** @return If qexpr is a QSeq an equivalent QSeq that has no QSeq as children, otherwise qexpr */
-  def flatten(qexpr: QExpr): QExpr = qexpr match {
-    case QSeq(seq) => if (seq.size == 1) {
-      flatten(seq.head)
-    } else {
-      QSeq(seq.map {
-        case QSeq(childSeq) => childSeq.map(flatten)
-        case child => Seq(child)
-      }.flatten)
-    }
-    case _ => qexpr
-  }
 }

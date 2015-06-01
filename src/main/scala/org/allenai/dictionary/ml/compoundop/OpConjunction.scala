@@ -20,8 +20,6 @@ case class OpConjunction private (
 
   override def canAdd(op: QueryOp): Boolean = op match {
     case rt: RemoveToken => !ops.exists(x => x.slot == rt.slot)
-    case re: RemoveEdge => re.afterRemovals.forall(ops contains RemoveToken(_)) &&
-      canAdd(RemoveToken(re.index))
     case tq: TokenQueryOp => !ops.exists(x => x.slot == tq.slot && x.combinable(tq) != AND)
   }
 
@@ -38,7 +36,6 @@ case class OpConjunction private (
         numEdits.intersectionWith(matches, (_, v1: Int, v2: Int) => math.min(1, v1 + v2))
       }
     val newOp = op match {
-      case RemoveEdge(index, _) => RemoveToken(index)
       case tq: TokenQueryOp => tq
     }
     new OpConjunction(ops + newOp, newNumEdits)

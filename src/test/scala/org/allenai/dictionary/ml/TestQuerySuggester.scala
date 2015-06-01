@@ -196,4 +196,22 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     assert(queries contains QNamed(QSeq(Seq(QPos("PRP"), QPos("VBP"),
       QRepetition(QWildcard(), 0, 1))), "c1"))
   }
+
+  it should "suggest removing disjunctions" in {
+    val table = Table("test", Seq("c1"),
+      Seq(Seq("I like")).map { x =>
+        TableRow(x.map(y => TableValue(y.split(" ").map(word => QWord(word)))))
+      },
+      Seq(Seq("I hate"), Seq("it tastes")).map { x =>
+        TableRow(x.map(y => TableValue(y.split(" ").map(word => QWord(word)))))
+      })
+    val startingQuery = QueryLanguage.parse("(PRP {tastes, like, hate})").get
+    val suggestions =
+      QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table), ss,
+        "test", true, SuggestQueryConfig(10, 2, 100, 100, -1, -1, true)).suggestions
+    val bestScore = suggestions(0).score
+    val bestQueries = suggestions.filter(_.score == bestScore)
+    val queries = bestQueries.map(x => x.query)
+    assert(queries contains QueryLanguage.parse("(?<c1>PRP like)").get)
+  }
 }

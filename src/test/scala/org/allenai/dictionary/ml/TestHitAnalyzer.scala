@@ -46,14 +46,13 @@ class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
     )))(matchData(0))
     assertResult(QueryMatches(QuerySlotData(
       Some(query.asInstanceOf[QSeq].qexprs(0)),
-      QueryToken(1), false, true, false
+      QueryToken(1), false
     ), Seq(
       QueryMatch(List(token("It")), true),
       QueryMatch(List(token("those")), true),
       QueryMatch(List(token("They")), true)
     )))(matchData(1))
-    assertResult(QueryMatches(QuerySlotData(Some(QWildcard()), QueryToken(2),
-      true, false, true), Seq(
+    assertResult(QueryMatches(QuerySlotData(Some(QWildcard()), QueryToken(2), true), Seq(
       QueryMatch(List(token("tastes")), true),
       QueryMatch(List(token("bananas")), true),
       QueryMatch(List(token("taste")), true)
@@ -98,10 +97,16 @@ class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
 
     val op10 = SetToken(Prefix(1), QPos("VBP"))
     val op11 = SetToken(Prefix(1), QPos("DT"))
+    def rd(word: String): QueryOp = RemoveFromDisj(QueryToken(1), QWord(word))
+    val removeFromDisjOps = Seq(
+      rd("mango"), rd("those"), rd("bananas")
+    )
 
-    println(hitAnalysis.operatorHits.keySet.mkString("\n"))
-    assertResult(Set(op10, op11))(hitAnalysis.operatorHits.keySet)
+    assertResult(Set(op10, op11) ++ removeFromDisjOps)(hitAnalysis.operatorHits.keySet)
     assertResult(Set(0, 1))(hitAnalysis.operatorHits.get(op10).get.keySet)
     assertResult(Set(2))(hitAnalysis.operatorHits.get(op11).get.keySet)
+    assertResult(Set(1, 2))(hitAnalysis.operatorHits.get(rd("mango")).get.keySet)
+    assertResult(Set(0, 2))(hitAnalysis.operatorHits.get(rd("those")).get.keySet)
+    assertResult(Set(0, 1))(hitAnalysis.operatorHits.get(rd("bananas")).get.keySet)
   }
 }

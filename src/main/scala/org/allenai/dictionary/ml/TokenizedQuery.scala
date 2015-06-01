@@ -17,11 +17,11 @@ case class Suffix(override val token: Int) extends Slot(token)
 object QuerySlotData {
 
   def apply(slot: Prefix): QuerySlotData = {
-    QuerySlotData(None, slot, false, false, false)
+    QuerySlotData(None, slot, false)
   }
 
   def apply(slot: Suffix): QuerySlotData = {
-    QuerySlotData(None, slot, false, false, false)
+    QuerySlotData(None, slot, false)
   }
 
 }
@@ -31,15 +31,12 @@ object QuerySlotData {
   * @param slot which query-token this data is about
   * @param isCapture whether this slot is contained within a capture group
   */
-// TODO prefix/suffix should probably be their own classes
 case class QuerySlotData(qexpr: Option[QExpr], slot: Slot, isCapture: Boolean,
-    firstTokenSequence: Boolean, lastTokenSequence: Boolean,
     generalization: Option[Generalization] = None) {
   if (slot.isInstanceOf[QueryToken]) {
     require(qexpr.isDefined)
   } else {
-    require(qexpr.isEmpty && generalization.isEmpty &&
-      !isCapture && !firstTokenSequence && !lastTokenSequence)
+    require(qexpr.isEmpty && generalization.isEmpty && !isCapture)
   }
 }
 
@@ -80,7 +77,7 @@ object TokenizedQuery {
       } else {
         Seq(QDisj(seq))
       }
-    case QNonCap(qexpr) => flattenQExpr(qexpr)
+    case QNonCap(child) => flattenQExpr(child)
     case _ => Seq(qexpr)
   }
 
@@ -168,17 +165,17 @@ case class TokenizedQuery(
   require(generalizations.isEmpty || size == generalizations.get.size)
 
   def getQuery: QExpr = {
-    TokenizedQuery.qexprFromSequence(tokenSequences.map { ts =>
+    TokenizedQuery.qexprFromSequence(tokenSequences.flatMap { ts =>
       if (ts.isCaptureGroup) {
         Seq(ts.getQuery)
       } else {
         ts.queryTokens
       }
-    }.flatten)
+    })
   }
 
   def getSeq: Seq[QExpr] = {
-    tokenSequences.map(_.queryTokens).flatten
+    tokenSequences.flatMap(_.queryTokens)
   }
 
   def getCaptureGroups: Seq[(String, Seq[QExpr])] = tokenSequences.filter(_.isCaptureGroup).map {
@@ -190,7 +187,7 @@ case class TokenizedQuery(
     */
   def getAnnotatedSeq: Seq[QuerySlotData] = {
     var onIndex = 0
-    tokenSequences.zipWithIndex.map {
+    tokenSequences.zipWithIndex.flatMap {
       case (tokenSequence, sequenceIndex) =>
         val isCapture = tokenSequence.columnName.isDefined
         tokenSequence.queryTokens.map { queryToken =>
@@ -199,12 +196,11 @@ case class TokenizedQuery(
           } else {
             None
           }
-          val qsd = QuerySlotData(Some(queryToken), QueryToken(onIndex + 1), isCapture,
-            sequenceIndex == 0, sequenceIndex == tokenSequences.size - 1, gen)
+          val qsd = QuerySlotData(Some(queryToken), QueryToken(onIndex + 1), isCapture, gen)
           onIndex += 1
           qsd
         }
-    }.flatten
+    }
   }
 
   /** @return the names each token in this.getSeq in order */

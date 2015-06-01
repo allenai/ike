@@ -21,6 +21,14 @@ case class GeneralizingOpGenerator(
     minSimilarityDifference: Int = 0
 ) extends OpGenerator {
 
+  // QLeafs to avoid suggestion if we are making suggestion for QExpr
+  private def avoidOp(qexpr: QExpr): Set[QLeaf] = qexpr match {
+    case ql: QLeaf => Set(ql)
+    case QDisj(disj) => disj.map(avoidOp).reduce((a, b) => a ++ b)
+    case qr: QRepeating => avoidOp(qr.qexpr)
+    case _ => Set()
+  }
+
   private def opsFromGeneralization(
     matches: QueryMatches,
     generalization: GeneralizeToDisj,
@@ -88,14 +96,10 @@ case class GeneralizingOpGenerator(
     posOps ++ phraseOps.toMap
   }
 
-  private def avoidOp(qexpr: QExpr): Set[QLeaf] = qexpr match {
-    case ql: QLeaf => Set(ql)
-    case QDisj(disj) => disj.map(avoidOp).reduce((a, b) => a ++ b)
-    case qr: QRepeating => avoidOp(qr.qexpr)
-    case _ => Set()
-  }
-
-  override def generate(matches: QueryMatches, examples: IndexedSeq[WeightedExample]): Map[QueryOp, IntMap[Int]] = {
+  override def generate(
+    matches: QueryMatches,
+    examples: IndexedSeq[WeightedExample]
+  ): Map[QueryOp, IntMap[Int]] = {
     val generalizations = matches.queryToken.generalization.get
     generalizations match {
       case GeneralizeToNone() => Map()

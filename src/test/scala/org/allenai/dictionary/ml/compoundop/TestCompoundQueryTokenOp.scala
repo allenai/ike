@@ -68,6 +68,17 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     }
   }
 
+  "CompoundOp" should "apply remove from disjunction" in {
+    val startingQuery = QueryLanguage.parse("{d1, d2, d3, d4}").get
+    val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
+    assertResult(QDisj(Seq(QWord("d1"), QWord("d3")))) {
+      CompoundQueryOp.applyOps(tokenized, Set(
+        RemoveFromDisj(1, QWord("d2")),
+        RemoveFromDisj(1, QWord("d4"))
+      )).getQuery
+    }
+  }
+
   "CompoundOp" should "work for repetitions" in {
     val startingQuery = QueryLanguage.parse("NN* (?<capture> c1)").get
     val tokenized = TokenizedQuery.buildFromQuery(startingQuery)

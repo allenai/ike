@@ -19,13 +19,17 @@ object Generalization {
 sealed abstract class Generalization()
 
 /** Generalize to any token sequence of the given length */
+// Note we currently do not handle this (we treat it as GeneralizeToNone)
+// since my first attempt was very inefficient
 case class GeneralizeToAny(min: Int, max: Int) extends Generalization {
   require(min >= 0)
   require(max == -1 || max >= min)
 }
 
 /** Generalize to a query to match either itself of a different query from a fixed set.
-  * Currently
+  * Currently we only handle a very limited number of kinds of generalizations.
+  * fullyGeneralizes is true if the generalizations are strictly more general then the
+  * corresponding QExpr (so they could replace the QExpr)
   */
 case class GeneralizeToDisj(pos: Seq[QPos], phrase: Seq[QSimilarPhrases], fullyGeneralizes: Boolean)
     extends Generalization {
@@ -49,7 +53,11 @@ object QueryGeneralizer {
     Set("RBS", "RBR", "RP", "SYM", "RB", "IN", "CD", "MD")
   ).map(_ + "FW")
 
-  private def getWordPosTags(qexpr: QExpr, searchers: Seq[Searcher], sampleSize: Int): Seq[String] = {
+  private def getWordPosTags(
+    qexpr: QExpr,
+    searchers: Seq[Searcher],
+    sampleSize: Int
+  ): Seq[String] = {
     val posTags = searchers.flatMap { searcher =>
       val hits = searcher.find(BlackLabSemantics.blackLabQuery(qexpr)).window(0, sampleSize)
       hits.setContextSize(0)
@@ -61,7 +69,6 @@ object QueryGeneralizer {
       }
     }
     posTags
-    //    posSets.filter(pSet => posTags.exists(pSet.contains)).reduce( (a, b) => a ++ b).toSeq
   }
 
   /** Suggestion some generalizations for a given query expressions
@@ -94,7 +101,10 @@ object QueryGeneralizer {
         } else {
           Seq()
         }
-        Generalization.to(posTags.toSet.toSeq.map(QPos), qSimPhrases, true)
+        val posTagCounts = posTags.groupBy(identity).mapValues(_.size)
+        val minCountsThresh = Math.min(posTags.size / 20, 2)
+        val posTagsToKeep = posTagCounts.filter(_._2 >= minCountsThresh).map(_._1)
+        Generalization.to(posTagsToKeep.map(QPos).toSeq, qSimPhrases, true)
       case QPos(pos) =>
         val posTagsToUse = posSets.filter(_.contains(pos)).reduce((a, b) => a ++ b) - pos
         Generalization.to(posTagsToUse.map(QPos).toSeq, Seq(), false)

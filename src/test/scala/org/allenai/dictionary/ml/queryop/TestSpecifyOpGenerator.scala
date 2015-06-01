@@ -6,11 +6,11 @@ import org.allenai.dictionary.ml._
 
 import scala.collection.immutable.IntMap
 
-class TestOpGenerator extends UnitSpec {
+class TestSpecifyOpGenerator extends UnitSpec {
 
   "getRepeatedOpMatch" should "Create correct repeated ops" in {
     val matches = QueryMatches(QuerySlotData(
-      Some(QWord("d")), QueryToken(1), false, false, true
+      Some(QWord("d")), QueryToken(1), true
     ), Seq(
       QueryMatch(Seq(Token("b", "NN"), Token("b", "NN")), true),
       QueryMatch(Seq(Token("a", "NN")), true)
@@ -18,7 +18,7 @@ class TestOpGenerator extends UnitSpec {
 
     val leafGen = QLeafGenerator(true, true)
 
-    val rOps = OpGenerator.getRepeatedOpMatch(matches, leafGen)
+    val rOps = SpecifyingOpGenerator.getRepeatedOpMatch(matches, leafGen)
     assertResult(IntMap(0 -> 0))(rOps(SetRepeatedToken(1, 1, QWord("b"))))
     assertResult(IntMap(1 -> 0))(rOps(SetRepeatedToken(1, 1, QWord("a"))))
     assertResult(IntMap(0 -> 0))(rOps(SetRepeatedToken(1, 2, QWord("b"))))
