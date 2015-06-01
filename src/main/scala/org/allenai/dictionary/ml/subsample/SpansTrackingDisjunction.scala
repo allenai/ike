@@ -30,7 +30,7 @@ class SpansTrackingDisjunction(
       if (spans1.spans.doc() == spans2.spans.doc()) {
         if (spans1.spans.start() == spans2.spans.start()) {
           if (spans1.spans.end() == spans2.spans.end()) {
-            spans1.first // firstSpan is smallest so it matches first if possible
+            spans1.first // so first span matches first if possible
           } else {
             spans1.spans.end() < spans2.spans.end()
           }

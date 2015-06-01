@@ -102,7 +102,7 @@ Now the distance from our query to each sentence is:
 * 2 for sentence 3
 * 2 for sentence 4
    
-And our operator
+And our operator "a" -> "DT"
 * matches but is not required for sentence 1
 * matches and fills a requirement for sentence 2
 * matches and fills a requirement for sentence 3
@@ -138,7 +138,7 @@ subsample.
 4. QueryEvaluator.scala defines the evaluation functions to use.
 5. TokenizedQuery.scala breaks queries into sequences of smaller queries as a preprocessing step.
 7. HitAnalyzer.scala preprocesses Hits by calculating their labels and grouping the tokens
-within each hit so that they can be used by queryop.OpGenerator
+within each hit so that they can be used by queryop.
 6. QuerySuggester.scala glues these pieces together and implements the actual beam search.
 7. QueryGeneralizer.scala is used to decide ways in which query-tokens can be generalized, we use 
 this when building a sample for broadening queries.

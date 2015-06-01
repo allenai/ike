@@ -20,7 +20,8 @@ sealed abstract class Generalization()
 
 /** Generalize to any token sequence of the given length */
 // Note we currently do not handle this (we treat it as GeneralizeToNone)
-// since my first attempt was very inefficient
+// since my first attempt was very inefficient. The trouble is BlackLab can't optimize queries
+// that involves capture groups of wildcards, might take a couple days to fix.
 case class GeneralizeToAny(min: Int, max: Int) extends Generalization {
   require(min >= 0)
   require(max == -1 || max >= min)

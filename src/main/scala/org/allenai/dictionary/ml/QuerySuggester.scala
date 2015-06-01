@@ -101,15 +101,18 @@ object QuerySuggester extends Logging {
         val repeatedOps = cop.ops.filter(opsUsed(_) >= maxOpOccurances)
         if (repeatedOps.nonEmpty) {
           // Adding would result in overusing an op, so we try to find an element in the queue
-          // that is lowering scoring and that we can remove to allow us to add this op
+          // that is lower scoring and that we can remove to allow us to add this op
+          // Cases where two ops are over-used should maybe be treated specially (maybe we should
+          // remove multiple elements?) but this is not currently implemeneted
           val candidatesForRemoval = priorityQueue.filter {
-            case (op, __) => repeatedOps.forall(op.ops.contains(_))
+            case (op, __) => repeatedOps.forall(op.ops.contains)
           }
           if (candidatesForRemoval.nonEmpty) {
             val min = candidatesForRemoval.minBy(_._2)
             if (min._2 < score) {
-              // Overly expensive way to remove since we re-sort the entire queue, but there is no
-              // remove API for queues as far as I can see
+              // Super expensive way to remove since we re-sort the entire queue, but there is no
+              // remove API for queues as far as I can see. This is not in a preformance limiting
+              // loop anyway
               removeCounts(min._1)
               val newElements = priorityQueue.filter(_ != min).toSeq
               priorityQueue.clear()
@@ -209,9 +212,10 @@ object QuerySuggester extends Logging {
   /** Return a set of suggested queries given a starting query and a Table
     *
     * @param searchers Searchers to use when suggesting new queries
-    * @param startingQuery Starting query to build suggestion from
+    * @param startingQuery Starting query to build suggestion from, should have all QGeneralize
+    *                      interpolated to QSimilarPhrases
     * @param tables Tables to use when building the query
-    *
+    * @param similarPhrasesSearcher to use when building similar phrase suggestions
     * @param target Name of the table to optimize the suggested queries for
     * @param narrow Whether the suggestions should narrow or broaden the starting
     * query
@@ -317,10 +321,10 @@ object QuerySuggester extends Logging {
     // Number of documents we searched for labelled hits from
     val numDocs = numUnlabelledDocs +
       (labelledHits, numDocsPerSearcher, numUnlabelledDocsPerSearcher).zipped.map {
-        case (hits, totalDocs, numUnlabelledDocs) =>
+        case (hits, totalDocsInSearcher, numUnlabelledDocsInSearcher) =>
           if (hits.size < maxLabelledPerSearcher) {
             // We must have scanned the entire index
-            totalDocs - numUnlabelledDocs
+            totalDocsInSearcher - numUnlabelledDocsInSearcher
           } else {
             // We use getOriginalHits since HitWindow does not return this count correctly
             hits.getOriginalHits.countSoFarDocsCounted()
@@ -335,7 +339,8 @@ object QuerySuggester extends Logging {
         SpecifyingOpGenerator(
           selectConf.getBoolean("suggestPos"),
           selectConf.getBoolean("suggestWord"),
-          selectConf.getBoolean("suggestSetRepeatedOp")
+          selectConf.getBoolean("suggestSetRepeatedOp"),
+          selectConf.getInt("minSimilarityDifference")
         )
       } else {
         val selectConf = querySuggestionConf.getConfig("broaden")
@@ -434,10 +439,10 @@ object QuerySuggester extends Logging {
     }
 
     val original = {
-      val edits = IntMap(Range(0, hitAnalysis.examples.size).map((_, 0)): _*)
+      val edits = IntMap(hitAnalysis.examples.indices.map((_, 0)): _*)
       val score = evalFunction.evaluate(NullOp(edits), config.depth)
       val (p, n, u) = QueryEvaluator.countOccurrences(
-        IntMap(Range(0, hitAnalysis.examples.size).map((_, 0)): _*),
+        edits,
         hitAnalysis.examples
       )
       ScoredQuery(startingQuery, score, p, n, u * unlabelledBiasCorrection)

@@ -1,12 +1,10 @@
 package org.allenai.dictionary.ml.subsample
 
 import org.allenai.common.Logging
-import org.allenai.dictionary.ml.{ TokenizedQuery }
+import org.allenai.dictionary.ml.TokenizedQuery
 
 import nl.inl.blacklab.search.{ Hits, Searcher }
 import org.allenai.dictionary._
-
-import org.apache.lucene.search.spans.SpanQuery
 
 object Sampler extends Logging {
 
@@ -17,8 +15,10 @@ object Sampler extends Logging {
     val captureSizes = query.getCaptureGroups.map {
       case (colName, seq) =>
         val querySize = QueryLanguage.getQueryLength(QSeq(seq))
-        (colName -> querySize)
+        colName -> querySize
     }.toMap
+    println(captureSizes)
+    println(table.cols)
     val orderedCapturedSizes = table.cols.map(captureSizes(_))
 
     // Filter rows from the query that cannot match the query
@@ -41,7 +41,7 @@ object Sampler extends Logging {
   ): QExpr = {
     val filteredRows = getFilteredRows(query, table)
 
-    require(filteredRows.size > 0)
+    require(filteredRows.nonEmpty, "Query could not match any rows")
 
     // Reorder rows to match the query
     val colNameToColumn = table.cols.zip(filteredRows.transpose).toMap
@@ -49,15 +49,15 @@ object Sampler extends Logging {
     val rowsReordered = captureNames.map(colNameToColumn(_)).transpose
 
     var prevWasCapture = query.tokenSequences.head.isCaptureGroup
-    val distanceBetweenCaptures = query.tokenSequences.drop(1).map { tokenSequence =>
-      val len = if (tokenSequence.isCaptureGroup && !prevWasCapture) {
+    val distanceBetweenCaptures = query.tokenSequences.drop(1).flatMap { tokenSequence =>
+      val distance = if (tokenSequence.isCaptureGroup && !prevWasCapture) {
         Some(QueryLanguage.getQueryLength(tokenSequence.getQuery))
       } else {
         None
       }
       prevWasCapture = tokenSequence.isCaptureGroup
-      len
-    }.flatten
+      distance
+    }
     val asSequences = rowsReordered.map(row => {
       val rowCaptures = row.zip(captureNames).map {
         case (phrase, columnName) => QNamed(QSeq(phrase), columnName)
@@ -65,7 +65,7 @@ object Sampler extends Logging {
       // For each row, build a query of the form
       // "phraseInColumn1 . . . phraseInColumn2 .* phraseInColumn2"
       val withWildCards = distanceBetweenCaptures.zip(rowCaptures).map {
-        case (distance, capture) => Seq(capture, QRepetition(QWildcard(), distance._1, distance._2))
+        case ((min, max), capture) => Seq(capture, QRepetition(QWildcard(), min, max))
       } :+ List(rowCaptures.last)
       QSeq(withWildCards.flatten)
     })

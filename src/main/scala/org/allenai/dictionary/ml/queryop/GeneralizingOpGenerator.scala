@@ -49,12 +49,15 @@ case class GeneralizingOpGenerator(
     }
 
     val posOps = if (generalization.fullyGeneralizes) {
+      // Build SetToken ops
       posMap.toMap.map {
         case (k, v) =>
           val s: QueryOp = SetToken(slot, k)
           (s, IntMap(v.reverse: _*))
       }
     } else {
+      // Build AddToken ops, in this case we need to add to ours the sentence the original
+      // QueryToken matched since it will continue to match those sentences after the op is applied
       val alreadyMatches = IntMap(
         matches.matches.view.zipWithIndex.filter {
           case (qm, index) => qm.didMatch
@@ -75,12 +78,12 @@ case class GeneralizingOpGenerator(
           val phrase = queryMatch.tokens.map(_.word)
           phraseMaps.foreach(_.addPhrase(phrase, queryMatch.didMatch, index))
       }
-      val minThreshold = query match {
+      val minPosAllowed = query match {
         case qsp: QSimilarPhrases => qsp.pos + 1
         case _ => 1
       }
       val phraseOps = phraseMaps.flatMap { spMatcher =>
-        spMatcher.generateOps(minThreshold, 100, minSimilarityDifference, examples).map {
+        spMatcher.generateOps(minPosAllowed, 100, minSimilarityDifference, examples).map {
           case (threshold, editMap) =>
             if (generalization.fullyGeneralizes) {
               (SetToken(slot, spMatcher.qSimilarPhrases.copy(pos = threshold)), editMap)
@@ -103,7 +106,7 @@ case class GeneralizingOpGenerator(
     val generalizations = matches.queryToken.generalization.get
     generalizations match {
       case GeneralizeToNone() => Map()
-      case GeneralizeToAny(_, _) => Map() // We do not handle this ATM
+      case GeneralizeToAny(_, _) => Map() // We do not handle this during subsampling ATM
       case gd: GeneralizeToDisj => opsFromGeneralization(matches, gd, examples)
     }
   }

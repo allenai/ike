@@ -323,7 +323,7 @@ object QueryLanguage {
       case QSeq(children) => QSeq(children.map(recurse))
       case QDisj(children) => QDisj(children.map(recurse))
       case QAnd(expr1, expr2) => QAnd(recurse(expr1), recurse(expr2))
-      case QRepetition(expr, min, max) => QRepetition(expr, min, max)
+      case QRepetition(expr, min, max) => QRepetition(recurse(expr), min, max)
       case q: QLeaf => q
     }
     val output = recurse(qexpr)

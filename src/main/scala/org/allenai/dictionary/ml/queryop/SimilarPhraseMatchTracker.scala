@@ -14,7 +14,7 @@ class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
   // List of (sentenceIndex, minPOS needed to matched that sentence)
   private var hits: List[(Int, Int, Int)] = List()
 
-  // Maps phrases -> minPos needed for qSimilarPhrases to match that rank
+  // Maps phrases -> minPos needed for qSimilarPhrases to match that phrase
   private val phraseToRank = {
     val allPhrases = SimilarPhrase(qSimilarPhrases.qwords, 0) +: qSimilarPhrases.phrases
     allPhrases.sortBy(_.similarity).reverse.zipWithIndex.map {
@@ -35,9 +35,9 @@ class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
     if (phrases.isEmpty) {
       0
     } else if (phrases.size == 1) {
-      phraseToRank(phrases)
+      phraseToRank.getOrElse(phrases, -1)
     } else {
-      // Solve a dynamic programming problem to decide the min setting needed to match the
+      // Solve a mini dynamic programming problem to decide the min setting needed to match the
       // token sequence.
 
       val adjustedMax = if (max == -1) {
@@ -108,8 +108,8 @@ class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
     }
   }
 
-  /** Gets a sequence of (pos threshold, edit map) that correspond to pos thresholds that can be used
-    * to qSimilarPhrases
+  /** Gets a sequence of (pos threshold, edit map) that correspond to pos thresholds that can be
+    * used to qSimilarPhrases
     *
     * @param minCoverageDifference no two thresholds returned will cover sets of sentences that only
     *                              differ by this much
@@ -118,6 +118,9 @@ class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
     */
   def generateOps(minPosThreshold: Int, maxPosThreshold: Int, minCoverageDifference: Int,
     examples: IndexedSeq[WeightedExample]): List[(Int, IntMap[Int])] = {
+    // Iterate through the minPosThreshold in sorted order and build a suggestion Op
+    // where the 1: the threshold changes and label of the relevant examples changes,
+    // and the the op would not violate minCoverageDifference
     val sortedHits = hits.filter(_._3 <= maxPosThreshold).sortBy(_._3)
     var curThreshold = sortedHits.head._3
     var curLabel: Option[Label] = Some(examples(sortedHits.head._1).label)

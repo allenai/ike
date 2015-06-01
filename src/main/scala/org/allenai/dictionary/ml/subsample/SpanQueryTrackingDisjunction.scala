@@ -9,8 +9,8 @@ import scala.collection.JavaConverters._
 import nl.inl.blacklab.search.lucene.{ BLSpansWrapper, SpanQueryBase }
 import org.apache.lucene.search.spans.{ Spans, SpanQuery }
 
-/** Disjunction of SpanQueries that tracks whether firstSpan created each Span it returns of if
-  * one of the alternative Spans did so. See SpansTrackingDisjunction
+/** Disjunction of SpanQueries that tracks whether 'firstSpan' created each returned Span or if
+  * one of the 'alternatives' Spans did. See SpansTrackingDisjunction
   */
 class SpanQueryTrackingDisjunction(
     firstSpan: SpanQuery,

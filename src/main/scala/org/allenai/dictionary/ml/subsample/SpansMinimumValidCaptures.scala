@@ -42,10 +42,11 @@ class SpansMinimumValidCaptures(
 
   def isValid(): Boolean = {
     clause.getCapturedGroups(captureGroupHolder)
-    captureIndicesToCheck.count(i => {
+    val numValidCaptures = captureIndicesToCheck.count(i => {
       val span = captureGroupHolder(i)
       span != null && span.end > 0
-    }) >= requiredMatches
+    })
+    numValidCaptures >= requiredMatches
   }
 
   override def skipTo(target: Int): Boolean = {

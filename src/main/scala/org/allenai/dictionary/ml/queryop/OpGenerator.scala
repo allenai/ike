@@ -7,10 +7,20 @@ import scala.collection.immutable.IntMap
 
 object OpGenerator {
 
+  /** Calculates which QLeaf could be used to match with QueryMatches. Note
+    * 1: QueryMatches with not token are never matched to a QLeaf
+    * 2: QueryMatches with multiple tokens will be matched to a QLeaf, if the QLeaf could
+    * match the token if it was repeated a sufficient number of times
+    *
+    * @param leafGenerator QLeafGenerator to determines what leaves to build the map for
+    * @param matches Sequence of QueryMatches to build the match for
+    * @return
+    */
   def buildLeafMap(
     leafGenerator: QLeafGenerator,
     matches: Seq[QueryMatch]
   ): Map[QLeaf, IntMap[Int]] = {
+    // Mutable for update speed since this is performance-relevant code
     val operatorMap = scala.collection.mutable.Map[QLeaf, List[(Int, Int)]]()
     matches.view.zipWithIndex.foreach {
       case (queryMatch, index) =>

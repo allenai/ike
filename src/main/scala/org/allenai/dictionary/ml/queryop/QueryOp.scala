@@ -68,7 +68,6 @@ object SetMax {
     SetMax(QueryToken(index), max)
   }
 }
-/** Changes a top level modifier of a QExpr, such as * or + operators */
 case class SetMax(slot: Slot, max: Int) extends ChangeRepetition {
   def combinable(other: TokenQueryOp): TokenCombination = other match {
     case cl: ChangeLeaf => AND
@@ -131,7 +130,7 @@ case class AddToken(slot: QueryToken, qexpr: QExpr) extends ChangeLeaf() {
   }
 }
 
-/** Remove a token form an existing disjunction */
+/** Remove a token from an existing disjunction */
 object RemoveFromDisj {
   def apply(index: Int, qexpr: QExpr): RemoveFromDisj = RemoveFromDisj(QueryToken(index), qexpr)
 }

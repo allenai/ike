@@ -53,14 +53,14 @@ object GeneralizedQuerySampler {
       val (chunk, rest) = remaining.splitAt(ts.size)
       remaining = rest
       val next = if (ts.isCaptureGroup) {
-        new SpanQueryCaptureGroup(new SpanQuerySequence(chunk.asJava), ts.columnName.get)
+        Seq(new SpanQueryCaptureGroup(new SpanQuerySequence(chunk.asJava), ts.columnName.get))
       } else {
-        new SpanQuerySequence(chunk.asJava)
+        chunk
       }
-      chunked = next :: chunked
+      chunked = chunked ++ next
     }
     require(remaining.isEmpty)
-    new SpanQuerySequence(chunked.reverse.asJava)
+    new SpanQuerySequence(chunked.asJava)
   }
 }
 
@@ -101,10 +101,10 @@ case class GeneralizedQuerySampler(maxEdits: Int, posSampleSize: Int)
     startFromDoc: Int,
     startFromToken: Int
   ): Hits = {
-    val rowQuery = Sampler.buildLabelledQuery(qexpr, targetTable)
-    val rowSpanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(rowQuery))
-    val sequenceQuery = buildGeneralizingQuery(qexpr, searcher, tables)
-    searcher.find(new SpanQueryFilterByCaptureGroups(sequenceQuery, rowSpanQuery,
+    val tableQuery = Sampler.buildLabelledQuery(qexpr, targetTable)
+    val tableSpanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(tableQuery))
+    val qexprQuery = buildGeneralizingQuery(qexpr, searcher, tables)
+    searcher.find(new SpanQueryFilterByCaptureGroups(qexprQuery, tableSpanQuery,
       targetTable.cols, startFromDoc, startFromToken))
   }
 }
