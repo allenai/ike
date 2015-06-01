@@ -7,7 +7,7 @@ import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 
 /** Filters hits from a BLSpans object that do not contains capture groups that would also be
   * returned by another BLSpans object. Note the capture groups from the filter query will
-  * not be returned. See SpanQueryCaptureFilter
+  * not be returned.
   *
   * @param query the 'query' spans to filter
   * @param filter the 'filter' spans to filter the query spans with
@@ -36,22 +36,26 @@ class SpansFilterByCaptureGroups(
   // array to use when getting capture spans for the filter spans
   var filterSpanHolder: Array[Span] = null
 
+  def initialize(): Boolean = {
+    initialized = true
+    if (query.skipTo(startFromDoc) && filter.skipTo(startFromDoc)) {
+      var continue = true
+      // Move past startFromToken
+      while (continue && query.start() < startFromToken && query.doc == startFromDoc) {
+        continue = query.next()
+      }
+      continue && syncMatch()
+    } else {
+      false
+    }
+  }
+
   override def next(): Boolean = {
     if (!more) {
       false
     } else {
       more = if (!initialized) {
-        initialized = true
-        if (query.skipTo(startFromDoc) && filter.skipTo(startFromDoc)) {
-          var continue = true
-          // Move past startFromToken
-          while (continue && query.start() < startFromToken && query.doc == startFromDoc) {
-            continue = query.next()
-          }
-          continue && syncMatch()
-        } else {
-          false
-        }
+        initialize()
       } else {
         query.next() && syncMatch()
       }
@@ -62,6 +66,14 @@ class SpansFilterByCaptureGroups(
   override def skipTo(target: Int): Boolean = {
     if (!more) {
       false
+    } else if (!initialize()) {
+      initialized = true
+      more = if (target > startFromDoc) {
+        filter.skipTo(target) && query.skipTo(target)
+      } else {
+        initialize()
+      } && syncMatch()
+      more
     } else {
       more = if (!query.skipTo(target)) {
         false
@@ -120,20 +132,26 @@ class SpansFilterByCaptureGroups(
    * @return false if query and filter could not be set to be on the same document
    */
   private def syncDoc(): Boolean = {
-    if (query.doc == filter.doc) return true
-    while (true) {
-      if (query.doc < filter.doc) {
-        if (!query.skipTo(filter.doc)) return false
+    if (query.doc == filter.doc) {
+      true
+    } else {
+      var foundMatch = false
+      var continue = true
+      while (continue) {
+        if (query.doc < filter.doc) {
+          continue = query.skipTo(filter.doc)
+        }
+        if (query.doc > filter.doc) {
+          continue = filter.skipTo(query.doc)
+        } else {
+          // Left must be at least as large as Right after the first if statement, so if
+          // Right is at least as large as Left after this statement we are done
+          continue = false
+          foundMatch = true
+        }
       }
-      if (query.doc > filter.doc) {
-        if (!filter.skipTo(query.doc)) return false
-      } else {
-        // Left must be at least as large as Right after the first if statement, so if
-        // Right is at least as large as Left after this statement we are done
-        return true
-      }
+      foundMatch
     }
-    throw new RuntimeException()
   }
 
   override def setHitQueryContext(context: HitQueryContext): Unit = {
