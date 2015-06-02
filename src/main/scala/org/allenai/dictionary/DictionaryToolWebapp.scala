@@ -174,7 +174,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   }
 
-  val corporaRoute = path("api" / "corpora") {
+  val corporaRoute = pathPrefix("api" / "corpora") {
     complete {
       val readySearchApps = searchApps.filter(_._2.isCompleted)
       JsArray(readySearchApps.map {

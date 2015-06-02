@@ -15,6 +15,7 @@ sealed trait QCapture extends QAtom
 
 case class QWord(value: String) extends QLeaf
 case class QPos(value: String) extends QLeaf
+case class QChunk(value: String) extends QLeaf
 case class QDict(value: String) extends QLeaf
 case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])
   extends QLeaf
@@ -48,14 +49,17 @@ object QExprParser extends RegexParsers {
   val posTagSet = Seq("PRP$", "NNPS", "WRB", "WP$", "WDT", "VBZ", "VBP", "VBN", "VBG", "VBD", "SYM",
     "RBS", "RBR", "PRP", "POS", "PDT", "NNS", "NNP", "JJS", "JJR", "WP", "VB", "UH", "TO", "RP",
     "RB", "NN", "MD", "LS", "JJ", "IN", "FW", "EX", "DT", "CD", "CC")
+  val chunkTagSet = Seq("NP", "VP", "PP", "ADJP", "ADVP")
   val posTagRegex = posTagSet.map(Pattern.quote).mkString("|").r
+  val chunkTagRegex = chunkTagSet.map(Pattern.quote).mkString("|").r
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
   def word = """[^|\]\[\^$(){}\s*+,]+""".r ^^ QWord
   def pos = posTagRegex ^^ QPos
+  def chunk = chunkTagRegex ^^ QChunk
   def dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
   def wildcard = "\\.".r ^^^ QWildcard()
-  def atom = wildcard | pos | dict | word
+  def atom = wildcard | pos | chunk | dict | word
   def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
   def named = "(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) }
   def unnamed = "(" ~> expr <~ ")" ^^ QUnnamed
@@ -128,6 +132,7 @@ object QueryLanguage {
     def recurse(qexpr: QExpr): String = qexpr match {
       case QWord(value) => value
       case QPos(value) => value
+      case QChunk(value) => value
       case QDict(value) => value
       case QWildcard() => "."
       case QSeq(children) => children.map(getQueryString).mkString(" ")

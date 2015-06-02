@@ -14,6 +14,7 @@ libraryDependencies ++= Seq(
     allenAiDatastore,
     nlpstackModule("tokenize"),
     nlpstackModule("postag"),
+    nlpstackModule("chunk"),
     nlpstackModule("lemmatize"),
     nlpstackModule("segment"),
     lucene("core"),

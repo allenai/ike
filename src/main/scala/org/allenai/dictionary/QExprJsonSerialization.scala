@@ -8,6 +8,7 @@ object QExprJsonSerialization {
     override def write(qexpr: QExpr): JsValue = qexpr match {
       case q: QWord => q.toJson
       case q: QPos => q.toJson
+      case q: QChunk => q.toJson
       case q: QDict => q.toJson
       case q: QWildcard => q.toJson
       case q: QNamed => q.toJson
@@ -26,6 +27,7 @@ object QExprJsonSerialization {
   }
   implicit val qwordFormat = jsonFormat1(QWord.apply).pack("type" -> "QWord")
   implicit val qposFormat = jsonFormat1(QPos.apply).pack("type" -> "QPos")
+  implicit val qchunkFormat = jsonFormat1(QChunk.apply).pack("type" -> "QChunk")
   implicit val qdictFormat = jsonFormat1(QDict.apply).pack("type" -> "QDict")
   implicit val qandFormat = jsonFormat2(QAnd.apply).pack("type" -> "QAnd")
   implicit val qwildcardFormat = new RootJsonFormat[QWildcard] {
@@ -43,7 +45,7 @@ object QExprJsonSerialization {
   implicit val qpfwFormat = jsonFormat3(QPosFromWord.apply).pack("type" -> "QPosFromWord")
   implicit val simPhraseFormat = jsonFormat2(SimilarPhrase.apply)
   implicit val qspFormat = jsonFormat3(QSimilarPhrases.apply).pack("type" -> "QSimilarPhrases")
-  implicit val unpackers = Seq(qwordFormat, qposFormat, qdictFormat,
+  implicit val unpackers = Seq(qwordFormat, qposFormat, qchunkFormat, qdictFormat,
     qwildcardFormat, qnamedFormat, qunnamedFormat, qnonCapFormat, qstarFormat,
     qplusFormat, qseqFormat, qdisjFormat, qpfwFormat, qspFormat)
 }

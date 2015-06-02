@@ -1,12 +1,13 @@
 package org.allenai.dictionary.index
 
+import org.allenai.datastore.Datastore
+import org.allenai.nlpstack.core.{ ChunkedToken, Lemmatized }
+
+import nl.inl.blacklab.index.Indexer
+
 import java.io.{ File, StringReader }
 import java.net.URI
 import java.nio.file.{ Files, Paths }
-
-import nl.inl.blacklab.index.Indexer
-import org.allenai.datastore.Datastore
-import org.allenai.nlpstack.core.{ Lemmatized, PostaggedToken }
 
 object CreateIndex extends App {
   def addTo(indexer: Indexer)(text: IndexableText): Unit = {
@@ -19,7 +20,7 @@ object CreateIndex extends App {
     destinationDir: File = null,
     batchSize: Int = 1000,
     textSource: URI = null,
-    oneSentencePerDoc: Boolean = false
+    oneSentencePerDoc: Boolean = true
   )
 
   val parser = new scopt.OptionParser[Options](this.getClass.getSimpleName.stripSuffix("$")) {
@@ -64,11 +65,12 @@ object CreateIndex extends App {
         throw new RuntimeException(s"URL scheme not supported: $otherAuthority")
     }
 
-    def indexableToken(lemmatized: Lemmatized[PostaggedToken]): IndexableToken = {
+    def indexableToken(lemmatized: Lemmatized[ChunkedToken]): IndexableToken = {
       val word = lemmatized.token.string
       val pos = lemmatized.token.postag
       val lemma = lemmatized.lemma
-      IndexableToken(word, pos, lemma)
+      val chunk = lemmatized.token.chunk
+      IndexableToken(word, pos, lemma, chunk)
     }
 
     def process(idText: IdText): Seq[IndexableText] = {
