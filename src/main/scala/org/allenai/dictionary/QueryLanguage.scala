@@ -249,55 +249,18 @@ object QueryLanguage {
     }
     case l: QLeaf => (1, 1)
     case QSeq(seq) =>
-      val (mins, maxes) = seq.map(getQueryLength(_)).unzip
-      val max = if (maxes.forall(_ != -1)) maxes.sum else -1
+      val (mins, maxes) = seq.map(getQueryLength).unzip
+      val max = if (maxes contains -1) -1 else maxes.sum
       (mins.sum, max)
     case QDisj(seq) =>
-      val (mins, maxes) = seq.map(getQueryLength(_)).unzip
-      val max = if (maxes.forall(_ != -1)) maxes.max else -1
+      val (mins, maxes) = seq.map(getQueryLength).unzip
+      val max = if (maxes contains -1) -1 else maxes.max
       (mins.min, max)
     case QAnd(q1, q2) =>
       val (min1, max1) = getQueryLength(q1)
       val (min2, max2) = getQueryLength(q2)
       (Math.min(min1, min2), math.max(max1, max2))
     case q: QAtom => getQueryLength(q.qexpr)
-  }
-
-  /** Ensures that all capture groups in QExpr are named capture groups with names corresponding
-    * to a column in tableCols. If QExpr contains unnamed capture groups they will be replaced with
-    * named capture groups with names taken from tableCols in the order they appear
-    *
-    * @param qexpr Query expression to name capture groups within
-    * @param tableCols Sequence of the columns in a table to be used to name unnamed capture
-    *          groups
-    * @throws IllegalArgumentException if QExpr contains a mix of named and unnamed capture groups,
-    *                          if the name capture group do not have names corresponding
-    *                          to the columns in tableCols, or if the query has the wrong
-    *                          number of capture groups
-    */
-  def nameCaptureGroups(qexpr: QExpr, tableCols: Seq[String]): QExpr = {
-    var columnsLeft = tableCols
-    def recurse(qexpr: QExpr): QExpr = qexpr match {
-      case QNamed(q, name) =>
-        require(columnsLeft contains name)
-        columnsLeft = columnsLeft.filter(_ != name)
-        require(tableCols contains name)
-        QNamed(recurse(q), name)
-      case QUnnamed(q) =>
-        val name = columnsLeft.head
-        columnsLeft = columnsLeft.drop(1)
-        QNamed(recurse(q), name)
-      case QStar(q) => QStar(recurse(q))
-      case QPlus(q) => QPlus(recurse(q))
-      case QNonCap(q) => QNonCap(recurse(q))
-      case QSeq(children) => QSeq(children.map(recurse))
-      case QDisj(children) => QDisj(children.map(recurse))
-      case QAnd(expr1, expr2) => QAnd(recurse(expr1), recurse(expr2))
-      case QRepetition(expr, min, max) => QRepetition(recurse(expr), min, max)
-      case q: QLeaf => q
-    }
-    val output = recurse(qexpr)
-    output
   }
 
   /** Convert a QRepetition to a QStar or QPlus if possible, None if it can be deleted */
