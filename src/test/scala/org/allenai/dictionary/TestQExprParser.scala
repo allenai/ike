@@ -72,5 +72,9 @@ class TestQExprParser extends UnitSpec with ScratchDirectory {
     val e13 = qs(w("the"), g(Seq("fat", "cat"), 10), g(Seq("ran"), 1),
       or(w("fast"), g(Seq("quick"), 34)))
     assert(parse(q13) == e13)
+
+    val q14 = "the \"fat cat\"[1,2]"
+    val e14 = qs(w("the"), rep(g(Seq("fat", "cat"), 0), 1, 2))
+    assert(parse(q14) == e14)
   }
 }

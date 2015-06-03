@@ -2,7 +2,7 @@ language: scala
 scala:
 - 2.11.5
 jdk:
-- openjdk7
+- oraclejdk8
 cache: yes
 env:
   - secure: Me9yvnJjmGkBz5CY1qKNfFFvy3DUgA33lhPTPPuI1+MJWPp2hi1EtANaO6rmV7GhdQBITL6llEyyGSAuKJbt8XL11axFtdF3WnQd/rXXR0gnk1GhsaSLZ/38lYZ4V+IH5ptPhimr2wOXhZgzK9H4b4bk+YGWgWX0V0LieQiJNarRsiUVOSuyhgz/VCWnMbFKEhP6ZzNc5Cm90ZNgcQjkY72GmUngNIadWW7lrSDo9vCzAY87wXvyCvIMF0feui2ancMjt1AAQjhiqNzpB7rVrly48la0b0s//tqctetT9YJlitRpo08q887JEtTjM3Gkk9QcZITn6GizMAWw9SKyvg==

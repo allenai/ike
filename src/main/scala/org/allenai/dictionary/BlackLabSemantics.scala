@@ -11,14 +11,14 @@ object BlackLabSemantics {
       case QWord(w) => new TextPatternTerm(w)
       case QPos(p) => new TextPatternProperty("pos", new TextPatternTerm(p))
       case QDict(_) =>
-        throw new IllegalArgumentException("Can't construct TextPattern from QDict")
+        throw new IllegalArgumentException("Can not convert QDict to TextPattern")
       case QGeneralizePhrase(_, _) =>
-        throw new IllegalArgumentException("Can't construct TextPattern from QGeneralizePhrase")
+        throw new IllegalArgumentException("Can not convert QGeneralizePhrase to TextPattern")
       case QWildcard() => new TextPatternAnyToken(1, 1)
       case QNamed(e: QExpr, name: String) => new TextPatternCaptureGroup(blqHelper(e), name)
       case QUnnamed(e) =>
         unnamedCnt += 1
-        val result = blqHelper(QNamed(e, s"Capture Group ${unnamedCnt}"))
+        val result = blqHelper(QNamed(e, s"Capture Group $unnamedCnt"))
         result
       case QNonCap(e: QExpr) => blqHelper(e)
       case QStar(e: QExpr) => new TextPatternRepetition(blqHelper(e), 0, maxRepetition)
