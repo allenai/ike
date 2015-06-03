@@ -72,7 +72,8 @@ class SpansFilterByCaptureGroups(
         filter.skipTo(target) && query.skipTo(target)
       } else {
         initialize()
-      } && syncMatch()
+      }
+      more = more && syncMatch()
       more
     } else {
       more = if (!query.skipTo(target)) {

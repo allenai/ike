@@ -25,8 +25,8 @@ class TestCompoundQueryTokenOp extends UnitSpec {
   "CompoundOp" should "Apply ops correctly" in {
     val ops = Seq(replace3, prefix22, prefix3, suffix1, suffix3)
     val startingQuery = QueryLanguage.parse("one (?<capture> c1 c2) two").get
-    val startingTokenQuery = TokenizedQuery.buildFromQuery(startingQuery)
-    val qExpr = CompoundQueryOp.applyOps(startingTokenQuery, ops).getQuery match {
+    val startingTokenQuery = TokenizedQuery.buildFromQuery(startingQuery, Seq())
+    val qExpr = CompoundQueryOp.applyOps(startingTokenQuery, ops).getOriginalQuery match {
       case QSeq(seq) => seq
       case _ => throw new RuntimeException()
     }
@@ -45,7 +45,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
 
   it should "apply AddToken ops" in {
     val startingQuery = QueryLanguage.parse("{one, two} (?<capture> c1 c2)").get
-    val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
+    val tokenized = TokenizedQuery.buildFromQuery(startingQuery, Seq())
     val ops = Seq(add22, add21, add1)
     val modified = CompoundQueryOp.applyOps(tokenized, ops).getSeq
     val expected = QueryLanguage.parse("{one, two, a3} (?<capture> {c1, a21, a22} c2)").get
@@ -59,49 +59,49 @@ class TestCompoundQueryTokenOp extends UnitSpec {
 
   "CompoundOp" should "apply remove ops" in {
     val startingQuery = QueryLanguage.parse("p1 p2 (?<capture> c1) s1 s2").get
-    val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
+    val tokenized = TokenizedQuery.buildFromQuery(startingQuery, Seq())
     assertResult(QSeq(Seq(QNamed(QWord("c1"), "capture"), QWord("s1")))) {
       CompoundQueryOp.applyOps(tokenized, Set(
         RemoveToken(1),
         RemoveToken(2), RemoveToken(5)
-      )).getQuery
+      )).getOriginalQuery
     }
   }
 
   "CompoundOp" should "apply remove from disjunction" in {
     val startingQuery = QueryLanguage.parse("{d1, d2, d3, d4}").get
-    val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
+    val tokenized = TokenizedQuery.buildFromQuery(startingQuery, Seq())
     assertResult(QDisj(Seq(QWord("d1"), QWord("d3")))) {
       CompoundQueryOp.applyOps(tokenized, Set(
         RemoveFromDisj(1, QWord("d2")),
         RemoveFromDisj(1, QWord("d4"))
-      )).getQuery
+      )).getOriginalQuery
     }
   }
 
   "CompoundOp" should "work for repetitions" in {
     val startingQuery = QueryLanguage.parse("NN* (?<capture> c1)").get
-    val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
+    val tokenized = TokenizedQuery.buildFromQuery(startingQuery, Seq())
     val min1 = SetMin(1, 1)
     val max1 = SetMax(1, 1)
     val set = SetToken(QueryToken(1), QPos("VB"))
     assertResult(QueryLanguage.parse("NN (?<capture> c1)").get) {
-      CompoundQueryOp.applyOps(tokenized, Set(min1, max1)).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(min1, max1)).getOriginalQuery
     }
     assertResult(QueryLanguage.parse("VB* (?<capture> c1)").get) {
-      CompoundQueryOp.applyOps(tokenized, Set(set)).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(set)).getOriginalQuery
     }
     assertResult(QueryLanguage.parse("VB (?<capture> c1)").get) {
-      CompoundQueryOp.applyOps(tokenized, Set(min1, max1, set)).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(min1, max1, set)).getOriginalQuery
     }
     assertResult(QueryLanguage.parse("VB+ (?<capture> c1)").get) {
-      CompoundQueryOp.applyOps(tokenized, Set(min1, set)).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(min1, set)).getOriginalQuery
     }
   }
 
   "CompoundOp" should "work for set repetition token" in {
     val startingQuery = QueryLanguage.parse("NN* NNS[2,4] (?<capture> c1)").get
-    val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
+    val tokenized = TokenizedQuery.buildFromQuery(startingQuery, Seq())
     val max1 = SetMax(1, 5)
     val set10 = SetRepeatedToken(1, 1, QWord("the"))
     val set13 = SetRepeatedToken(1, 3, QWord("cat"))
@@ -110,22 +110,22 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     val set23 = SetRepeatedToken(2, 3, QWord("cat"))
 
     assertResult(QueryLanguage.parse("the NN* NNS[2,4] (?<capture> c1)").get) {
-      CompoundQueryOp.applyOps(tokenized, Set(set10)).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(set10)).getOriginalQuery
     }
     assertResult(QueryLanguage.parse("the NN cat NN* NNS[2,4] (?<capture> c1)").get) {
-      CompoundQueryOp.applyOps(tokenized, Set(set10, set13)).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(set10, set13)).getOriginalQuery
     }
     assertResult(QueryLanguage.parse("the NN cat NN[0,2] NNS[2,4] (?<capture> c1)").get) {
-      CompoundQueryOp.applyOps(tokenized, Set(set10, set13, max1)).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(set10, set13, max1)).getOriginalQuery
     }
     assertResult(QueryLanguage.parse("NN* NNS cat NNS[0,2] (?<capture> c1)").get) {
-      CompoundQueryOp.applyOps(tokenized, Set(set22)).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(set22)).getOriginalQuery
     }
     assertResult(QueryLanguage.parse("NN* NNS[3,3] cat (?<capture> c1)").get) {
-      CompoundQueryOp.applyOps(tokenized, Set(set24)).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(set24)).getOriginalQuery
     }
     assertResult(QueryLanguage.parse("NN* NNS cat cat NNS[0,1] (?<capture> c1)").get) {
-      CompoundQueryOp.applyOps(tokenized, Set(set22, set23)).getQuery
+      CompoundQueryOp.applyOps(tokenized, Set(set22, set23)).getOriginalQuery
     }
   }
 
@@ -133,7 +133,7 @@ class TestCompoundQueryTokenOp extends UnitSpec {
     implicit def opToEvaluatedOp(x: TokenQueryOp): EvaluatedOp = EvaluatedOp(x, IntMap())
     val ops = Seq(suffix1, replace3, prefix21, prefix22, add3)
     val start = QueryLanguage.parse("(?<capture> c1 c2 c3) h").get
-    val tokenized = TokenizedQuery.buildFromQuery(start)
+    val tokenized = TokenizedQuery.buildFromQuery(start, Seq())
     val modified = CompoundQueryOp.applyOps(tokenized, ops).getSeq
     assertResult(Set(prefix21.qexpr, prefix22.qexpr)) {
       modified(0) match {

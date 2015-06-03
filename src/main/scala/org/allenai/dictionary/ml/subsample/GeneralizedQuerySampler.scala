@@ -4,7 +4,7 @@ import nl.inl.blacklab.search.lucene.SpanQueryCaptureGroup
 import nl.inl.blacklab.search.sequences.SpanQuerySequence
 import nl.inl.blacklab.search.{ Hits, Searcher }
 import org.allenai.dictionary._
-import org.allenai.dictionary.ml.{ GeneralizeToDisj, TokenizedQuery }
+import org.allenai.dictionary.ml._
 import org.apache.lucene.search.spans.SpanQuery
 
 import scala.collection.JavaConverters._
@@ -52,10 +52,10 @@ object GeneralizedQuerySampler {
     qexpr.tokenSequences.foreach { ts =>
       val (chunk, rest) = remaining.splitAt(ts.size)
       remaining = rest
-      val next = if (ts.isCaptureGroup) {
-        Seq(new SpanQueryCaptureGroup(new SpanQuerySequence(chunk.asJava), ts.columnName.get))
-      } else {
-        chunk
+      val next = ts match {
+        case CapturedTokenSequence(_, name, _) =>
+          Seq(new SpanQueryCaptureGroup(new SpanQuerySequence(chunk.asJava), name))
+        case TokenSequence(_) => chunk
       }
       chunked = chunked ++ next
     }

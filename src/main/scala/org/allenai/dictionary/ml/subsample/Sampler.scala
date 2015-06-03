@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.subsample
 
 import org.allenai.common.Logging
-import org.allenai.dictionary.ml.TokenizedQuery
+import org.allenai.dictionary.ml.{ CapturedTokenSequence, TokenizedQuery }
 
 import nl.inl.blacklab.search.{ Hits, Searcher }
 import org.allenai.dictionary._
@@ -17,8 +17,6 @@ object Sampler extends Logging {
         val querySize = QueryLanguage.getQueryLength(QSeq(seq))
         colName -> querySize
     }.toMap
-    println(captureSizes)
-    println(table.cols)
     val orderedCapturedSizes = table.cols.map(captureSizes(_))
 
     // Filter rows from the query that cannot match the query
@@ -48,14 +46,14 @@ object Sampler extends Logging {
     val captureNames = query.getCaptureGroups.map(_._1)
     val rowsReordered = captureNames.map(colNameToColumn(_)).transpose
 
-    var prevWasCapture = query.tokenSequences.head.isCaptureGroup
+    var prevWasCapture = query.tokenSequences.head.isInstanceOf[CapturedTokenSequence]
     val distanceBetweenCaptures = query.tokenSequences.drop(1).flatMap { tokenSequence =>
-      val distance = if (tokenSequence.isCaptureGroup && !prevWasCapture) {
-        Some(QueryLanguage.getQueryLength(tokenSequence.getQuery))
+      val distance = if (tokenSequence.isInstanceOf[CapturedTokenSequence] && !prevWasCapture) {
+        Some(QueryLanguage.getQueryLength(tokenSequence.getOriginalQuery))
       } else {
         None
       }
-      prevWasCapture = tokenSequence.isCaptureGroup
+      prevWasCapture = tokenSequence.isInstanceOf[CapturedTokenSequence]
       distance
     }
     val asSequences = rowsReordered.map(row => {

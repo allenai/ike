@@ -236,14 +236,10 @@ object QuerySuggester extends Logging {
       case Some(table) => table
       case None => throw new IllegalArgumentException("Target table not found")
     }
-    require(QueryLanguage.getCaptureGroups(startingQuery).size == targetTable.cols.size)
-
     val percentUnlabelled = querySuggestionConf.getDouble("percentUnlabelled")
 
-    val queryWithNamedCaptures = QueryLanguage.nameCaptureGroups(
-      QueryLanguage.interpolateSimilarPhrases(startingQuery, similarPhrasesSearcher),
-      targetTable.cols
-    )
+    val queryWithNamedCaptures =
+      QueryLanguage.interpolateSimilarPhrases(startingQuery, similarPhrasesSearcher).get
 
     logger.info(s"Making ${if (narrow) "narrowing" else "broadening"} " +
       s"suggestion for <${QueryLanguage.getQueryString(queryWithNamedCaptures)}> for $target")
@@ -251,10 +247,10 @@ object QuerySuggester extends Logging {
 
     val tokenizedQuery =
       if (narrow) {
-        TokenizedQuery.buildFromQuery(queryWithNamedCaptures)
+        TokenizedQuery.buildFromQuery(queryWithNamedCaptures, targetTable.cols)
       } else {
         val tq = TokenizedQuery.buildWithGeneralizations(queryWithNamedCaptures, searchers,
-          similarPhrasesSearcher, 100)
+          targetTable.cols, similarPhrasesSearcher, 100)
         tq.getSeq.zip(tq.generalizations.get).foreach {
           case (q, g) => logger.debug(s"Generalize $q => $g")
         }
@@ -478,7 +474,7 @@ object QuerySuggester extends Logging {
 
     val scoredOps = operatorsPruneByRepetition.take(maxToSuggest).map {
       case (op, score) =>
-        val query = op.applyOps(tokenizedQuery).getQuery
+        val query = op.applyOps(tokenizedQuery).getOriginalQuery
         val (p, n, u) = QueryEvaluator.countOccurrences(op.numEdits, hitAnalysis.examples)
         ScoredQuery(query, score, p, n, u * unlabelledBiasCorrection)
     }

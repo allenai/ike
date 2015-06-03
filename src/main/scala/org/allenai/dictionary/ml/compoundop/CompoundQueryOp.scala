@@ -1,5 +1,6 @@
 package org.allenai.dictionary.ml.compoundop
 
+import opennlp.tools.tokenize.TokenizerME
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml._
 import org.allenai.dictionary.ml.queryop._
@@ -213,20 +214,29 @@ object CompoundQueryOp {
 
     // Now chunk up new token sequence, this is done by consuming tokens from our sequence in
     // the same proportions as found in the old query
-    var queryTokenSequences = List[QueryTokenSequence]()
-    query.tokenSequences.foreach { tokenSeq =>
+    val queryTokenSequences = query.tokenSequences.map { tokenSeq =>
       val seqSize = tokenSeq.size
       val (newSeq, rest) = newQuerySequence.splitAt(seqSize)
       newQuerySequence = rest
-      queryTokenSequences =
-        QueryTokenSequence(newSeq.flatten, tokenSeq.columnName) :: queryTokenSequences
-    }
+      tokenSeq match {
+        case TokenSequence(queryTokens) => TokenSequence(newSeq.flatten)
+        case cts: CapturedTokenSequence => cts.copy(queryTokens = newSeq.flatten)
+      }
+    }.toList
     require(newQuerySequence.isEmpty)
 
     // Finally, add in the new prefix and suffix sequences
-    queryTokenSequences = QueryTokenSequence(suffixSeq, None) :: queryTokenSequences
-    queryTokenSequences = QueryTokenSequence(prefixSeq, None) :: queryTokenSequences.reverse
-    TokenizedQuery(queryTokenSequences)
+    val sequencesWithSuffix = if (suffixSeq.nonEmpty) {
+      queryTokenSequences :+ TokenSequence(suffixSeq)
+    } else {
+      queryTokenSequences
+    }
+    val sequencesWithSuffixAndPrefix = if (prefixSeq.nonEmpty) {
+      TokenSequence(prefixSeq) :: sequencesWithSuffix
+    } else {
+      sequencesWithSuffix
+    }
+    TokenizedQuery(sequencesWithSuffixAndPrefix)
   }
 }
 
@@ -258,6 +268,6 @@ abstract class CompoundQueryOp() {
   }
 
   def toString(query: TokenizedQuery): String = {
-    "<" + QueryLanguage.getQueryString(applyOps(query).getQuery) + ">"
+    "<" + QueryLanguage.getQueryString(applyOps(query).getOriginalQuery) + ">"
   }
 }

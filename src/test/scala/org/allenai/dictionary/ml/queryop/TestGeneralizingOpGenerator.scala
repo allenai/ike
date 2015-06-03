@@ -10,7 +10,7 @@ class TestGeneralizingOpGenerator extends UnitSpec with ScratchDirectory {
 
   it should "Suggest correct POS operators" in {
     val query = QueryLanguage.parse("a (?<x>b c) d").get
-    val tokenized = TokenizedQuery.buildFromQuery(query)
+    val tokenized = TokenizedQuery.buildFromQuery(query, Seq())
     var generator = GeneralizingOpGenerator(true, true)
     val slot = QueryToken(4)
     val setPosNN = SetToken(slot, QPos("NN"))

@@ -38,7 +38,23 @@ class TestMatchesSampler extends UnitSpec with ScratchDirectory {
       negative.map(x => TableRow(Seq(TableValue(x.split(" ").map(QWord.apply))))))
   }
 
-  "MatchesSampler" should "test correctly" in {
+  it should "get named query correctly" in {
+    val query = QueryLanguage.parse("(?<c1> a+) b (?<c2> c d) e*").get
+    val tokenized = TokenizedQuery.buildFromQuery(query, Seq())
+    val names = tokenized.getNames
+    val expectedNamedQuery = QSeq(Seq(
+      QNamed(QNamed(QPlus(QWord("a")), names(0)), "c1"),
+      QWord("b"),
+      QNamed(QSeq(Seq(
+        QWord("c"),
+        QWord("d")
+      )), "c2"),
+      QNamed(QStar(QWord("e")), names(4))
+    ))
+    assertResult(expectedNamedQuery)(MatchesSampler.getNamedQuery(tokenized))
+  }
+
+  it should "test correctly" in {
     val startingQuery = QueryLanguage.parse("(?<col1> {I, hate, it}) . " +
       "(?<col2> {great, mango, bananas}) .").get
     val table = Table(
@@ -53,7 +69,7 @@ class TestMatchesSampler extends UnitSpec with ScratchDirectory {
         TableRow(Seq(TableValue(Seq(QWord("I"))), TableValue(Seq(QWord("bananas")))))
       )
     )
-    val tokenized = TokenizedQuery.buildFromQuery(startingQuery)
+    val tokenized = TokenizedQuery.buildFromQuery(startingQuery, Seq())
 
     val expectedResults = Seq(
       Seq("I", "mango"),

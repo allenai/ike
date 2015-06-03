@@ -3,8 +3,6 @@ package org.allenai.dictionary.ml
 import nl.inl.blacklab.search.Searcher
 import org.allenai.dictionary._
 
-case class UnconvertibleQuery(msg: String) extends Exception
-
 /** Indicates a 'slot' relative to a particular TokenizedQuery. A Slot indicates a token within
   * the existing query, or an 'empty space' that occurs before of after the existing query
   */
@@ -40,19 +38,27 @@ case class QuerySlotData(qexpr: Option[QExpr], slot: Slot, isCapture: Boolean,
   }
 }
 
-/** A sequence of of QExpr 'tokens' that make up one named capture group
-  * paired with the name of the capture group
-  */
-case class QueryTokenSequence(queryTokens: Seq[QExpr], columnName: Option[String]) {
-  def getQuery: QExpr = {
-    if (columnName.isDefined) {
-      QNamed(TokenizedQuery.qexprFromSequence(queryTokens), columnName.get)
+/** A 'chunk' of QueryTokens that may or may not be part of a capture group */
+sealed trait QueryTokenSequence {
+  def queryTokens: Seq[QExpr]
+  def getOriginalQuery: QExpr
+  def size: Int = queryTokens.size
+}
+case class TokenSequence(queryTokens: Seq[QExpr]) extends QueryTokenSequence {
+  override def getOriginalQuery: QExpr = TokenizedQuery.qexprFromSequence(queryTokens)
+}
+
+case class CapturedTokenSequence(
+    queryTokens: Seq[QExpr],
+    captureName: String, wasExplicitlyNamed: Boolean
+) extends QueryTokenSequence {
+  override def getOriginalQuery: QExpr = {
+    if (wasExplicitlyNamed) {
+      QNamed(TokenizedQuery.qexprFromSequence(queryTokens), captureName)
     } else {
-      TokenizedQuery.qexprFromSequence(queryTokens)
+      QUnnamed(TokenizedQuery.qexprFromSequence(queryTokens))
     }
   }
-  def size: Int = queryTokens.size
-  def isCaptureGroup: Boolean = columnName.isDefined
 }
 
 object TokenizedQuery {
@@ -92,44 +98,49 @@ object TokenizedQuery {
 
   /** Builds a TokenizedQuery from a QExpr
     *
-    * @param qexpr Expression to tokenize
-    * @param tableCols Sequence of table columns, used to name the query's unnamed capture group
-    * @return the tokenized QExpr
-    * @throws IllegalArgumentException if the query capture groups could not be made mapped to
-    *                             the table columns
-    */
-  def buildFromQuery(qexpr: QExpr, tableCols: Seq[String]): TokenizedQuery = {
-    buildFromQuery(QueryLanguage.nameCaptureGroups(qexpr, tableCols))
-  }
-
-  /** Builds a TokenizedQuery from a QExpr
-    *
     * @param qexpr Expression to tokenize, assumed to be fixed length (always matches the same
     *     number of tokens) and with no unnamed capture groups
+    * @param tableCols tables columns to use when naming unnamed capture groups
     * @return the tokenized QExpr
-    * @throws IllegalArgumentException if the query has unnamed capture groups
     */
-  def buildFromQuery(qexpr: QExpr): TokenizedQuery = {
+  def buildFromQuery(qexpr: QExpr, tableCols: Seq[String]): TokenizedQuery = {
     val asSeq = flattenQExpr(qexpr)
 
+    var columnNamesLeft = tableCols
     var tokenSequences = Seq[QueryTokenSequence]()
     var onSequence = List[QExpr]()
     asSeq.foreach {
       case c: QCapture =>
         if (onSequence.nonEmpty) {
-          tokenSequences = tokenSequences :+ QueryTokenSequence(onSequence.reverse, None)
+          tokenSequences = tokenSequences :+ TokenSequence(onSequence.reverse)
           onSequence = List()
         }
-        val captureSeq = c match {
-          case QUnnamed(expr) => throw new IllegalArgumentException("Cannot convert unnamed " +
-            "capture groups")
-          case QNamed(expr, name) => QueryTokenSequence(flattenQExpr(expr), Some(name))
+        val columnName = c match {
+          case QUnnamed(expr) =>
+            val name = columnNamesLeft.head
+            columnNamesLeft = columnNamesLeft.tail
+            name
+          case QNamed(expr, name) =>
+            columnNamesLeft = columnNamesLeft.filter(_ != name)
+            name
         }
-        tokenSequences = tokenSequences :+ captureSeq
+        tokenSequences = tokenSequences :+ CapturedTokenSequence(
+          flattenQExpr(c.qexpr), columnName, c.isInstanceOf[QNamed]
+        )
       case q: QExpr => onSequence = q :: onSequence
     }
     if (onSequence.nonEmpty) {
-      tokenSequences = tokenSequences :+ QueryTokenSequence(onSequence.reverse, None)
+      tokenSequences = tokenSequences :+ TokenSequence(onSequence.reverse)
+    }
+
+    if ((tableCols.size == 1) &&
+      tokenSequences.size == 1 && tokenSequences.head.isInstanceOf[TokenSequence]) {
+      // No capture groups and one column table, assume the whole query was intended to be captured
+      tokenSequences =
+        Seq(CapturedTokenSequence(tokenSequences.head.queryTokens, tableCols.head, false))
+    } else {
+      require(columnNamesLeft.isEmpty, s"Could not align capture groups for " +
+        s"${QueryLanguage.getQueryString(qexpr)} with columns $tableCols")
     }
     tokenSequences.foreach(ts => require(ts.queryTokens.nonEmpty))
     TokenizedQuery(tokenSequences)
@@ -138,10 +149,11 @@ object TokenizedQuery {
   def buildWithGeneralizations(
     qexpr: QExpr,
     searchers: Seq[Searcher],
+    tableCols: Seq[String],
     similarPhrasesSearcher: SimilarPhrasesSearcher,
     sampleSize: Int
   ): TokenizedQuery = {
-    val tq = buildFromQuery(qexpr)
+    val tq = buildFromQuery(qexpr, tableCols)
     val generalizations =
       tq.getSeq.map(QueryGeneralizer.queryGeneralizations(_, searchers,
         similarPhrasesSearcher, sampleSize))
@@ -150,11 +162,11 @@ object TokenizedQuery {
 }
 
 /** Query that has been 'tokenized' into a sequence of QExpr, the QExpr are then chunked together
-  * into tokenSequence which can be marked as capture groups or not.
+  * into tokenSequence which can be marked as capture groups or not. Note this cannot represent
+  * queries with nested capture groups.
   *
-  * @param tokenSequences
-  * @param generalizations
-  * @throws IllegalArgumentException if capture.size + 1 != nonCapture.size
+  * @param tokenSequences Chunked sequence of QExpr
+  * @param generalizations Optionally, corresponding generalization for each QExpr
   */
 case class TokenizedQuery(
     tokenSequences: Seq[QueryTokenSequence],
@@ -164,32 +176,28 @@ case class TokenizedQuery(
   val size: Int = tokenSequences.map(_.queryTokens.size).sum
   require(generalizations.isEmpty || size == generalizations.get.size)
 
-  def getQuery: QExpr = {
-    TokenizedQuery.qexprFromSequence(tokenSequences.flatMap { ts =>
-      if (ts.isCaptureGroup) {
-        Seq(ts.getQuery)
-      } else {
-        ts.queryTokens
-      }
+  def getOriginalQuery: QExpr = {
+    TokenizedQuery.qexprFromSequence(tokenSequences.flatMap {
+      case TokenSequence(seq) => seq
+      case cts: CapturedTokenSequence => Seq(cts.getOriginalQuery)
     })
   }
 
-  def getSeq: Seq[QExpr] = {
-    tokenSequences.flatMap(_.queryTokens)
+  def getSeq: Seq[QExpr] = tokenSequences.flatMap(_.queryTokens)
+
+  def getCaptureGroups: Seq[(String, Seq[QExpr])] = tokenSequences.flatMap {
+    case TokenSequence(_) => None
+    case CapturedTokenSequence(tokens, name, _) => Some((name, tokens))
   }
 
-  def getCaptureGroups: Seq[(String, Seq[QExpr])] = tokenSequences.filter(_.isCaptureGroup).map {
-    qc => (qc.columnName.get, qc.queryTokens)
-  }
-
-  /** @return the tokens of this, plus their Slot, their group number, and whether they are part
+  /** @return the tokens of this, plus their Slot, and whether they are part
     * of a capture group or not
     */
   def getAnnotatedSeq: Seq[QuerySlotData] = {
     var onIndex = 0
     tokenSequences.zipWithIndex.flatMap {
       case (tokenSequence, sequenceIndex) =>
-        val isCapture = tokenSequence.columnName.isDefined
+        val isCapture = tokenSequence.isInstanceOf[CapturedTokenSequence]
         tokenSequence.queryTokens.map { queryToken =>
           val gen = if (generalizations.isDefined) {
             Some(generalizations.get(onIndex))
@@ -208,34 +216,16 @@ case class TokenizedQuery(
     TokenizedQuery.getTokenNames(size)
   }
 
-  /** @return the sequence of tokens in this query paired with their names */
-  def getNamedTokens: Seq[(String, QExpr)] = {
-    getNames.zip(getSeq)
-  }
+  /** @return each token in this paired with its name */
+  def getNamedTokens: Seq[(String, QExpr)] = getNames.zip(getSeq)
 
-  /** @return this as a query where all of its tokens are in named capture group of their
-    * name, in addition to the capture groups normally part of this.getQuery
-    */
-  def getNamedQuery: QExpr = {
-    var onIndex = 0
-    val querySequence = tokenSequences.map { tokenSequence =>
-      val namedTokens = tokenSequence.queryTokens.map { queryToken =>
-        val (min, max) = QueryLanguage.getQueryLength(queryToken)
-        val q = if (min == max) {
-          queryToken
-        } else {
-          QNamed(queryToken, TokenizedQuery.getTokenName(onIndex))
-        }
-        onIndex += 1
-        q
-      }
-      val query = TokenizedQuery.qexprFromSequence(namedTokens)
-      if (tokenSequence.columnName.isDefined) {
-        QNamed(query, tokenSequence.columnName.get)
-      } else {
-        query
-      }
+  /** @return the sequence of QueryTokenSequence paired with the names of their tokens */
+  def getSequencesWithNames: Seq[(QueryTokenSequence, Seq[String])] = {
+    var remainingNames = getNames
+    tokenSequences.map { tseq =>
+      val (sequenceNames, rest) = remainingNames.splitAt(tseq.size)
+      remainingNames = rest
+      (tseq, sequenceNames)
     }
-    TokenizedQuery.qexprFromSequence(querySequence)
   }
 }

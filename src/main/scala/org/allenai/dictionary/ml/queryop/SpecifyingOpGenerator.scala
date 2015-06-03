@@ -177,7 +177,7 @@ case class SpecifyingOpGenerator(
         val leafMap = OpGenerator.buildLeafMap(leafGenerator, matches.matches)
         leafMap.map {
           case (qLeaf, editMap) =>
-            // Add zeroMatchesEditMap since if no tokens were matched changing the token won't matter
+            // If no tokens were matched changing the token won't effect that hit
             (SetToken(slot, qLeaf), editMap ++ zeroMatchesEditMap)
         }
       case _ => Map()

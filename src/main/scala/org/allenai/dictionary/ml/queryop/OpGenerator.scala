@@ -39,6 +39,9 @@ object OpGenerator {
   * to a query and calculates what sentences that operation would a starting query to match
   */
 abstract class OpGenerator {
-  def generate(matches: QueryMatches, examples: IndexedSeq[WeightedExample]): Map[QueryOp, IntMap[Int]]
+  def generate(
+    matches: QueryMatches,
+    examples: IndexedSeq[WeightedExample]
+  ): Map[QueryOp, IntMap[Int]]
 }
 

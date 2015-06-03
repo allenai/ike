@@ -22,7 +22,10 @@ class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
     val hits = searcher.find(BlackLabSemantics.blackLabQuery(query))
     assert(hits.size() == 3)
     assertResult(Seq(Positive, Unlabelled, Negative)) {
-      HitAnalyzer.getExamples(TokenizedQuery.buildFromQuery(query), hits, table).map(_.label)
+      HitAnalyzer.getExamples(
+        TokenizedQuery.buildFromQuery(query, table.cols),
+        hits, table
+      ).map(_.label)
     }
   }
 
@@ -33,7 +36,7 @@ class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
 
   "getMatchData" should "test correctly" in {
     val query = QueryLanguage.parse("{it, those, They} (?<c1> .)").get
-    val tokenized = TokenizedQuery.buildFromQuery(query)
+    val tokenized = TokenizedQuery.buildFromQuery(query, Seq())
     val hits = searcher.find(BlackLabSemantics.blackLabQuery(query))
     hits.setContextSize(1)
     hits.setContextField(List("word", "pos").asJava)
@@ -84,7 +87,7 @@ class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
 
     // Get the hits
     val hitAnalysis = HitAnalyzer.buildHitAnalysis(
-      Seq(hits), TokenizedQuery.buildFromQuery(query),
+      Seq(hits), TokenizedQuery.buildFromQuery(query, Seq()),
       1, 0, SpecifyingOpGenerator(true, false),
       table
     )

@@ -145,57 +145,12 @@ object QueryLanguage {
   def interpolateSimilarPhrases(
     expr: QExpr,
     similarPhrasesSearcher: SimilarPhrasesSearcher
-  ): QExpr = {
+  ): Try[QExpr] = {
     def recurse(expr: QExpr): QExpr = expr match {
       case QGeneralizePhrase(phrase, pos) =>
         val similarPhrases =
           similarPhrasesSearcher.getSimilarPhrases(phrase.map(_.value).mkString(" "))
         QSimilarPhrases(phrase, pos, similarPhrases)
-      case l: QLeaf => l
-      case QSeq(children) => QSeq(children.map(recurse))
-      case QDisj(children) => QDisj(children.map(recurse))
-      case QNamed(expr, name) => QNamed(recurse(expr), name)
-      case QNonCap(expr) => QNonCap(recurse(expr))
-      case QPlus(expr) => QPlus(recurse(expr))
-      case QStar(expr) => QStar(recurse(expr))
-      case QUnnamed(expr) => QUnnamed(recurse(expr))
-      case QAnd(expr1, expr2) => QAnd(recurse(expr1), recurse(expr2))
-      case QRepetition(expr, min, max) => QRepetition(recurse(expr), min, max)
-    }
-    recurse(expr)
-  }
-
-  /** Replaces QDict and QGeneralizePhrases expressions within a QExpr with
-    * QDisj and QSimilarPhrase
-    *
-    * @param expr QExpr to interpolate
-    * @param tables tables to use when replacing QDict expressions
-    * @param similarPhrasesSearcher searcher to use when replacing QGeneralizePhrase expressions
-    * @return the attempt to interpolated the query
-    */
-  def interpolateQuery(expr: QExpr, tables: Map[String, Table],
-    similarPhrasesSearcher: SimilarPhrasesSearcher): Try[QExpr] = {
-    def interp(value: String): QDisj = tables.get(value) match {
-      case Some(table) if table.cols.size == 1 =>
-        val rowExprs = for {
-          row <- table.positive
-          value <- row.values
-          qseq = QSeq(value.qwords)
-        } yield qseq
-        QDisj(rowExprs)
-      case Some(table) =>
-        val name = table.name
-        val ncol = table.cols.size
-        throw new IllegalArgumentException(s"1-col table required: Table '$name' has $ncol columns")
-      case None =>
-        throw new IllegalArgumentException(s"Could not find dictionary '$value'")
-    }
-    def recurse(expr: QExpr): QExpr = expr match {
-      case QGeneralizePhrase(phrase, pos) =>
-        val similarPhrases =
-          similarPhrasesSearcher.getSimilarPhrases(phrase.map(_.value).mkString(" "))
-        QSimilarPhrases(phrase, pos, similarPhrases)
-      case QDict(value) => interp(value)
       case l: QLeaf => l
       case QSeq(children) => QSeq(children.map(recurse))
       case QDisj(children) => QDisj(children.map(recurse))
@@ -208,6 +163,19 @@ object QueryLanguage {
       case QRepetition(expr, min, max) => QRepetition(recurse(expr), min, max)
     }
     Try(recurse(expr))
+  }
+
+  /** Replaces QDict and QGeneralizePhrases expressions within a QExpr with
+    * QDisj and QSimilarPhrase
+    *
+    * @param expr QExpr to interpolate
+    * @param tables tables to use when replacing QDict expressions
+    * @param similarPhrasesSearcher searcher to use when replacing QGeneralizePhrase expressions
+    * @return the attempt to interpolated the query
+    */
+  def interpolateQuery(expr: QExpr, tables: Map[String, Table],
+    similarPhrasesSearcher: SimilarPhrasesSearcher): Try[QExpr] = {
+    interpolateSimilarPhrases(interpolateTables(expr, tables).get, similarPhrasesSearcher)
   }
 
   /** Converts a query to its string format

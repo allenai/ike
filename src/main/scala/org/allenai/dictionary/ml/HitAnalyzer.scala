@@ -287,7 +287,7 @@ object HitAnalyzer extends Logging {
 
     logger.debug("Calculating labels and weights...")
     val (examples, exampleTime) = Timing.time {
-      val examples = hits.map(h => getExamples(query, h, table)).flatten
+      val examples = hits.flatMap(h => getExamples(query, h, table))
       getWeightedExamples(examples)
     }
     logger.debug(s"Done in ${exampleTime.toMillis / 1000.0} seconds")
@@ -297,7 +297,7 @@ object HitAnalyzer extends Logging {
       val matchDataPerSearcher = hits.map(h => getMatchData(h, query, prefixCounts, suffixCounts))
       val matchDataPerSlot = matchDataPerSearcher.transpose.map { slotMatchData =>
         assert(slotMatchData.forall(_.queryToken == slotMatchData.head.queryToken))
-        QueryMatches(slotMatchData.head.queryToken, slotMatchData.map(_.matches).flatten)
+        QueryMatches(slotMatchData.head.queryToken, slotMatchData.flatMap(_.matches))
       }
       matchDataPerSlot.foldLeft(Map[QueryOp, IntMap[Int]]()) {
         case (accumulatedOpMap, queryMatches) =>
