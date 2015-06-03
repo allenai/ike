@@ -18,8 +18,10 @@ case class QPos(value: String) extends QLeaf
 case class QDict(value: String) extends QLeaf
 case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])
   extends QLeaf
-case class SimilarPhrase(qwords: Seq[QWord], similarity: Double)
+// Generalize a phrase to the nearest `pos` similar phrases
 case class QGeneralizePhrase(qwords: Seq[QWord], pos: Int) extends QLeaf
+case class SimilarPhrase(qwords: Seq[QWord], similarity: Double)
+// A QGeneralizePhrase with its similar phrases pre-computed
 case class QSimilarPhrases(qwords: Seq[QWord], pos: Int, phrases: Seq[SimilarPhrase])
   extends QLeaf
 case class QWildcard() extends QLeaf
@@ -58,8 +60,8 @@ object QExprParser extends RegexParsers {
   def generalizedWord = (word <~ "~") ~ integer ^^ { x =>
     QGeneralizePhrase(Seq(x._1), x._2)
   }
-  def generalizedPhrase = (("\"" ~> rep1(word)) <~ "\"~") ~ integer ^^ { x =>
-    QGeneralizePhrase(x._1, x._2)
+  def generalizedPhrase = ("\"" ~> rep1(word) <~ "\"") ~ (("~" ~> integer)?) ^^ { x =>
+    QGeneralizePhrase(x._1, x._2.getOrElse(0))
   }
   def pos = posTagRegex ^^ QPos
   def dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
