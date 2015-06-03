@@ -60,7 +60,7 @@ object QExprParser extends RegexParsers {
   def generalizedWord = (word <~ "~") ~ integer ^^ { x =>
     QGeneralizePhrase(Seq(x._1), x._2)
   }
-  def generalizedPhrase = ("\"" ~> rep1(word) <~ "\"") ~ (("~" ~> integer)?) ^^ { x =>
+  def generalizedPhrase = ("\"" ~> rep1(word) <~ "\"") ~ ("~" ~> integer).? ^^ { x =>
     QGeneralizePhrase(x._1, x._2.getOrElse(0))
   }
   def pos = posTagRegex ^^ QPos
