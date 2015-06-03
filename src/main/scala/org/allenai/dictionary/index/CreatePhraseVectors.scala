@@ -425,7 +425,6 @@ object CreatePhraseVectors extends App with Logging {
         override def next(): java.util.List[String] =
           new util.ArrayList[String](inner.next().toList.asJava)
         override def hasNext: Boolean = inner.hasNext
-        override def remove(): Unit = throw new UnsupportedOperationException
       }
     }
 
