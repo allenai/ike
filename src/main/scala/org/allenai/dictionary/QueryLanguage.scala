@@ -18,7 +18,10 @@ case class QPos(value: String) extends QLeaf
 case class QDict(value: String) extends QLeaf
 case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])
   extends QLeaf
+// Generalize a phrase to the nearest `pos` similar phrases
+case class QGeneralizePhrase(qwords: Seq[QWord], pos: Int) extends QLeaf
 case class SimilarPhrase(qwords: Seq[QWord], similarity: Double)
+// A QGeneralizePhrase with its similar phrases pre-computed
 case class QSimilarPhrases(qwords: Seq[QWord], pos: Int, phrases: Seq[SimilarPhrase])
   extends QLeaf
 case class QWildcard() extends QLeaf
@@ -51,18 +54,25 @@ object QExprParser extends RegexParsers {
   val posTagRegex = posTagSet.map(Pattern.quote).mkString("|").r
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
-  def word = """[^|\]\[\^$(){}\s*+,]+""".r ^^ QWord
+  def integer = """-?[0-9]+""".r ^^ { _.toInt }
+  def positiveInteger = "[1-9][0-9]*".r ^^ { _.toInt }
+  def word = """[^|\]\[\^$(){}\s*+,"~]+""".r ^^ QWord
+  def generalizedWord = (word <~ "~") ~ integer ^^ { x =>
+    QGeneralizePhrase(Seq(x._1), x._2)
+  }
+  def generalizedPhrase = ("\"" ~> rep1(word) <~ "\"") ~ ("~" ~> integer).? ^^ { x =>
+    QGeneralizePhrase(x._1, x._2.getOrElse(0))
+  }
   def pos = posTagRegex ^^ QPos
   def dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
   def wildcard = "\\.".r ^^^ QWildcard()
-  def atom = wildcard | pos | dict | word
+  def atom = wildcard | pos | dict | generalizedWord | generalizedPhrase | word
   def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
   def named = "(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) }
   def unnamed = "(" ~> expr <~ ")" ^^ QUnnamed
   def nonCap = "(?:" ~> expr <~ ")" ^^ QNonCap
   def curlyDisj = "{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq
   def operand = named | nonCap | unnamed | curlyDisj | atom
-  def integer = """-?[0-9]+""".r ^^ { _.toInt }
   def repetition = (operand <~ "[") ~ ((integer <~ ",") ~ (integer <~ "]")) ^^ { x =>
     QRepetition(x._1, x._2._1, x._2._2)
   }
@@ -85,7 +95,17 @@ object QueryLanguage {
       val exception = new ParseException(message, next.pos.column)
       Failure(exception)
   }
-  def interpolateTables(expr: QExpr, tables: Map[String, Table]): Try[QExpr] = {
+
+  /** Replaces QDict and QGeneralizePhrases expressions within a QExpr with
+    * QDisj and QSimilarPhrase
+    *
+    * @param expr QExpr to interpolate
+    * @param tables tables to use when replacing QDict expressions
+    * @param similarPhrasesSearcher searcher to use when replacing QGeneralizePhrase expressions
+    * @return the attempt to interpolated the query
+    */
+  def interpolateQuery(expr: QExpr, tables: Map[String, Table],
+    similarPhrasesSearcher: SimilarPhrasesSearcher): Try[QExpr] = {
     def interp(value: String): QDisj = tables.get(value) match {
       case Some(table) if table.cols.size == 1 =>
         val rowExprs = for {
@@ -102,6 +122,10 @@ object QueryLanguage {
         throw new IllegalArgumentException(s"Could not find dictionary '$value'")
     }
     def recurse(expr: QExpr): QExpr = expr match {
+      case QGeneralizePhrase(phrase, pos) =>
+        val similarPhrases =
+          similarPhrasesSearcher.getSimilarPhrases(phrase.map(_.value).mkString(" "))
+        QSimilarPhrases(phrase, pos, similarPhrases)
       case QDict(value) => interp(value)
       case l: QLeaf => l
       case QSeq(children) => QSeq(children.map(recurse))
@@ -138,6 +162,13 @@ object QueryLanguage {
       case QPlus(expr) => modifiableString(expr) + "+"
       case QStar(expr) => modifiableString(expr) + "*"
       case QRepetition(expr, min, max) => s"${modifiableString(expr)}[$min,$max]"
+      case QGeneralizePhrase(phrase, pos) =>
+        if (phrase.size == 1) {
+          s"${recurse(phrase.head)}~$pos"
+        } else {
+          // Use triple quote syntax since scala's single quote interpolation has a bug with \"
+          s""""${phrase.map(recurse).mkString(" ")}"~$pos"""
+        }
       case _ => ???
     }
 
