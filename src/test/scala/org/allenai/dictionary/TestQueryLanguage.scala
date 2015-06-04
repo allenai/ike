@@ -47,6 +47,16 @@ class TestQueryLanguage extends UnitSpec {
       val q1 = QueryLanguage.parse("(a b)[1,2]").get
       QueryLanguage.getQueryLength(q1)
     }
+
+    assertResult((1, 3)) {
+      def w(): QWord = QWord("")
+      val q1 = QSimilarPhrases(Seq(w(), w()), 2, Seq(
+        SimilarPhrase(Seq(w(), w(), w()), 1),
+        SimilarPhrase(Seq(w()), 1),
+        SimilarPhrase(Seq(w(), w(), w(), w()), 1)
+      ))
+      QueryLanguage.getQueryLength(q1)
+    }
   }
 
   "getQueryString" should "get correct string" in {

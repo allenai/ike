@@ -241,13 +241,17 @@ object QueryLanguage {
     * can match a variable number of tokens'
     */
   def getQueryLength(qexpr: QExpr): (Int, Int) = qexpr match {
-    case QDict(_) => (0, -1)
+    case QDict(_) => (1, -1)
+    case QGeneralizePhrase(_, _) => (1, -1)
+    case QSimilarPhrases(qwords, pos, phrases) =>
+      val lengths = qwords.size +: phrases.slice(0, pos).map(_.qwords.size)
+      (lengths.min, lengths.max)
+    case l: QLeaf => (1, 1)
     case qr: QRepeating => {
       val (baseMin, baseMax) = getQueryLength(qr.qexpr)
       val max = if (baseMax == -1 || qr.max == -1) -1 else baseMax * qr.max
       (baseMin * qr.min, max)
     }
-    case l: QLeaf => (1, 1)
     case QSeq(seq) =>
       val (mins, maxes) = seq.map(getQueryLength).unzip
       val max = if (maxes contains -1) -1 else maxes.sum
