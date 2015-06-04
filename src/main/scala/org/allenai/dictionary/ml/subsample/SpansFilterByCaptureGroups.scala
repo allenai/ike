@@ -145,13 +145,15 @@ class SpansFilterByCaptureGroups(
         if (query.doc < filter.doc) {
           continue = query.skipTo(filter.doc)
         }
-        if (continue && query.doc > filter.doc) {
-          continue = filter.skipTo(query.doc)
-        } else {
-          // Left must be at least as large as Right after the first if statement, so if
-          // Right is at least as large as Left after this statement we are done
-          continue = false
-          foundMatch = true
+        if (continue) {
+          if (query.doc > filter.doc) {
+            continue = filter.skipTo(query.doc)
+          } else {
+            // Left must be at least as large as Right after the first if statement, so if
+            // Right is at least as large as Left after this statement we are done
+            continue = false
+            foundMatch = true
+          }
         }
       }
       foundMatch

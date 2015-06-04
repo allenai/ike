@@ -104,15 +104,17 @@ class SpansTrackingDisjunction(
       } else {
         false
       }
-      while (queue.size() != 0 && top.doc() < target) {
-        if (top.skipTo(target)) {
-          queue.updateTop()
-        } else {
-          queue.pop()
+      if (more) {
+        while (queue.size() != 0 && top.doc() < target) {
+          if (top.skipTo(target)) {
+            queue.updateTop()
+          } else {
+            queue.pop()
+          }
+          stepTaken = true
         }
-        stepTaken = true
+        more = if (stepTaken) queue.size() != 0 else next()
       }
-      more = if (stepTaken) queue.size() != 0 else next()
     }
     more
   }
