@@ -112,7 +112,7 @@ abstract class PerLabelEvaluator(
     if (p == 0) {
       Double.NegativeInfinity
     } else {
-      (p * positiveWeight + n * negativeWeight + u * unlabelledWeight)
+      p * positiveWeight + n * negativeWeight + u * unlabelledWeight
     }
   }
 
