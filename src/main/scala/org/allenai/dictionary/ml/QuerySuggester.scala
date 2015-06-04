@@ -443,8 +443,6 @@ object QuerySuggester extends Logging {
       )
       ScoredQuery(startingQuery, score, p, n, u * unlabelledBiasCorrection)
     }
-    logger.info(s"Done suggesting query for " +
-      s"${QueryLanguage.getQueryString(queryWithNamedCaptures)}")
 
     // Remove queries the appear to be completely worthless, don't return
     val operatorsPrunedByScore = operators.filter(_._2 > Double.NegativeInfinity)
@@ -479,7 +477,7 @@ object QuerySuggester extends Logging {
         ScoredQuery(query, score, p, n, u * unlabelledBiasCorrection)
     }
     logger.info(s"Done suggesting query for " +
-      "${QueryLanguage.getQueryString(queryWithNamedCaptures)}")
+        s"${QueryLanguage.getQueryString(queryWithNamedCaptures)}")
     Suggestions(original, scoredOps, numDocs)
   }
 }
