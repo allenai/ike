@@ -170,7 +170,9 @@ object HitAnalyzer extends Logging {
           Left(size._2)
         }
     }
-    val allQueryMatches = hits.asScala.map { hit =>
+
+    // For each Hit in Hits, break that hit into a sequence of QueryMatches
+    val queryMatchesPerHit = hits.asScala.map { hit =>
       val kwic = hits.getKwic(hit)
       val captureGroups = hits.getCapturedGroups(hit)
       val hitQueryMatches = {
@@ -232,12 +234,13 @@ object HitAnalyzer extends Logging {
     }
     val expressions = prefixExpressions ++ matchExpressions ++ suffixExpressions
 
-    if (allQueryMatches.isEmpty) {
+    if (queryMatchesPerHit.isEmpty) {
       // No hits found, so zip the metadata with empty sequences
       expressions.map(QueryMatches(_, Seq()))
     } else {
-      // Zip the meta-data with the matches we found for each each Slot
-      allQueryMatches.transpose.zip(expressions).map {
+      // Zip the meta-data with the matches we found (transposed so we have a list of QueryMatches
+      // for each Slot)
+      queryMatchesPerHit.transpose.zip(expressions).map {
         case (matches, slotData) =>
           QueryMatches(slotData, matches.toSeq)
       }.toSeq

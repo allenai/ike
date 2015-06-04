@@ -5,14 +5,15 @@ import java.util
 import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 
-/** Filters hits from a BLSpans object that do not contains capture groups that would also be
-  * returned by another BLSpans object. Note the capture groups from the filter query will
-  * not be returned
+/** Filters hits from a BLSpans that do not return capture groups that would also be
+  * returned by another BLSpans. In other words it is a AND operation between the capture groups
+  * of two queries. Note, however, the Spans and capture group from the `filter` Spans will not be
+  * returned.
   *
-  * @param query the 'query' spans to filter
-  * @param filter the 'filter' spans to filter the query spans with
+  * @param query the Spans to return
+  * @param filter the Spans to AND with the `query` Spans
   * @param captureGroupNames the names of the captures groups to filter with, both the query and
-  *              filter spans should contain these capture groups
+  *              filter spans should register these names as capture groups
   * @param startFromDoc document to start collecting hits from
   * @param startFromToken token to start collecting hits from
   */
@@ -90,7 +91,7 @@ class SpansFilterByCaptureGroups(
   /* @return Whether this is are currently on a valid match, assuming both filter and query
    *     are on the same document
    */
-  private def isValidMatch: Boolean = {
+  private def onValidMatch: Boolean = {
     filterSpanHolder.indices.foreach(filterSpanHolder.update(_, null))
     querySpanHolder.indices.foreach(querySpanHolder.update(_, null))
     filter.getCapturedGroups(filterSpanHolder)
@@ -117,7 +118,7 @@ class SpansFilterByCaptureGroups(
             query.next() && syncDoc()
           } else if (filter.end < query.start) {
             filter.next() && syncDoc()
-          } else if (isValidMatch) {
+          } else if (onValidMatch) {
             foundMatch = true
             false
           } else {

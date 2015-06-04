@@ -7,26 +7,26 @@ import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 import nl.inl.blacklab.search.sequences.PerDocumentSortedSpans
 import org.apache.lucene.util.PriorityQueue
 
-/** Disjunction of spans that ensures that its matches are unique. Sets a capture group to the span
-  * it returned. The capture span is negated if firstSpan could not match that capture group.
+/** Disjunction of spans, ensures the returned Hits are unique. For each Hit, additionally puts that
+  * Hit's span in a capture group. That capture group will be positive if `firstSpan`
+  * produced the returned Hit and negated otherwise.
   *
-  * @param firstSpan Span in disjunction that returns positive capture groups
-  * @param alternatives Spans that return negated capture groups
+  * @param firstSpan Span in the disjunction that returns positive capture groups
+  * @param alternatives Spans in the disjunction that return negated capture groups
   * @param captureName Name of the capture group to fill
   */
 class SpansTrackingDisjunction(
     firstSpan: BLSpans,
     alternatives: Seq[BLSpans],
-    captureName: String,
-    matchEdge: Boolean = false
+    captureName: String
 ) extends BLSpans {
 
   /* Contains BLSpans marked with whether it is the firstSpan or not */
-  case class SortedSpans(spans: BLSpans, first: Boolean)
+  case class MarkedSpan(spans: BLSpans, first: Boolean)
 
-  class SpanQueue(size: Int) extends PriorityQueue[SortedSpans](size) {
+  class SpanQueue(size: Int) extends PriorityQueue[MarkedSpan](size) {
 
-    override def lessThan(spans1: SortedSpans, spans2: SortedSpans): Boolean = {
+    override def lessThan(spans1: MarkedSpan, spans2: MarkedSpan): Boolean = {
       if (spans1.spans.doc() == spans2.spans.doc()) {
         if (spans1.spans.start() == spans2.spans.start()) {
           if (spans1.spans.end() == spans2.spans.end()) {
@@ -65,10 +65,10 @@ class SpansTrackingDisjunction(
       }
     }
     val allSpans = if (firstSpanHasNext) {
-      SortedSpans(firstSpanSorted, first = true) +:
-        alternativeSorted.map(SortedSpans(_, first = false))
+      MarkedSpan(firstSpanSorted, first = true) +:
+        alternativeSorted.map(MarkedSpan(_, first = false))
     } else {
-      alternativeSorted.map(SortedSpans(_, first = false))
+      alternativeSorted.map(MarkedSpan(_, first = false))
     }
     queue = new SpanQueue(allSpans.size)
     allSpans.foreach(queue.add)
@@ -133,7 +133,7 @@ class SpansTrackingDisjunction(
 
   override def getCapturedGroups(capturedGroups: Array[Span]): Unit = {
     if (queue.top().first) {
-      capturedGroups.update(captureGroupIndex, new Span(firstSpan.start, firstSpan.end))
+      capturedGroups.update(captureGroupIndex, new Span(top.start, top.end))
     } else {
       capturedGroups.update(captureGroupIndex, new Span(-top.start, -top.end))
     }

@@ -25,7 +25,6 @@ var SuggestQueryButton = React.createClass({
 
   suggestQueryCallBack: function(err, resp, body) {
     this.setState({waiting: false})
-    console.log("GOT CALLBACK")
     console.log(resp.statusCode)
     if (resp.statusCode == 200) {
       var suggestions = JSON.parse(body)
@@ -162,7 +161,7 @@ var SuggestQueryButton = React.createClass({
     <div>
       <label className="control-label">Query</label>
       <div>
-         <ButtonGroup>
+        <ButtonGroup>
           <DropdownButton
             style={{fontSize: 'small'}}
             pullRight

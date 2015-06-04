@@ -6,7 +6,7 @@ import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 
 /** Returns spans that have a minimum number of valid capture groups, where a valid capture
-  * groups is one that is non-null and end is non-negative.
+  * group is one that is non-null and whose end is non-negative.
   *
   * @param clause Spans to filter
   * @param requiredMatches Number of required matches
@@ -40,7 +40,8 @@ class SpansMinimumValidCaptures(
       capturedGroups, clauseFirstCaptureGroupIndex, clauseNumCaptureGroups)
   }
 
-  def isValid(): Boolean = {
+  def onValidMatch: Boolean = {
+    captureGroupHolder.indices.foreach(captureGroupHolder.update(_, null))
     clause.getCapturedGroups(captureGroupHolder)
     val numValidCaptures = captureIndicesToCheck.count(i => {
       val span = captureGroupHolder(i)
@@ -52,7 +53,7 @@ class SpansMinimumValidCaptures(
   override def skipTo(target: Int): Boolean = {
     if (more) {
       more = clause.skipTo(target)
-      while (more && !isValid()) {
+      while (more && !onValidMatch) {
         more = clause.next()
       }
     }
@@ -62,7 +63,7 @@ class SpansMinimumValidCaptures(
   override def next(): Boolean = {
     if (more) {
       more = clause.next()
-      while (more && !isValid()) {
+      while (more && !onValidMatch) {
         more = clause.next()
       }
     }

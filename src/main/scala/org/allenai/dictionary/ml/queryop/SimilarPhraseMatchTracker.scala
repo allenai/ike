@@ -6,8 +6,8 @@ import org.allenai.dictionary.ml.WeightedExample
 
 import scala.collection.immutable.IntMap
 
-/** Given a QSimilarPhrases, this class tracks which sentences that QSimilarPhrases could match
-  * if the POS threshold of that QSimilarPhrases was increased
+/** Given a QSimilarPhrases, this class can be used to determine new POS thresholds of that phrase
+  * and the corresponding edit maps of those thresholds.
   */
 class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
 
@@ -17,7 +17,7 @@ class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
   // Maps phrases -> minPos needed for qSimilarPhrases to match that phrase
   private val phraseToRank = {
     val allPhrases = SimilarPhrase(qSimilarPhrases.qwords, 0) +: qSimilarPhrases.phrases
-    allPhrases.sortBy(_.similarity).reverse.zipWithIndex.map {
+    allPhrases.sortBy(-_.similarity).zipWithIndex.map {
       case (phrases, index) => phrases.qwords.map(_.value) -> (index + 1)
     }.toMap + (qSimilarPhrases.qwords.map(_.value) -> 0)
   }
@@ -54,7 +54,7 @@ class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
 
       // Precompute (word matched up to) -> min and max #phrases we could use to reach that word
       // and still match the whole sequence using an allowable number of phrases
-      val wordToPhrasesUsedLimits = (0 until phrases.size).map { word =>
+      val wordToPhrasesUsedLimits = phrases.indices.map { word =>
         val wordsLeft = phrases.size - word
         val maxPhrasesNeeded = word
         val minPhrasesNeeded = word / maxPhraseLength
@@ -109,7 +109,8 @@ class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
   }
 
   /** Gets a sequence of (pos threshold, edit map) that correspond to pos thresholds that can be
-    * used to qSimilarPhrases
+    * used for qSimilarPhrases and the map of (sentence id -> # of edits) that we would get if we
+    * used that threshold
     *
     * @param minCoverageDifference no two thresholds returned will cover sets of sentences that only
     *                              differ by this much
@@ -136,7 +137,7 @@ class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
           (size - prevSize) >= minCoverageDifference) {
           if (curLabel.isDefined && (curLabel == prevLabel)) {
             // The previous block added nothing but the same as label this block label, drop it
-            ops = ops.drop(1)
+            ops = ops.tail
           }
           val editMap = IntMap(curMatches: _*)
           ops = (curThreshold, editMap) :: ops
@@ -156,7 +157,7 @@ class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
     // Add the last max POS op (checking for label continuity as usual)
     if ((size - prevSize) >= minCoverageDifference) {
       if (curLabel.isDefined && (curLabel == prevLabel)) {
-        ops = ops.drop(1)
+        ops = ops.tail
       }
       ops = (curThreshold, IntMap(curMatches: _*)) :: ops
     }

@@ -8,11 +8,10 @@ import org.apache.lucene.util.Bits
 import java.util
 
 /** SpanQuery the filters hits from a query that do not capture and the same spans as another
-  * query. Note the capture groups from the filter query will not be returned,
-  * see SpansFilterByCaptureGroups
+  * query. In other words a capture group level end between two queries.
   *
   * @param _query The query to filter
-  * @param _filter The query to filter by
+  * @param _filter the filter to AND the query against
   * @param captureGroups Capture groups to filter the query by, both the filter and the query should
   *                contain capture groups with the names in this list
   * @param startFromDoc document to start from, returns hits have doc >= startFromDoc
@@ -34,7 +33,7 @@ class SpanQueryFilterByCaptureGroups(
     termContexts: util.Map[Term, TermContext]): Spans = {
     val leftSpans = query.getSpans(context, acceptDocs, termContexts)
     val filterSpans = filter.getSpans(context, acceptDocs, termContexts)
-    return new SpansFilterByCaptureGroups(
+    new SpansFilterByCaptureGroups(
       BLSpansWrapper.optWrap(leftSpans),
       BLSpansWrapper.optWrap(filterSpans),
       captureGroups,
