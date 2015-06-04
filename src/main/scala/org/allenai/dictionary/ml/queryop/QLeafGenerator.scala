@@ -7,7 +7,7 @@ object QLeafGenerator {
 
   /** @return True if word is a word that can be used in a string QExpr */
   def validWord(word: String): Boolean = {
-    QueryLanguage.parser.wordRegex.findFirstIn(word).nonEmpty
+    QueryLanguage.parser.wordRegex.pattern.matcher(word).matches()
   }
 
   /** @return True if pos is a POS tag that can be used in a string QExpr */
@@ -30,7 +30,7 @@ case class QLeafGenerator(pos: Boolean, word: Boolean,
     } else {
       val posOp = if (pos) {
         val head = tokens.head.pos
-        if (tokens.drop(1).forall(_.pos == head) && QLeafGenerator.validPos(head)) {
+        if (tokens.tail.forall(_.pos == head) && QLeafGenerator.validPos(head)) {
           Some(QPos(head))
         } else {
           None
@@ -40,7 +40,7 @@ case class QLeafGenerator(pos: Boolean, word: Boolean,
       }
       val wordOp = if (word) {
         val head = tokens.head.word
-        if (tokens.drop(1).forall(_.word == word) && QLeafGenerator.validWord(head)) {
+        if (tokens.tail.forall(_.word == word) && QLeafGenerator.validWord(head)) {
           Some(QWord(head))
         } else {
           None
@@ -48,7 +48,7 @@ case class QLeafGenerator(pos: Boolean, word: Boolean,
       } else {
         None
       }
-      (posOp ++ wordOp).filter(!avoidSuggesting.contains(_))
+      (posOp ++ wordOp).filterNot(avoidSuggesting.contains(_))
     }
   }
 
@@ -64,6 +64,6 @@ case class QLeafGenerator(pos: Boolean, word: Boolean,
     } else {
       None
     }
-    (posOp ++ wordOp).filter(!avoidSuggesting.contains(_))
+    (posOp ++ wordOp).filterNot(avoidSuggesting.contains(_))
   }
 }
