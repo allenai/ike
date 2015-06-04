@@ -9,7 +9,7 @@ import java.io.{ File, StringReader }
 import java.net.URI
 import java.nio.file.{ Files, Paths }
 
-object CreateIndex extends App {
+object  CreateIndex extends App {
   def addTo(indexer: Indexer)(text: IndexableText): Unit = {
     val xml = XmlSerialization.xml(text)
     val id = text.idText.id
@@ -20,7 +20,7 @@ object CreateIndex extends App {
     destinationDir: File = null,
     batchSize: Int = 1000,
     textSource: URI = null,
-    oneSentencePerDoc: Boolean = true
+    numOfSent: Int = -1
   )
 
   val parser = new scopt.OptionParser[Options](this.getClass.getSimpleName.stripSuffix("$")) {
@@ -36,9 +36,9 @@ object CreateIndex extends App {
       o.copy(textSource = t)
     } text "URL of a file or directory to load the text from"
 
-    opt[Unit]("oneSentencePerDoc") action { (_, o) =>
-      o.copy(oneSentencePerDoc = true)
-    }
+    opt[Int]('n', "numOfSent") action { (n, o) =>
+      o.copy(numOfSent = n)
+    } text "Number of sentences per doc"
 
     help("help")
   }
@@ -74,17 +74,18 @@ object CreateIndex extends App {
     }
 
     def process(idText: IdText): Seq[IndexableText] = {
-      if (options.oneSentencePerDoc) {
-        val sents = NlpAnnotate.annotate(idText.text)
-        sents.zipWithIndex.filter(_._1.nonEmpty).map {
-          case (sent, index) =>
-            val text = idText.text.substring(
-              sent.head.token.offset,
-              sent.last.token.offset + sent.last.token.string.length
-            )
-            val sentenceIdText = IdText(s"${idText.id}-$index", text)
-
-            IndexableText(sentenceIdText, Seq(sent map indexableToken))
+      if (options.numOfSent > 0) {
+        val numOfSent = options.numOfSent
+        val sents = NlpAnnotate.annotate(idText.text).grouped(numOfSent).toList.zipWithIndex.filter(_._1.nonEmpty)
+        sents.map {
+          case (sentGroup, index) =>
+            val text = for {
+              sent <- sentGroup
+              sentString = (for{ token <- sent} yield token.token.string).mkString(" ")
+            } yield sentString
+//            val _ = println("Text: " + text.mkString(" . "))
+            val sentenceIdText = IdText(s"${idText.id}-$index", text.mkString(" . "))
+            IndexableText(sentenceIdText, sentGroup.map(_.map(indexableToken)))
         }
       } else {
         val text = idText.text
@@ -97,7 +98,7 @@ object CreateIndex extends App {
     }
 
     def processBatch(batch: Seq[IdText]): Seq[IndexableText] =
-      batch.toArray.par.map(process).flatten.seq
+      batch.toArray.map(process).flatten.seq
 
     def addTo(indexer: Indexer)(text: IndexableText): Unit = {
       CreateIndex.addTo(indexer)(text)
@@ -109,6 +110,7 @@ object CreateIndex extends App {
       batchResults = processBatch(batch)
       result <- batchResults
     } yield result
+
     indexableTexts foreach addTo(indexer)
     indexer.close()
   }
