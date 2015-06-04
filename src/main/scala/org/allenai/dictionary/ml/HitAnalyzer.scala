@@ -21,14 +21,14 @@ case class Token(word: String, pos: String)
 /** A sequence of tokens that are associated with a QExpr, if didMatch is true the QExpr matched
   * these tokens, if didMatch is false the QExpr did not match these tokens, but it needs to for the
   * query as a whole to match the sentence the tokens are in. This sequence can be zero length if
-  * the QExpr did not match any tokens, or needed to match zero tokens (if didMatch is true)
+  * the QExpr did not match any tokens, or needed to match zero tokens and didMatch is true
   */
 case class QueryMatch(tokens: Seq[Token], didMatch: Boolean)
 
 /** A QExpr, assumed to be one token of a TokenizedQuery, and the tokens that individual QExpr
   * matched within a sequence of sentences
   *
-  * @param queryToken The query-token
+  * @param queryToken The QExpr and accompanying meta-data
   * @param matches the Tokens this QExpr matched, or should have matched, within a sequence of
   *        sentences the original TokenizedQuery matched, or nearly matched
   */
@@ -37,14 +37,16 @@ case class QueryMatches(
   matches: Seq[QueryMatch]
 )
 
-/** Cached analysis for a number of hits, includes the labels for each subsample and which
-  * sentences each primitive operation would allow the starting query to match
+/** Cached analysis for a number of Hit objects produced by a Sampler, includes the labels
+  * for each Hit and, for a number of QueryOps, how applying that QueryOp to
+  * the QExpr that generated those Hits would alter which Hits that QExpr would continue to match.
   *
-  * @param operatorHits Maps primitive operations to map of (sentence index within Examples ->
-  *           number of required 'edit' that operator completes for that sentence
-  *           (can be 0)). If a sentence index is not included the starting query will no long
-  *           match the corresponding sentence if the query operaiton is applied to it
-  * @param examples List of examples, one for each sentence
+  * @param operatorHits Maps primitive operations to IntMaps, which map (sentence index within
+  *           Examples) -> (number of required 'edits' that operator completes for that sentence
+  *           (can be 0)). If a sentence index is not included in the map it implies the starting
+  *           query will no longer match the corresponding sentence if that query operation is
+  *           applied to it
+  * @param examples List of examples, one for each Hit
   */
 case class HitAnalysis(
     operatorHits: Map[QueryOp, IntMap[Int]],
@@ -56,14 +58,14 @@ case class HitAnalysis(
 /** Contains the logic needed to turn BlackLab Hits into a HitAnalysis object, this
   * involves parsing this Hits to determine the labels of the hits, and to determine what
   * QueryOps can be applied, and how applying those ops would alter which hits the starting
-  * query would apply to
+  * query would match
   */
 object HitAnalyzer extends Logging {
 
-  /** Builds a list of Example objects, one for each hit in Hits
+  /** Builds a list of Example objects, one for each Hit in Hits
     *
-    * @param hits, Hits to build examples from
-    * @param table, Table to use when deciding each Hit's label
+    * @param hits Hits to build examples from
+    * @param table Table to use when deciding each Hit's label
     * @return The examples
     */
   def getExamples(query: TokenizedQuery, hits: Hits, table: Table): Iterable[Example] = {
@@ -75,7 +77,7 @@ object HitAnalyzer extends Logging {
     )).toSet
 
     // If the whole query is QWords, delete the encoded word from the
-    // dictionary so its occurences will be treated as unlabelled
+    // dictionary so its occurrences will be treated as unlabelled
     val columnToQSeq = query.getCaptureGroups.toMap
     val captureGroupsInOrder = table.cols.map(columnToQSeq(_))
     if (captureGroupsInOrder.forall(_.forall(_.isInstanceOf[QWord]))) {
@@ -94,9 +96,7 @@ object HitAnalyzer extends Logging {
       s"Expected capture names ${table.cols} but got $captureNames"
     )
     hits.asScala.map { hit =>
-      if (Thread.interrupted()) {
-        throw new InterruptedException()
-      }
+      if (Thread.interrupted()) throw new InterruptedException()
       val allCaptureSpans = hits.getCapturedGroups(hit)
       val columnsCaptures = captureGroupIndices.map(allCaptureSpans(_))
       val kwic = hits.getKwic(hit)
@@ -105,8 +105,8 @@ object HitAnalyzer extends Logging {
         val captures = columnsCaptures.map {
           captureSpan =>
             if (captureSpan == null) {
-              // We assume null captures --> imply the capture group was in an empty
-              // sequences, which can occur for some queries like "(.*) b"
+              // We assume null captures imply the capture group captured nothing,
+              // which can occur for some queries like "(.*) b"
               Seq()
             } else {
               kwic.getTokens("word").subList(
@@ -126,6 +126,8 @@ object HitAnalyzer extends Logging {
       }
       val requiredEdits = otherCaptureIndices.count(index => {
         val span = allCaptureSpans(index)
+        // We expect the Sampler that produced these hits to have marked Spans within each Hit
+        // that the starting query did not match exactly with a negated Span object
         span != null && allCaptureSpans(index).end < 0
       })
       val str = kwic.getTokens("word").asScala.mkString(" ")
@@ -135,11 +137,10 @@ object HitAnalyzer extends Logging {
 
   /** Builds a sequence of WeightedExamples from a set of Examples. Currently we down weight
     * examples that captured the same string to encourage returning queries that would return a
-    * diversity of capture groups.
+    * diversity of captured output.
     */
   def getWeightedExamples(examples: Seq[Example]): IndexedSeq[WeightedExample] = {
-    val counts = examples.map(example => example.captureStrings).
-      groupBy(identity).mapValues(x => x.size)
+    val counts = examples.map(_.captureStrings).groupBy(identity).mapValues(_.size)
     examples.map { example =>
       val numOfSameStrings = counts(example.captureStrings).toDouble
       WeightedExample(example.label, example.requiredEdits,
@@ -151,8 +152,7 @@ object HitAnalyzer extends Logging {
   /** Build a sequence of QueryMatches for the given Hits object and query. For token in the given
     * TokenizedQuery, a QueryMatches object will be built that shows what that token matched, or
     * should have matched, for each Hit in Hits. QueryMatches objects will also be built for each
-    * prefix and suffix slot as specified by prefixCounts and suffixCounts. Hits that returned a
-    * null capture group should be skipped.
+    * prefix and suffix slot as specified by prefixCounts and suffixCounts.
     */
   def getMatchData(
     hits: Hits,
@@ -169,8 +169,9 @@ object HitAnalyzer extends Logging {
 
     val captureGroups = hits.getCapturedGroupNames
 
-    // For each queryToken, note either the capture group that token's matches are stored
-    // in or the number of tokens that queryToken will have matched
+    // For each queryToken within `query`, queryTokenMatchLocations stores either the capture group
+    // index where that token's spans are saved in or the number of tokens that queryToken most
+    // have matched
     val queryTokenMatchLocations = query.getNamedTokens.map {
       case (name, token) =>
         if (captureGroups.contains(name)) {
@@ -194,7 +195,9 @@ object HitAnalyzer extends Logging {
               val length = if (span == null) {
                 0
               } else {
-                math.abs(span.end) - math.abs(span.start)
+                // math.abs so we get the span length right for captured Spans that were
+                // negated by the Sampler that built these Hits
+                math.abs(span.end - span.start)
               }
               val (matchedTokens, rest) = tokens.splitAt(length)
               tokens = rest
@@ -204,9 +207,7 @@ object HitAnalyzer extends Logging {
               tokens = rest
               QueryMatch(matchedTokens, didMatch = true)
           }
-          if (Thread.interrupted()) {
-            throw new InterruptedException()
-          }
+          if (Thread.interrupted()) throw new InterruptedException()
           qMatch
         }
       }
@@ -217,21 +218,17 @@ object HitAnalyzer extends Logging {
             QueryMatch(Seq(Token(x(0), x(1))), didMatch = true))
         prefixTokens.toSeq.padTo(prefixCounts, QueryMatch(Seq(), didMatch = true)).reverse
       }
-      if (Thread.interrupted()) {
-        throw new InterruptedException()
-      }
+      if (Thread.interrupted()) throw new InterruptedException()
 
       val suffixQueryMatches = {
-        // == "" to filter out blank ending tokens BlackLab sometime inserts
+        // != "" to filter out blank ending tokens BlackLab sometimes inserts
         val suffixTokens = props.map(prop => kwic.getRight(prop).asScala).transpose.
-          take(suffixCounts).filter(x => x.forall(_ != "")).map(
+          take(suffixCounts).filterNot(_.contains("")).map(
             x => QueryMatch(Seq(Token(x(0), x(1))), didMatch = true)
           )
         suffixTokens.toSeq.padTo(suffixCounts, QueryMatch(Seq(), didMatch = true))
       }
-      if (Thread.interrupted()) {
-        throw new InterruptedException()
-      }
+      if (Thread.interrupted()) throw new InterruptedException()
 
       assert(hitQueryMatches.size == query.size)
       prefixQueryMatches ++ hitQueryMatches ++ suffixQueryMatches
@@ -246,11 +243,12 @@ object HitAnalyzer extends Logging {
       i => QuerySlotData(Suffix(i + 1))
     }
     val expressions = prefixExpressions ++ matchExpressions ++ suffixExpressions
+
     if (allQueryMatches.isEmpty) {
       // No hits found, so zip the metadata with empty sequences
       expressions.map(QueryMatches(_, Seq()))
     } else {
-      // Zip it with the matches for each slot
+      // Zip the meta-data with the matches we found for each each Slot
       allQueryMatches.transpose.zip(expressions).map {
         case (matches, slotData) =>
           QueryMatches(slotData, matches.toSeq)
