@@ -14,7 +14,7 @@ object EvaluatedOp {
   }
 }
 
-/** TokenQueryOp that is paired with a cache of what sentences inside the Hits object the op was
+/** QueryOp that is paired with a cache of what sentences inside the Hits object the op was
   * created from this operator matches
   *
   * @param op operator

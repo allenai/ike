@@ -107,7 +107,7 @@ object QueryGeneralizer {
         val posTagsToKeep = posTagCounts.filter(_._2 >= minCountsThresh).map(_._1)
         Generalization.to(posTagsToKeep.map(QPos).toSeq, qSimPhrases, true)
       case QPos(pos) =>
-        val posTagsToUse = posSets.filter(_.contains(pos)).reduce((a, b) => a ++ b) - pos
+        val posTagsToUse = posSets.filter(_.contains(pos)).reduce(_ ++ _) - pos
         Generalization.to(posTagsToUse.map(QPos).toSeq, Seq(), false)
       case QDisj(qexprs) =>
         if (qexprs.size < 10) {

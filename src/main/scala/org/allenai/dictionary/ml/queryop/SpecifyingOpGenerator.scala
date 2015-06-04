@@ -196,14 +196,14 @@ case class SpecifyingOpGenerator(
             if (qMatch.didMatch) 0 else 1)
       }
       val nRepeats = editsWithSize.map(_.repeats).distinct
-      val setMinOps = nRepeats.filter(_ != repeatingOp.min).map { n =>
+      val setMinOps = nRepeats.filter(n => n != repeatingOp.min && n <= repeatingOp.max).map { n =>
         (SetMin(queryTokenIndex, n), IntMap(editsWithSize.filter(_.repeats >= n).
           map(x => (x.index, x.required)): _*))
-      }.filter(_._1.min <= repeatingOp.max)
-      val setMaxOps = nRepeats.filter(_ != repeatingOp.max).map { n =>
+      }
+      val setMaxOps = nRepeats.filter(n => n != repeatingOp.max && n >= repeatingOp.min).map { n =>
         (SetMax(queryTokenIndex, n), IntMap(editsWithSize.filter(_.repeats <= n).
           map(x => (x.index, x.required)): _*))
-      }.filter(_._1.max >= repeatingOp.min)
+      }
       val repeatedOps = if (setRepeatedOp) {
         SpecifyingOpGenerator.getRepeatedOpMatch(matches, leafGenerator)
       } else {
