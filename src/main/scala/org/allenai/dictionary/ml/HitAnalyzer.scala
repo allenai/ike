@@ -69,23 +69,12 @@ object HitAnalyzer extends Logging {
     * @return The examples
     */
   def getExamples(query: TokenizedQuery, hits: Hits, table: Table): Iterable[Example] = {
-    var positiveStrings = table.positive.seq.map(_.values.map(
+    val positiveStrings = table.positive.seq.map(_.values.map(
       _.qwords.map(_.value.toLowerCase)
     )).toSet
     val negativeStrings = table.negative.seq.map(_.values.map(
       _.qwords.map(_.value.toLowerCase)
     )).toSet
-
-    // If the whole query is QWords, delete the encoded word from the
-    // dictionary so its occurrences will be treated as unlabelled
-    val columnToQSeq = query.getCaptureGroups.toMap
-    val captureGroupsInOrder = table.cols.map(columnToQSeq(_))
-    if (captureGroupsInOrder.forall(_.forall(_.isInstanceOf[QWord]))) {
-      val encodedSeq = captureGroupsInOrder.map(_.map(_.asInstanceOf[QWord].value.toLowerCase))
-      positiveStrings = positiveStrings - encodedSeq
-      logger.debug(s"Removed ${encodedSeq.map(_.mkString(" ")).mkString("::")} from " +
-        s"positive examples to avoid it being suggested")
-    }
 
     hits.get(0) // Makes sure captureGroupNames has been loaded
     val captureNames = hits.getCapturedGroupNames
@@ -140,12 +129,11 @@ object HitAnalyzer extends Logging {
     * diversity of captured output.
     */
   def getWeightedExamples(examples: Seq[Example]): IndexedSeq[WeightedExample] = {
-    val counts = examples.map(_.captureStrings).groupBy(identity).mapValues(_.size)
+    val counts = examples.map(_.captureStrings).distinct.zipWithIndex.toMap
     examples.map { example =>
       val numOfSameStrings = counts(example.captureStrings).toDouble
-      WeightedExample(example.label, example.requiredEdits,
-        math.sqrt(numOfSameStrings) / numOfSameStrings,
-        example.doc, example.str)
+      WeightedExample(example.label, counts(example.captureStrings), example.requiredEdits,
+        math.sqrt(numOfSameStrings) / numOfSameStrings, example.doc, example.str)
     }.toIndexedSeq
   }
 

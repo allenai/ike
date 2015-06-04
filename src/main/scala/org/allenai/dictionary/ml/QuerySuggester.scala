@@ -39,7 +39,7 @@ case class Example(label: Label, requiredEdits: Int,
 /** Example, but with an associated weight indicating how important it is to get this example
   * correct
   */
-case class WeightedExample(label: Label, requiredEdits: Int,
+case class WeightedExample(label: Label, matchId: Int, requiredEdits: Int,
   weight: Double, doc: Int, str: String = "")
 
 object QuerySuggester extends Logging {
