@@ -251,11 +251,11 @@ object HitAnalyzer extends Logging {
     *
     * @param hits sequence of hits to build the object from
     * @param query Query to use when deciding which primitive operations to generate
-    * @param prefixCounts number of tokens before each to gather and pass to generator
+    * @param prefixCounts number of tokens before each hit to gather and pass to generator
     *               in a Prefix Slot.
-    * @param suffixCounts number of tokens before each hit to gather and pass to generator
+    * @param suffixCounts number of tokens after each hit to gather and pass to generator
     *               in a Suffix Slot.
-    * @param generator generator used to decide what primtive operations to generate for each
+    * @param generator generator used to decide what primitive operations to generate for each
     *            query-token within query
     * @param table table to use when labelling the hits as positive or negative
     * @return the HitAnalysis object containing one 'Example' for each hit in hits, in the same
