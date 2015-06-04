@@ -78,7 +78,7 @@ abstract class QueryEvaluator() {
   /** @return Whether this evaluator accounts for the current search depth when computing
     * its scoring function, if so scores are expected to be monotonically decreasing with depth
     */
-  def usesDepth(): Boolean
+  def usesDepth: Boolean
 
   /** Returns a score determining the general 'goodness' of a query operation
     *
@@ -139,7 +139,7 @@ case class SumEvaluator(
     QueryEvaluator.countOccurrences(op.numEdits, examples)
   }
 
-  override def usesDepth(): Boolean = false
+  override def usesDepth: Boolean = false
 }
 
 class PositivePlusNegative(
@@ -147,7 +147,7 @@ class PositivePlusNegative(
     negativeWeight: Double
 ) extends SumEvaluator(examples, 1, negativeWeight, 0) {
 
-  override def usesDepth(): Boolean = false
+  override def usesDepth: Boolean = false
 }
 
 /** Weighted sum of positive, negative, and unlabelled examples with credit to partially
@@ -165,7 +165,7 @@ case class PartialSumEvaluator(
     QueryEvaluator.countPartialOccurrences(op.numEdits, examples, maxDepth, maxDepth - depth)
   }
 
-  override def usesDepth(): Boolean = true
+  override def usesDepth: Boolean = true
 }
 
 /** Weighted sum of positive, negative, and unlabelled examples normalized by the number of
@@ -195,5 +195,5 @@ case class NormalizedSumEvaluator(
     )
   }
 
-  override def usesDepth(): Boolean = false
+  override def usesDepth: Boolean = false
 }

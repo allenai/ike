@@ -169,7 +169,7 @@ object QuerySuggester extends Logging {
       logger.debug(s"********* Depth $i *********")
       logQueue(i + 1)
 
-      if (evaluationFunction.usesDepth()) {
+      if (evaluationFunction.usesDepth) {
         // Now the depth has changes, rescore the old queries so their scores are up-to-date
         val withNewScores = priorityQueue.map {
           case (x, _) => (x, evaluationFunction.evaluate(x, i + 1))
