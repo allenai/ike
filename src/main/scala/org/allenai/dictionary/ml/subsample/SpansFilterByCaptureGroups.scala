@@ -7,7 +7,7 @@ import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 
 /** Filters hits from a BLSpans object that do not contains capture groups that would also be
   * returned by another BLSpans object. Note the capture groups from the filter query will
-  * not be returned.
+  * not be returned
   *
   * @param query the 'query' spans to filter
   * @param filter the 'filter' spans to filter the query spans with
@@ -91,6 +91,8 @@ class SpansFilterByCaptureGroups(
    *     are on the same document
    */
   private def isValidMatch: Boolean = {
+    filterSpanHolder.indices.foreach(filterSpanHolder.update(_, null))
+    querySpanHolder.indices.foreach(querySpanHolder.update(_, null))
     filter.getCapturedGroups(filterSpanHolder)
     query.getCapturedGroups(querySpanHolder)
     captureIndicesToAnd.forall {
@@ -128,7 +130,7 @@ class SpansFilterByCaptureGroups(
     }
   }
 
-  /* Makes query and filter are on the same document
+  /* Makes sure query and filter are on the same document
    *
    * @return false if query and filter could not be set to be on the same document
    */
