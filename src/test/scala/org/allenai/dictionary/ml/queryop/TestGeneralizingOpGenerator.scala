@@ -18,8 +18,8 @@ class TestGeneralizingOpGenerator extends UnitSpec with ScratchDirectory {
     val setPosVB = SetToken(slot, QPos("VB"))
 
     val labels = IndexedSeq(Label.Negative, Label.Positive, Label.Negative, Label.Positive,
-      Label.Positive, Label.Positive, Label.Positive, Label.Positive).
-      map(WeightedExample(_, 0, 0, 0, ""))
+      Label.Positive, Label.Positive, Label.Positive, Label.Positive).zipWithIndex.
+      map(x => WeightedExample(x._1, x._2, 0, 1))
 
     def getWithGeneralization(gen: Generalization): Map[QueryOp, IntMap[Int]] = {
       val matches = QueryMatches(QuerySlotData(

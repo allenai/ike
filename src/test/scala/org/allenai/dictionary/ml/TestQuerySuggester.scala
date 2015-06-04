@@ -21,6 +21,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
 
   "SelectOperator" should "Select correct AND query" in {
 
+    var matchId = 0
     def buildExample(k: Int): WeightedExample = {
       val label = if (k == 1) {
         Positive
@@ -29,7 +30,8 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       } else {
         Unlabelled
       }
-      WeightedExample(label, 0, 1.0, 0)
+      matchId += 1
+      WeightedExample(label, matchId, 0, 1.0)
     }
 
     val examples = List(1, 1, 1, 1, 1, -1, -1, -1, -1, -1, 0).
@@ -66,13 +68,12 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
           scoredQueries.map(_._1.ops)
         }
       }
-
   }
 
   it should "Select correct OR queries" in {
     val examples = (Seq(Unlabelled) ++ Seq.fill(5)(Positive) ++
-      Seq.fill(5)(Negative) ++ Seq(Unlabelled)).
-      map(x => WeightedExample(x, 0, 1.0, 0)).toIndexedSeq
+      Seq.fill(5)(Negative) ++ Seq(Unlabelled)).zipWithIndex.
+      map(x => WeightedExample(x._1, x._2, 0, 1.0)).toIndexedSeq
 
     val op1 = SetToken(Prefix(1), QWord("p1"))
     val op2 = SetToken(Prefix(2), QWord("p2"))
@@ -99,8 +100,8 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
 
   "QuerySuggester" should "Select diverse queries" in {
     val examples = (Seq(Unlabelled) ++ Seq.fill(5)(Positive) ++
-      Seq.fill(5)(Negative) ++ Seq(Unlabelled)).
-      map(x => WeightedExample(x, 0, 1.0, 0)).toIndexedSeq
+      Seq.fill(5)(Negative) ++ Seq(Unlabelled)).zipWithIndex.
+      map(x => WeightedExample(x._1, x._2, 0, 1.0)).toIndexedSeq
 
     val op1 = SetToken(Prefix(1), QWord("p1"))
     val op2 = SetToken(Prefix(2), QWord("p2"))
@@ -137,8 +138,12 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
     val startingQuery = QueryLanguage.parse("I (?<c1> like)").get
     val suggestions =
       QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table), ss,
-        "test", false, SuggestQueryConfig(5, 2, 100, 10, 0, -0.1, false)).suggestions
-    val bestSuggestions = suggestions.take(2).map(_.query)
+        "test", false, SuggestQueryConfig(5, 2, 100, 10, 0, -0.1, false))
+    assertResult((1, 0, 0))((suggestions.original.positiveScore, suggestions.original.negativeScore,
+      suggestions.original.unlabelledScore))
+    val bestSuggestions = suggestions.suggestions.take(2).map(_.query)
+    val best = suggestions.suggestions.head
+    assertResult((2, 0, 0))((best.positiveScore, best.negativeScore, best.unlabelledScore))
     assert(bestSuggestions contains QueryLanguage.parse("PRP (?<c1> VBP)").get)
     assert(bestSuggestions contains QueryLanguage.parse("I (?<c1> VBP)").get)
   }
@@ -202,15 +207,19 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
       Seq(Seq("I like")).map { x =>
         TableRow(x.map(y => TableValue(y.split(" ").map(word => QWord(word)))))
       },
-      Seq(Seq("I hate"), Seq("it tastes")).map { x =>
+      Seq(Seq("I hate")).map { x =>
         TableRow(x.map(y => TableValue(y.split(" ").map(word => QWord(word)))))
       })
     val startingQuery = QueryLanguage.parse("PRP {tastes, like, hate}").get
     val suggestions =
       QuerySuggester.suggestQuery(Seq(searcher), startingQuery, Map("test" -> table), ss,
-        "test", true, SuggestQueryConfig(10, 2, 100, 100, -1, -1, true)).suggestions
-    val bestScore = suggestions(0).score
-    val bestQueries = suggestions.filter(_.score == bestScore)
+        "test", true, SuggestQueryConfig(10, 2, 100, 100, -1, -1, true))
+    val orig = suggestions.original
+    assertResult((1, 1, 1))((orig.positiveScore, orig.negativeScore, orig.unlabelledScore))
+    val bestScore = suggestions.suggestions.head.score
+    val bestQueries = suggestions.suggestions.filter(_.score == bestScore)
+    val best = bestQueries.head
+    assertResult((1, 0, 0))((best.positiveScore, best.negativeScore, best.unlabelledScore))
     val queries = bestQueries.map(x => x.query)
     assert(queries contains QueryLanguage.parse("(PRP like)").get)
   }

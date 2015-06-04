@@ -7,13 +7,13 @@ import scala.collection.immutable.IntMap
 
 object QueryEvaluator {
 
-  /** Counts the number of positive, negative, and unlabelled examples a mapping
+  /** Counts the total weight of positive, negative, and unlabelled examples a mapping
     * from (sentence_id -> # of edits made to that sentence) would match
     *
     * @param sentenceId2EditCount map of sentence indices to number of edits done to that sentence
     * @param examples list of examples
     */
-  def countOccurrences(
+  def countWeight(
     sentenceId2EditCount: IntMap[Int],
     examples: IndexedSeq[WeightedExample]
   ): (Double, Double, Double) = {
@@ -34,7 +34,69 @@ object QueryEvaluator {
     (positive, negative, unlabelled)
   }
 
-  /** Counts the number of positive, negative, and unlabelled examples a mapping
+  /** Counts the number of unique positive, negative, and unlabelled examples a mapping
+    * from (sentence_id -> # of edits made to that sentence) would match
+    *
+    * @param sentenceId2EditCount map of sentence indices to number of edits done to that sentence
+    * @param examples list of examples
+    */
+  def countOccurrences(
+    sentenceId2EditCount: IntMap[Int],
+    examples: IndexedSeq[WeightedExample]
+  ): (Double, Double, Double) = {
+    var positive: Set[Int] = Set()
+    var negative: Set[Int] = Set()
+    var unlabelled: Set[Int] = Set()
+    sentenceId2EditCount.foreach {
+      case (key, numEdits) =>
+        val example = examples(key)
+        if (numEdits >= example.requiredEdits) {
+          example.label match {
+            case Positive => positive += example.phraseId
+            case Negative => negative += example.phraseId
+            case Unlabelled => unlabelled += example.phraseId
+          }
+        }
+    }
+    (positive.size, negative.size, unlabelled.size)
+  }
+
+  /** Counts the number of unique positive, negative, and unlabelled examples a mapping
+    * from (sentence_id -> # of edits made to that sentence) would match, giving
+    * partial credit to sentences that are close to being matched
+    *
+    * @param sentenceId2EditCount map of sentence indices to number of edits done to that sentence
+    * @param examples list of examples
+    * @param maxEdits maximum number of edits that can ever be done to any sentence
+    * @param editsLeft number of edits that we might be able do to any sentence in the future
+    */
+  def countPartialOccurrences(
+    sentenceId2EditCount: IntMap[Int],
+    examples: IndexedSeq[WeightedExample],
+    maxEdits: Int,
+    editsLeft: Int
+  ): (Double, Double, Double) = {
+    var positive: Set[Int] = Set()
+    var negative: Set[Int] = Set()
+    var unlabelled: Set[Int] = Set()
+    sentenceId2EditCount.foreach {
+      case (exNum, numEditsDone) =>
+        val example = examples(exNum)
+        val requiredEdits = example.requiredEdits
+        val editsStillNeeded = requiredEdits - numEditsDone
+        if (editsStillNeeded <= editsLeft) {
+          val weight = example.weight * (1 - math.max(editsStillNeeded, 0) / maxEdits)
+          example.label match {
+            case Positive => positive += example.phraseId
+            case Negative => negative += example.phraseId
+            case Unlabelled => unlabelled += example.phraseId
+          }
+        }
+    }
+    (positive.size, negative.size, unlabelled.size)
+  }
+
+  /** Counts the total weight of positive, negative, and unlabelled examples a mapping
     * from (sentence_id -> # of edits made to that sentence) would match,
     * giving partial credit to sentences that are close to being matched
     *
@@ -43,7 +105,7 @@ object QueryEvaluator {
     * @param maxEdits maximum number of edits that can ever be done to any sentence
     * @param editsLeft number of edits that we might be able do to any sentence in the future
     */
-  def countPartialOccurrences(
+  def countPartialWeight(
     sentenceId2EditCount: IntMap[Int],
     examples: IndexedSeq[WeightedExample],
     maxEdits: Int,
@@ -127,16 +189,23 @@ abstract class PerLabelEvaluator(
   }
 }
 
-/** Weighted sum of positive, negative, and unlabelled examples */
+/** Weighted sum of either 1) The number of unique phrases returned per each label or 2) The
+  * weighted sum of all the examples matched per label, depending on `countUniquePhrases`
+  */
 case class SumEvaluator(
     examples: IndexedSeq[WeightedExample],
     positiveWeight: Double,
     negativeWeight: Double,
-    unlabelledWeight: Double
+    unlabelledWeight: Double,
+    countUniquePhrases: Boolean
 ) extends PerLabelEvaluator(examples, positiveWeight, negativeWeight, unlabelledWeight) {
 
   override def getSubScores(op: CompoundQueryOp, depth: Int): (Double, Double, Double) = {
-    QueryEvaluator.countOccurrences(op.numEdits, examples)
+    if (countUniquePhrases) {
+      QueryEvaluator.countOccurrences(op.numEdits, examples)
+    } else {
+      QueryEvaluator.countWeight(op.numEdits, examples)
+    }
   }
 
   override def usesDepth: Boolean = false
@@ -145,55 +214,30 @@ case class SumEvaluator(
 class PositivePlusNegative(
     examples: IndexedSeq[WeightedExample],
     negativeWeight: Double
-) extends SumEvaluator(examples, 1, negativeWeight, 0) {
+) extends SumEvaluator(examples, 1, negativeWeight, 0, false) {
 
   override def usesDepth: Boolean = false
 }
 
-/** Weighted sum of positive, negative, and unlabelled examples with credit to partially
-  * completed examples
+/** As SumEvaluator, but gives credit to partially matched examples
   */
 case class PartialSumEvaluator(
     examples: IndexedSeq[WeightedExample],
     positiveWeight: Double,
     negativeWeight: Double,
     unlabelledWeight: Double,
-    maxDepth: Int
+    maxDepth: Int,
+    useWeights: Boolean
 ) extends PerLabelEvaluator(examples, positiveWeight, negativeWeight, unlabelledWeight) {
 
   override def getSubScores(op: CompoundQueryOp, depth: Int): (Double, Double, Double) = {
-    QueryEvaluator.countPartialOccurrences(op.numEdits, examples, maxDepth, maxDepth - depth)
+    if (useWeights) {
+      QueryEvaluator.countPartialWeight(op.numEdits, examples, maxDepth, maxDepth - depth)
+
+    } else {
+      QueryEvaluator.countPartialOccurrences(op.numEdits, examples, maxDepth, maxDepth - depth)
+    }
   }
 
   override def usesDepth: Boolean = true
-}
-
-/** Weighted sum of positive, negative, and unlabelled examples normalized by the number of
-  * possible positive, negative, and unlabelled examples
-  */
-case class NormalizedSumEvaluator(
-    examples: IndexedSeq[WeightedExample],
-    positiveWeight: Double,
-    negativeWeight: Double,
-    unlabelledWeight: Double
-) extends PerLabelEvaluator(examples, positiveWeight, negativeWeight, unlabelledWeight) {
-
-  val totalPositiveWeight: Double = examples.map(x => if (x.label == Positive) x.weight else 0).sum
-  val totalNegativeWeight: Double = examples.map(x => if (x.label == Negative) x.weight else 0).sum
-  val totalUnlabelledWeight: Double = examples.map(x =>
-    if (x.label == Unlabelled) x.weight else 0).sum
-
-  override def getSubScores(op: CompoundQueryOp, depth: Int): (Double, Double, Double) = {
-    val (p, n, u) = QueryEvaluator.countOccurrences(op.numEdits, examples)
-    def safeDivide(num: Double, denom: Double): Double = {
-      if (denom == 0) 0 else num / denom.toDouble
-    }
-    (
-      safeDivide(p, totalPositiveWeight),
-      safeDivide(n, totalNegativeWeight),
-      safeDivide(u, totalUnlabelledWeight)
-    )
-  }
-
-  override def usesDepth: Boolean = false
 }

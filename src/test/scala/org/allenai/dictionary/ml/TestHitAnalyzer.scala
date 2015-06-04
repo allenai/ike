@@ -14,6 +14,11 @@ class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
   TestData.createTestIndex(scratchDir)
   val searcher = TestData.testSearcher(scratchDir)
 
+  def testWeightedSample(wex: WeightedExample, label: Label, requiredEdits: Int): Unit = {
+    assertResult(label)(wex.label)
+    assertResult(wex.requiredEdits)(requiredEdits)
+  }
+
   "GetExamples" should "label correctly" in {
     val query = QueryLanguage.parse("(?<c1> {mango, bananas, not})").get
     val table = Table("test", Seq("c1"),
@@ -31,7 +36,7 @@ class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
 
   def token(word: String): Token = {
     val pos = TestData.posTags(word)
-    Token(word, pos)
+    Token(word.toLowerCase, pos)
   }
 
   "getMatchData" should "test correctly" in {
@@ -92,10 +97,9 @@ class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
       table
     )
 
-    // What gets put in str changes for debug reasons so best to just ignore it
-    assertResult(WeightedExample(Negative, 0, 1.0, 0))(hitAnalysis.examples(0).copy(str = ""))
-    assertResult(WeightedExample(Unlabelled, 0, 1.0, 2))(hitAnalysis.examples(1).copy(str = ""))
-    assertResult(WeightedExample(Positive, 0, 1.0, 2))(hitAnalysis.examples(2).copy(str = ""))
+    testWeightedSample(hitAnalysis.examples(0), Negative, 0)
+    testWeightedSample(hitAnalysis.examples(1), Unlabelled, 0)
+    testWeightedSample(hitAnalysis.examples(2), Positive, 0)
     assertResult(3)(hitAnalysis.examples.size)
 
     val op10 = SetToken(Prefix(1), QPos("VBP"))

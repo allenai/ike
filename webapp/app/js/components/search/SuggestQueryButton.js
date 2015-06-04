@@ -121,9 +121,9 @@ var SuggestQueryButton = React.createClass({
       <tr className="queryRow" onClick={clicked} target={scoredQuery.query}>
         <td className="queryCell">{scoredQuery.query}</td>
         <td className="queryCell queryStat">
-          {scoredQuery.positiveScore.toFixed(2)}</td>
+          {scoredQuery.positiveScore.toFixed(0)}</td>
         <td className="queryCell queryStat">
-          {scoredQuery.negativeScore.toFixed(2)}
+          {scoredQuery.negativeScore.toFixed(0)}
         </td>
         <td className="queryCell queryStat">
           {scoredQuery.unlabelledScore .toFixed(2)}
@@ -133,26 +133,9 @@ var SuggestQueryButton = React.createClass({
   },
 
   render: function() {
-    var maxLabelledScore = 0
-    var maxUnlabelledScore = 0
-    var arrayLength =  this.state.suggestions.length;
-    for (var i = 0; i < arrayLength; i++) {
-        var suggestion = this.state.suggestions[i]
-        maxLabelledScore = Math.max(maxLabelledScore, suggestion.positiveScore, suggestion.negativeScore)
-        maxUnlabelledScore = Math.max(maxUnlabelledScore, suggestion.unlabelledScore)
-    }
-    var labelledScoreScale = 1
-    var unlabelledScoreScale = 1
-    while (maxLabelledScore * labelledScoreScale < 0.1 && maxLabelledScore > 0) {
-        labelledScoreScale *= 10
-    }
-    while (maxUnlabelledScore * unlabelledScoreScale < 1 && maxUnlabelledScore > 0) {
-        unlabelledScoreScale *= 10
-    }
     var rows = []
-    for (var i = 0; i < arrayLength; i++) {
-        var suggestion = this.state.suggestions[i]
-        rows.push(this.buildTableRow(suggestion))
+    for (var i = 0; i < this.state.suggestions.length; i++) {
+        rows.push(this.buildTableRow(this.state.suggestions[i]))
     }
 
     var tableInstance = (
@@ -165,9 +148,9 @@ var SuggestQueryButton = React.createClass({
           <tr>
             <th className="queryHeader">{"Query (Sample Size: " +
                 Math.max((this.state.sampleSize * 100).toFixed(2), 0.01) + "%)"}</th>
-            <th className="queryHeader">Positive Score</th>
-            <th className="queryHeader">Negative Score</th>
-            <th className="queryHeader">Unlabelled Score</th>
+            <th className="queryHeader">Positive Rows</th>
+            <th className="queryHeader">Negative Rows</th>
+            <th className="queryHeader">(Approximate) Unlabelled Rows</th>
           </tr>
         </thead>
         <tbody>

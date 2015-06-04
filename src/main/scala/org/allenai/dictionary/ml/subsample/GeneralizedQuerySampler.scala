@@ -101,7 +101,7 @@ case class GeneralizedQuerySampler(maxEdits: Int, posSampleSize: Int)
     startFromDoc: Int,
     startFromToken: Int
   ): Hits = {
-    val tableQuery = Sampler.buildLabelledQuery(qexpr, targetTable)
+    val tableQuery = Sampler.buildLabelledQuery(qexpr.getGeneralizeQuery, targetTable)
     val tableSpanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(tableQuery))
     val qexprQuery = buildGeneralizingQuery(qexpr, searcher, tables)
     searcher.find(new SpanQueryFilterByCaptureGroups(qexprQuery, tableSpanQuery,

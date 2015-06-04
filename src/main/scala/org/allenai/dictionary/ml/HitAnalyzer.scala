@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml
 
 import org.allenai.common.{ Logging, Timing }
-import org.allenai.dictionary.{ QueryLanguage, QWord, Table }
+import org.allenai.dictionary.{ QueryLanguage, Table }
 import org.allenai.dictionary.ml.queryop.{ OpGenerator, QueryOp }
 
 import nl.inl.blacklab.search.Hits
@@ -133,7 +133,7 @@ object HitAnalyzer extends Logging {
     examples.map { example =>
       val numOfSameStrings = counts(example.captureStrings).toDouble
       WeightedExample(example.label, counts(example.captureStrings), example.requiredEdits,
-        math.sqrt(numOfSameStrings) / numOfSameStrings, example.doc, example.str)
+        math.sqrt(numOfSameStrings) / numOfSameStrings, example.str)
     }.toIndexedSeq
   }
 
@@ -175,7 +175,7 @@ object HitAnalyzer extends Logging {
       val captureGroups = hits.getCapturedGroups(hit)
       val hitQueryMatches = {
         var tokens = props.map(prop => kwic.getMatch(prop).asScala).
-          transpose.map(x => Token(x(0), x(1)))
+          transpose.map(x => Token(x(0).toLowerCase, x(1)))
         queryTokenMatchLocations.map { tokensMatches =>
           val qMatch = tokensMatches match {
             case Right(captureGroupIndex) =>
@@ -203,7 +203,7 @@ object HitAnalyzer extends Logging {
       val prefixQueryMatches = {
         val prefixTokens = props.map(prop => kwic.getLeft(prop).asScala).transpose.
           reverse.take(prefixCounts).map(x =>
-            QueryMatch(Seq(Token(x(0), x(1))), didMatch = true))
+            QueryMatch(Seq(Token(x(0).toLowerCase, x(1))), didMatch = true))
         prefixTokens.toSeq.padTo(prefixCounts, QueryMatch(Seq(), didMatch = true)).reverse
       }
       if (Thread.interrupted()) throw new InterruptedException()
@@ -212,7 +212,7 @@ object HitAnalyzer extends Logging {
         // != "" to filter out blank ending tokens BlackLab sometimes inserts
         val suffixTokens = props.map(prop => kwic.getRight(prop).asScala).transpose.
           take(suffixCounts).filterNot(_.contains("")).map(
-            x => QueryMatch(Seq(Token(x(0), x(1))), didMatch = true)
+            x => QueryMatch(Seq(Token(x(0).toLowerCase, x(1))), didMatch = true)
           )
         suffixTokens.toSeq.padTo(suffixCounts, QueryMatch(Seq(), didMatch = true))
       }

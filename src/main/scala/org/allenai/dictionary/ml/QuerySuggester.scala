@@ -36,11 +36,18 @@ case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
 case class Example(label: Label, requiredEdits: Int,
   captureStrings: Seq[Seq[String]], doc: Int, str: String = "")
 
-/** Example, but with an associated weight indicating how important it is to get this example
-  * correct
+/** Example, but with an associated weight and phraseId
+  *
+  * @param label label of the Hit
+  * @param phraseId id for the phrase this Hit captured, Examples that captured the same phrase
+  *                 will have the same id
+  * @param requiredEdits number of query-tokens we need to edit for the starting query to match
+  * this hit (see the ml/README.md)
+  * @param weight weight indicating how important it is to match this Example
+  * @param str String of the hit, again a debugging tool
   */
-case class WeightedExample(label: Label, matchId: Int, requiredEdits: Int,
-  weight: Double, doc: Int, str: String = "")
+case class WeightedExample(label: Label, phraseId: Int, requiredEdits: Int,
+  weight: Double, str: String = "")
 
 object QuerySuggester extends Logging {
 
@@ -94,14 +101,15 @@ object QuerySuggester extends Logging {
       }
     }
 
-    // Trys to add the given operator with given score to the queue
+    // Trys to add the given operator with given score to the queue while avoiding over-using the
+    // same operator
     def addOp(cop: CompoundQueryOp, score: Double): Boolean = {
       val queueFull = priorityQueue.size >= beamSize
       val opAdded = if (!queueFull || priorityQueue.head._2 < score) {
         val repeatedOps = cop.ops.filter(opsUsed(_) >= maxOpOccurances)
         if (repeatedOps.nonEmpty) {
           // Adding would result in overusing an op, so we try to find an element in the queue
-          // that is lower scoring and that we can remove to allow us to add this op
+          // that has a lower score and that we can remove to allow us to add this op
           // Cases where two ops are over-used should maybe be treated specially (maybe we should
           // remove multiple elements?) but this is not currently implemeneted
           val candidatesForRemoval = priorityQueue.filter {
@@ -111,7 +119,7 @@ object QuerySuggester extends Logging {
             val min = candidatesForRemoval.minBy(_._2)
             if (min._2 < score) {
               // Super expensive way to remove since we re-sort the entire queue, but there is no
-              // remove API for queues as far as I can see. This is not in a preformance limiting
+              // remove API for queues as far as I can see. This is not in a performance limiting
               // loop anyway
               removeCounts(min._1)
               val newElements = priorityQueue.filter(_ != min).toSeq
@@ -396,12 +404,13 @@ object QuerySuggester extends Logging {
       if (narrow) {
         SumEvaluator(
           hitAnalysis.examples,
-          config.pWeight, config.nWeight, config.uWeight * unlabelledBiasCorrection
+          config.pWeight, config.nWeight, config.uWeight * unlabelledBiasCorrection, true
         )
       } else {
         PartialSumEvaluator(
           hitAnalysis.examples,
-          config.pWeight, config.nWeight, config.uWeight * unlabelledBiasCorrection, config.depth
+          config.pWeight, config.nWeight, config.uWeight * unlabelledBiasCorrection, config
+          .depth, false
         )
       }
 
@@ -477,7 +486,7 @@ object QuerySuggester extends Logging {
         ScoredQuery(query, score, p, n, u * unlabelledBiasCorrection)
     }
     logger.info(s"Done suggesting query for " +
-        s"${QueryLanguage.getQueryString(queryWithNamedCaptures)}")
+      s"${QueryLanguage.getQueryString(queryWithNamedCaptures)}")
     Suggestions(original, scoredOps, numDocs)
   }
 }

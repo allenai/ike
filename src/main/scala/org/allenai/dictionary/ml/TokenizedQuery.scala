@@ -157,7 +157,16 @@ object TokenizedQuery {
     val generalizations =
       tq.getSeq.map(QueryGeneralizer.queryGeneralizations(_, searchers,
         similarPhrasesSearcher, sampleSize))
-    tq.copy(generalizations = Some(generalizations))
+
+    // Special case when we have one word, only use 'phrase' generalization. Use POS
+    // generalizations here will make the POS matches dominate our sample and thus reduce our
+    // ability to select good phrase generalizations.
+    val correctedGeneralizations = generalizations match {
+      case Seq(GeneralizeToDisj(pos, phrase, fullyGeneralizes)) =>
+        Seq(GeneralizeToDisj(Seq(), phrase, fullyGeneralizes))
+      case _ => generalizations
+    }
+    tq.copy(generalizations = Some(correctedGeneralizations))
   }
 }
 
@@ -227,5 +236,27 @@ case class TokenizedQuery(
       remainingNames = rest
       (tseq, sequenceNames)
     }
+  }
+
+  /** @return the generalize version of this query, assumes Generalization has been set */
+  def getGeneralizeQuery: TokenizedQuery = {
+    var remainingGeneralization = generalizations.get
+    val newSequences = tokenSequences.map { tseq =>
+      val (generalizations, rest) = remainingGeneralization.splitAt(tseq.size)
+      remainingGeneralization = rest
+      val newSeq = generalizations.zip(tseq.queryTokens).map {
+        case (gen, qexpr) =>
+          gen match {
+            case GeneralizeToAny(min, max) => QRepetition(QWildcard(), min, max)
+            case GeneralizeToNone() => qexpr
+            case GeneralizeToDisj(pos, phrase, _) => QDisj((pos ++ phrase) :+ qexpr)
+          }
+      }
+      tseq match {
+        case cts: CapturedTokenSequence => cts.copy(queryTokens = newSeq)
+        case ts: TokenSequence => ts.copy(queryTokens = newSeq)
+      }
+    }
+    TokenizedQuery(newSequences, None)
   }
 }

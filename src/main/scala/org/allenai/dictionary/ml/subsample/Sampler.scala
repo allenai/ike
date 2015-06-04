@@ -29,9 +29,9 @@ object Sampler extends Logging {
     }
   }
 
-  /** @param query Query the labelled query will be used to filter
+  /** @param query QExpr the returned query is being built for
     * @param table to build the query for
-    * @return QExpr that captures rows of the given table that query might capture
+    * @return QExpr that captures rows of the given table that `query` might capture
     */
   def buildLabelledQuery(
     query: TokenizedQuery,
