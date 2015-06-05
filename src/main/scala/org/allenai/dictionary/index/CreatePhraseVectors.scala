@@ -30,13 +30,13 @@ import scala.util.Sorting
 
 object CreatePhraseVectors extends App with Logging {
   // phrase2vec parameters
-  val minWordCount = 5
+  val minWordCount = 10
   val startThreshold = 200
 
   case class Options(
     input: URI = null,
     destination: File = null,
-    vocabSize: Int = 100000000,
+    vocabSize: Int = 25000000,
     sentencesFile: Option[File] = None,
     phrasesFile: Option[File] = None,
     phrasifiedCorpusFile: Option[File] = None
