@@ -49,7 +49,7 @@ var QExprMixin = {
     var attr = this.pathAttr();
     if (attr == 'qexpr') {
       return [this.props.qexpr[attr]];
-    } else if (attr == 'qexprs') {
+    } else if (attr == 'qwords' || attr == 'qexprs') {
       return this.props.qexpr[attr];
     } else {
       return [];
@@ -61,6 +61,8 @@ var QExprMixin = {
       return 'qexpr';
     } else if ('qexprs' in qexpr) {
       return 'qexprs';
+    } else if ('qwords' in qexpr) {
+      return 'qwords';
     } else {
       return null;
     }
@@ -73,7 +75,7 @@ var QExprMixin = {
     var config = this.props.config;
     var makeUri = this.props.makeUri;
     childPath.push(attr);
-    if (attr == 'qexprs') {
+    if (attr == 'qexprs' || attr == "qwords") {
       childPath.push(index);
     }
     return (
@@ -285,6 +287,49 @@ var QUnnamed = React.createClass({
   mixins: [InnerNodeMixin],
   name: 'Capture'
 });
+var QGeneralizePhrase = React.createClass({
+  mixins: [QExprMixin],
+  phrase: function() {
+    var children = this.children();
+    var words = children.map(function(child) { return child.value });
+    var phrase = words.join(" ");
+    if (children.length > 1) {
+      phrase = "\"" + phrase + "\"";
+    }
+    return phrase;
+  },
+  replaceWithSimilarPhrases: function(phraseData) {
+    var children = this.children();
+    var replacement = {
+      type: 'QSimilarPhrases',
+      qwords: children,
+      pos: this.props.qexpr.pos,
+      phrases: phraseData
+    };
+    this.updateSelf(replacement);
+  },
+  similarPhrasesClick: function() {
+    similarPhrases(this.phrase(), this.replaceWithSimilarPhrases);
+  },
+  menuButton: function() {
+    return (
+      <div>
+      <DropdownButton bsStyle="link" title={this.phrase() + "~" + this.props.qexpr.pos}>
+        <MenuItem eventKey={1} onClick={this.similarPhrasesClick}>
+          Adjust Similarity
+        </MenuItem>
+      </DropdownButton>
+      </div>
+    );
+  },
+  render: function() {
+    return (
+      <div>
+        {this.menuButton()}
+      </div>)
+    ;
+  }
+});
 var QSimilarPhrases = React.createClass({
   mixins: [QExprMixin],
   numPhrases: function() {
@@ -296,7 +341,11 @@ var QSimilarPhrases = React.createClass({
   phrase: function() {
     var qwords = this.props.qexpr.qwords;
     var words = qwords.map(function(qw) { return qw.value; });
-    return words.join(" ");
+    var phrase = words.join(" ");
+    if (words.length > 1) {
+      phrase = "\"" + phrase + "\"";
+    }
+    return phrase;
   },
   handleChange: function(e) {
     var value = e.target.value;
@@ -307,7 +356,7 @@ var QSimilarPhrases = React.createClass({
   },
   renderSlider: function() {
     var max = this.numPhrases();
-    var value = max - this.pos();
+    var value = Math.max(0,max - this.pos());
     var slider =
       <input
         ref="slider"
@@ -322,7 +371,7 @@ var QSimilarPhrases = React.createClass({
   },
   render: function() {
   return (
-      <Panel header={this.phrase()}>
+      <Panel header={this.phrase() + "~" + this.pos()}>
         More Similar
         {this.renderSlider()}
         Less Similar
@@ -391,6 +440,7 @@ var QExpr = React.createClass({
   qexprComponents: {
     QWord: QWord,
     QSimilarPhrases: QSimilarPhrases,
+    QGeneralizePhrase: QGeneralizePhrase,
     QPos: QPos,
     QChunk: QChunk,
     QSeq: QSeq,

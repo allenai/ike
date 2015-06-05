@@ -38,22 +38,11 @@ case class SearchApp(config: Config) extends Logging {
   def semantics(query: QExpr): Try[TextPattern] = Try(BlackLabSemantics.blackLabQuery(query))
   def suggestQuery(request: SuggestQueryRequest): Try[SuggestQueryResponse] =
     SearchApp.suggestQuery(Seq(this), request)
-  def search(r: SearchRequest): Try[Seq[BlackLabResult]] = for {
-    qexpr <- SearchApp.parse(r)
-    interpolated <- QueryLanguage.interpolateTables(qexpr, r.tables)
-    textPattern <- semantics(interpolated)
-    hits <- blackLabHits(textPattern, r.config.limit)
+  def search(qexpr: QExpr, searchConfig: SearchConfig): Try[Seq[BlackLabResult]] = for {
+    textPattern <- semantics(qexpr)
+    hits <- blackLabHits(textPattern, searchConfig.limit)
     results <- fromHits(hits)
   } yield results
-  def groupedSearch(req: SearchRequest): Try[SearchResponse] = for {
-    results <- search(req)
-    grouped = req.target match {
-      case Some(target) => SearchResultGrouper.groupResults(req, results)
-      case None => SearchResultGrouper.identityGroupResults(req, results)
-    }
-    qexpr <- SearchApp.parse(req)
-    resp = SearchResponse(qexpr, grouped)
-  } yield resp
   def wordAttributes(req: WordInfoRequest): Try[Seq[(String, String)]] = for {
     textPattern <- semantics(QWord(req.word))
     hits <- blackLabHits(textPattern, req.config.limit)
