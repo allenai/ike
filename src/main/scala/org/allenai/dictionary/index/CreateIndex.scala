@@ -40,6 +40,9 @@ object  CreateIndex extends App {
       o.copy(numOfSent = n)
     } text "Number of sentences per doc"
 
+    opt[Unit]("oneSentencePerDoc") action { (_, o) =>
+      o.copy(numOfSent = 1)
+    }
     help("help")
   }
 
@@ -110,7 +113,7 @@ object  CreateIndex extends App {
     }
 
     def processBatch(batch: Seq[IdText]): Seq[IndexableText] =
-      batch.toArray.map(process).flatten.seq
+      batch.toArray.par.map(process).flatten.seq
 
     def addTo(indexer: Indexer)(text: IndexableText): Unit = {
       CreateIndex.addTo(indexer)(text)
