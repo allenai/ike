@@ -74,7 +74,20 @@ object  CreateIndex extends App {
     }
 
     def process(idText: IdText): Seq[IndexableText] = {
-      if (options.numOfSent > 0) {
+      if (options.numOfSent == 1) {
+        val sents = NlpAnnotate.annotate(idText.text)
+        sents.zipWithIndex.filter(_._1.nonEmpty).map {
+          case (sent, index) =>
+            val text = idText.text.substring(
+              sent.head.token.offset,
+              sent.last.token.offset + sent.last.token.string.length
+            )
+            val sentenceIdText = IdText(s"${idText.id}-$index", text)
+
+            IndexableText(sentenceIdText, Seq(sent map indexableToken))
+        }
+      }
+      else if (options.numOfSent > 1) {
         val numOfSent = options.numOfSent
         val sents = NlpAnnotate.annotate(idText.text).grouped(numOfSent).toList.zipWithIndex.filter(_._1.nonEmpty)
         sents.map {
@@ -83,7 +96,6 @@ object  CreateIndex extends App {
               sent <- sentGroup
               sentString = (for{ token <- sent} yield token.token.string).mkString(" ")
             } yield sentString
-//            val _ = println("Text: " + text.mkString(" . "))
             val sentenceIdText = IdText(s"${idText.id}-$index", text.mkString(" . "))
             IndexableText(sentenceIdText, sentGroup.map(_.map(indexableToken)))
         }
