@@ -11,11 +11,13 @@ object NlpAnnotate {
   def tokenize(segment: Segment): Seq[Token] = tokenizer.tokenize(segment.text)
   def postag(tokens: Seq[Token]): Seq[PostaggedToken] = postagger.postagTokenized(tokens)
   def chunk(tokens: Seq[PostaggedToken]): Seq[ChunkedToken] = chunker.chunkPostagged(tokens)
-  def addEndingMarkers(tokens: Seq[PostaggedToken]): Seq[ChunkedToken] = {
-    chunk(tokens).iterator.sliding(2).toList.map {
-      case Seq(ChunkedToken(a, b, c, d), ChunkedToken(x, y, z, w)) if (a.startsWith("I-") && x.startsWith("B-")) => ChunkedToken("E-" + a.substring(2), b, c, d)
-      case Seq(ChunkedToken(a, b, c, d), ChunkedToken(x, y, z, w)) if (a.startsWith("B-") && x.startsWith("B-")) => ChunkedToken("BE-" + a.substring(2), b, c, d)
-      case Seq(ChunkedToken(a, b, c, d), ChunkedToken(x, y, z, w)) => ChunkedToken(a, b, c, d)
+  def addEndingMarkers(tokens: Seq[ChunkedToken]): Seq[ChunkedToken] = {
+    var tokenSlide : List[Seq[ChunkedToken]] = List()
+    if(tokens.length > 0) tokenSlide = tokens.sliding(2).toList :+ Seq(tokens.last)
+    tokenSlide.map {
+      case Seq(ChunkedToken(a, b, c, d), ChunkedToken(x, _, _, _)) if (a.startsWith("I-") && x.startsWith("B-")) => ChunkedToken("E-" + a.substring(2), b, c, d)
+      case Seq(ChunkedToken(a, b, c, d), ChunkedToken(x, _, _, _)) if (a.startsWith("B-") && x.startsWith("B-")) => ChunkedToken("BE-" + a.substring(2), b, c, d)
+      case Seq(ChunkedToken(a, b, c, d), ChunkedToken(x, _, _, _)) => ChunkedToken(a, b, c, d)
       case Seq(ChunkedToken(a, b, c, d)) if a.startsWith("B-") => ChunkedToken("BE-" + a.substring(2), b, c, d)
       case Seq(ChunkedToken(a, b, c, d)) => ChunkedToken(a, b, c, d)
     }
@@ -23,14 +25,15 @@ object NlpAnnotate {
   def lemmatize(postagged: Seq[PostaggedToken]): Seq[Lemmatized[PostaggedToken]] =
     postagged map lemmatizer.lemmatizePostaggedToken
   def lemmatize_chunk(chunked: Seq[ChunkedToken]): Seq[Lemmatized[ChunkedToken]] =
-    addEndingMarkers(chunked).map {
+    chunked.map {
       case x => lemmatizer.lemmatizePostaggedToken(x)
     }
   def annotate(text: String): Seq[Seq[Lemmatized[ChunkedToken]]] = segment(text).map { segment =>
     val tokens = tokenize(segment)
     val tagged = postag(tokens)
     val chunked = chunk(tagged)
-    lemmatize_chunk(chunked)
+    val chunkedWithEndingMarkers = addEndingMarkers(chunked)
+    lemmatize_chunk(chunkedWithEndingMarkers)
   }
 }
 

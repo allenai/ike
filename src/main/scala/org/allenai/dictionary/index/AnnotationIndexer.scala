@@ -11,8 +11,8 @@ class AnnotationIndexer(indexer: Indexer, fileName: String, reader: Reader)
     extends DocIndexerXmlHandlers(indexer, fileName, reader) {
   val mainProp = getMainProperty
   val punctProp = getPropPunct
-  val posProp = addProperty("pos", SensitivitySetting.SENSITIVE_AND_INSENSITIVE)
-  val chunkProp = addProperty("chunk", SensitivitySetting.SENSITIVE_AND_INSENSITIVE)
+  val posProp = addProperty("pos", SensitivitySetting.ONLY_INSENSITIVE)
+  val chunkProp = addProperty("chunk", SensitivitySetting.ONLY_INSENSITIVE)
   val lemmaProp = addProperty("lemma", SensitivitySetting.ONLY_SENSITIVE)
   addHandler("/document", new DocumentElementHandler())
   addHandler("word", new WordHandlerBase() {
