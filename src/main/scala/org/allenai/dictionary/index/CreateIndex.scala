@@ -20,7 +20,7 @@ object  CreateIndex extends App {
     destinationDir: File = null,
     batchSize: Int = 1000,
     textSource: URI = null,
-    numOfSent: Int = -1
+    oneSentPerDoc: Boolean = true
   )
 
   val parser = new scopt.OptionParser[Options](this.getClass.getSimpleName.stripSuffix("$")) {
@@ -36,12 +36,8 @@ object  CreateIndex extends App {
       o.copy(textSource = t)
     } text "URL of a file or directory to load the text from"
 
-    opt[Int]('n', "numOfSent") action { (n, o) =>
-      o.copy(numOfSent = n)
-    } text "Number of sentences per doc"
-
     opt[Unit]("oneSentencePerDoc") action { (_, o) =>
-      o.copy(numOfSent = 1)
+      o.copy(oneSentPerDoc = true)
     }
     help("help")
   }
@@ -77,7 +73,7 @@ object  CreateIndex extends App {
     }
 
     def process(idText: IdText): Seq[IndexableText] = {
-      if (options.numOfSent == 1) {
+      if (options.oneSentPerDoc) {
         val sents = NlpAnnotate.annotate(idText.text)
         sents.zipWithIndex.filter(_._1.nonEmpty).map {
           case (sent, index) =>
@@ -90,19 +86,7 @@ object  CreateIndex extends App {
             IndexableText(sentenceIdText, Seq(sent map indexableToken))
         }
       }
-      else if (options.numOfSent > 1) {
-        val numOfSent = options.numOfSent
-        val sents = NlpAnnotate.annotate(idText.text).grouped(numOfSent).toList.zipWithIndex.filter(_._1.nonEmpty)
-        sents.map {
-          case (sentGroup, index) =>
-            val text = for {
-              sent <- sentGroup
-              sentString = (for{ token <- sent} yield token.token.string).mkString(" ")
-            } yield sentString
-            val sentenceIdText = IdText(s"${idText.id}-$index", text.mkString(" . "))
-            IndexableText(sentenceIdText, sentGroup.map(_.map(indexableToken)))
-        }
-      } else {
+      else {
         val text = idText.text
         val sents = for {
           sent <- NlpAnnotate.annotate(text)
