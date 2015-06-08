@@ -129,11 +129,14 @@ object HitAnalyzer extends Logging {
     * diversity of captured output.
     */
   def getWeightedExamples(examples: Seq[Example]): IndexedSeq[WeightedExample] = {
-    val counts = examples.map(_.captureStrings).distinct.zipWithIndex.toMap
+    val phraseToIndex = examples.map(_.captureStrings).distinct.zipWithIndex.toMap
+    val phraseToCounts = examples.map(_.captureStrings).groupBy(identity).mapValues(_.size)
+
     examples.map { example =>
-      val numOfSameStrings = counts(example.captureStrings).toDouble
-      WeightedExample(example.label, counts(example.captureStrings), example.requiredEdits,
-        math.sqrt(numOfSameStrings) / numOfSameStrings, example.str)
+      val numOfSameStrings = phraseToCounts(example.captureStrings).toDouble
+      val phraseId = phraseToIndex(example.captureStrings)
+      WeightedExample(example.label, phraseId, example.requiredEdits,
+        example.doc, math.sqrt(numOfSameStrings) / numOfSameStrings, example.str)
     }.toIndexedSeq
   }
 
@@ -276,14 +279,14 @@ object HitAnalyzer extends Logging {
 
     logger.debug("Calculating labels and weights...")
     val (examples, exampleTime) = Timing.time {
-      val examples = hits.flatMap(h => getExamples(query, h, table))
-      getWeightedExamples(examples)
+      val unwieghtedExamples = hits.flatMap(getExamples(query, _, table))
+      getWeightedExamples(unwieghtedExamples)
     }
     logger.debug(s"Done in ${exampleTime.toMillis / 1000.0} seconds")
 
     logger.debug("Calculating match data...")
     val (opMap, opMaptime) = Timing.time {
-      val matchDataPerSearcher = hits.map(h => getMatchData(h, query, prefixCounts, suffixCounts))
+      val matchDataPerSearcher = hits.map(getMatchData(_, query, prefixCounts, suffixCounts))
       val matchDataPerSlot = matchDataPerSearcher.transpose.map { slotMatchData =>
         assert(slotMatchData.forall(_.queryToken == slotMatchData.head.queryToken))
         QueryMatches(slotMatchData.head.queryToken, slotMatchData.flatMap(_.matches))

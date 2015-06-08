@@ -8,7 +8,7 @@ import scala.collection.immutable.IntMap
 object OpConjunctionOfDisjunctions {
   def apply(
     op: EvaluatedOp,
-      restrictDisjunctionsTo: Option[Set[Slot]] = None
+    restrictDisjunctionsTo: Option[Set[Slot]] = None
   ): Option[OpConjunctionOfDisjunctions] = op.op match {
     case tq: TokenQueryOp => Some(new OpConjunctionOfDisjunctions(Set(tq), op.matches,
       Map(tq.slot -> op.matches), restrictDisjunctionsTo))
@@ -40,8 +40,8 @@ case class OpConjunctionOfDisjunctions private (
         val otherOps = ops.filter(_.slot == tq.slot)
         val combinations = otherOps.map(x => x.combinable(tq))
         combinations.forall(_ == AND) ||
-            ((restrictDisjunctionsTo.isEmpty || restrictDisjunctionsTo.get.contains(tq.slot))
-                && combinations.forall(_ == OR))
+          ((restrictDisjunctionsTo.isEmpty || restrictDisjunctionsTo.get.contains(tq.slot))
+            && combinations.forall(_ == OR))
       } else {
         true
       }

@@ -43,13 +43,66 @@ case class Example(label: Label, requiredEdits: Int,
   *                 will have the same id
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
   * this hit (see the ml/README.md)
+  * @param doc document this example came from
   * @param weight weight indicating how important it is to match this Example
   * @param str String of the hit, again a debugging tool
   */
-case class WeightedExample(label: Label, phraseId: Int, requiredEdits: Int,
+case class WeightedExample(label: Label, phraseId: Int, requiredEdits: Int, doc: Int,
   weight: Double, str: String = "")
 
 object QuerySuggester extends Logging {
+
+  /** Returns an estimate of the number unlabelled phrases we expected to find is we searched
+    * docToExtrapolateTo, given we gathered unlabelledExamples by searching up to lastDocSearched
+    *
+    * @param unlabelledExamples unlabelled Examples
+    * @param lastDocSearched number of documents the unlabelled examples were gathered from
+    * @param docToExtrapolateTo number of documents we would expect to search
+    * @return expected number of phrases found
+    */
+  def getExpectedUnlabelledPhrases(
+    unlabelledExamples: IndexedSeq[WeightedExample],
+    lastDocSearched: Int,
+    docToExtrapolateTo: Int
+  ): Double = {
+    // Ideal we could fit a logarithmic curve to the data, but for now we just use the heuristic of
+    // fitting a linear curve to the last half of the data. In theory we should also be
+    // doing calculations per the results returned by each searcher as well
+    require(lastDocSearched < docToExtrapolateTo)
+    if (unlabelledExamples.isEmpty) {
+      0
+    } else {
+      var phrasesFound = Set[Int]()
+      // Count the number of new phrases that were introduced in all documents after the
+      // median document, we use the median doc only so our split contains hits from
+      // non-overlapping documents
+      val sortedDocs = unlabelledExamples.map(_.doc).sorted
+      val medianDoc = sortedDocs(sortedDocs.size / 2)
+      val numNewPhrasesFromMedianDoc = unlabelledExamples.groupBy(_.doc).toSeq.sortBy(_._1).map {
+        case (doc, examplesInDoc) =>
+          if (doc > medianDoc) {
+            val oldSize = phrasesFound.size
+            phrasesFound ++= examplesInDoc.map(_.phraseId)
+            phrasesFound.size - oldSize
+          } else {
+            phrasesFound ++= examplesInDoc.map(_.phraseId)
+            0
+          }
+      }.sum
+
+      // Now assuming that new phrases continue to be introduced at the same rate, extrapolate
+      // to get the number of phrases we expect
+      val expectedNewPhrasesPerDoc = numNewPhrasesFromMedianDoc.toDouble /
+        (lastDocSearched - medianDoc)
+      val docsMissing = docToExtrapolateTo - lastDocSearched
+      val expectedNewPhrases = phrasesFound.size + expectedNewPhrasesPerDoc * docsMissing
+      // We expect the naive linear interpolation to produce predict more results, but if not
+      // (maybe because our sample size was small/noisy) so we prefer the linear interpolation
+      val linearExpectedNewPhrases = phrasesFound.size +
+        phrasesFound.size.toDouble / lastDocSearched * docsMissing
+      Math.min(linearExpectedNewPhrases, expectedNewPhrases)
+    }
+  }
 
   lazy val querySuggestionConf = ConfigFactory.load().getConfig("QuerySuggester")
 
@@ -291,17 +344,17 @@ object QuerySuggester extends Logging {
     }
 
     // Number of documents we searched for unlabelled hits from, per each searcher
-    val numUnlabelledDocsPerSearcher = unlabelledHits.zip(numDocsPerSearcher).map {
+    val numUnlabelledDocs = unlabelledHits.zip(numDocsPerSearcher).map {
       case (hits, totalDocs) =>
         if (hits.size() < maxUnlabelledPerSearcher) {
           // We must have scanned the entire index
           totalDocs
         } else {
-          // We use getOriginalHits since HitWindow does not return this count correctly
-          hits.getOriginalHits.countSoFarDocsCounted()
+          // Assume docIds correspond to document number, this should be safe as long as
+          // we do not delete documents.
+          hits.get(hits.last()).doc
         }
-    }
-    val numUnlabelledDocs = numUnlabelledDocsPerSearcher.sum
+    }.sum
     val unlabelledEndPoints = unlabelledHits.map { hits =>
       if (hits.last() == -1) {
         (0, 0)
@@ -323,17 +376,15 @@ object QuerySuggester extends Logging {
       s" ${labelledReadTime.toMillis / 1000.0} seconds")
 
     // Number of documents we searched for labelled hits from
-    val numDocs = numUnlabelledDocs +
-      (labelledHits, numDocsPerSearcher, numUnlabelledDocsPerSearcher).zipped.map {
-        case (hits, totalDocsInSearcher, numUnlabelledDocsInSearcher) =>
-          if (hits.size < maxLabelledPerSearcher) {
-            // We must have scanned the entire index
-            totalDocsInSearcher - numUnlabelledDocsInSearcher
-          } else {
-            // We use getOriginalHits since HitWindow does not return this count correctly
-            hits.getOriginalHits.countSoFarDocsCounted()
-          }
-      }.sum
+    val numDocs = (labelledHits, numDocsPerSearcher).zipped.map {
+      case (hits, totalDocsInSearcher) =>
+        if (hits.size < maxLabelledPerSearcher) {
+          // We must have scanned the entire index
+          totalDocsInSearcher
+        } else {
+          hits.get(hits.last()).doc
+        }
+    }.sum
 
     logger.debug("Analyzing hits")
 
@@ -362,8 +413,11 @@ object QuerySuggester extends Logging {
       } else {
         (0, 0)
       }
-      buildHitAnalysis(labelledHits ++ unlabelledHits, tokenizedQuery,
-        prefixCounts, suffixCounts, generator, targetTable)
+
+      buildHitAnalysis(
+        unlabelledHits ++ labelledHits,
+        tokenizedQuery, prefixCounts, suffixCounts, generator, targetTable
+      )
     }
     logger.debug(s"Done Analyzing hits in ${analysisTime.toMillis / 1000.0} seconds")
 
@@ -395,13 +449,27 @@ object QuerySuggester extends Logging {
         case _ => None
       }
     }.toSet
+
     val opCombiner = (x: EvaluatedOp) => OpConjunctionOfDisjunctions(x, Some(restrictDisjunctionTo))
 
+    // Since we might have biased our sample toward labelled documents, extrapolate to guess at the
+    // number of unlabelled documents we would have seen if the whole sample was not biased
+    val unlabelledPhrases = hitAnalysis.examples.filter(_.label == Unlabelled).
+      map(_.phraseId).toSet.size
+    val expectedUnlabelledPhrases = if (unlabelledPhrases == 0 || numDocs == numUnlabelledDocs) {
+      unlabelledPhrases
+    } else {
+      getExpectedUnlabelledPhrases(
+        hitAnalysis.examples.filter(_.label == Unlabelled),
+        numUnlabelledDocs, numDocs
+      )
+    }
     val unlabelledBiasCorrection =
       Math.min(
-        numDocs.toDouble / numUnlabelledDocs,
+        expectedUnlabelledPhrases / unlabelledPhrases,
         querySuggestionConf.getDouble("maxUnlabelledBiasCorrection")
       )
+    logger.debug(s"Unlabelled bias correction: $unlabelledBiasCorrection")
     val evalFunction =
       if (narrow) {
         SumEvaluator(

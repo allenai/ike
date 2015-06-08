@@ -31,7 +31,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
         Unlabelled
       }
       matchId += 1
-      WeightedExample(label, matchId, 0, 1.0)
+      WeightedExample(label, matchId, 0, 0, 1.0)
     }
 
     val examples = List(1, 1, 1, 1, 1, -1, -1, -1, -1, -1, 0).
@@ -73,7 +73,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
   it should "Select correct OR queries" in {
     val examples = (Seq(Unlabelled) ++ Seq.fill(5)(Positive) ++
       Seq.fill(5)(Negative) ++ Seq(Unlabelled)).zipWithIndex.
-      map(x => WeightedExample(x._1, x._2, 0, 1.0)).toIndexedSeq
+      map(x => WeightedExample(x._1, x._2, 0, 0, 1.0)).toIndexedSeq
 
     val op1 = SetToken(Prefix(1), QWord("p1"))
     val op2 = SetToken(Prefix(2), QWord("p2"))
@@ -101,7 +101,7 @@ class TestQuerySuggester extends UnitSpec with ScratchDirectory {
   "QuerySuggester" should "Select diverse queries" in {
     val examples = (Seq(Unlabelled) ++ Seq.fill(5)(Positive) ++
       Seq.fill(5)(Negative) ++ Seq(Unlabelled)).zipWithIndex.
-      map(x => WeightedExample(x._1, x._2, 0, 1.0)).toIndexedSeq
+      map(x => WeightedExample(x._1, x._2, 0, 0, 1.0)).toIndexedSeq
 
     val op1 = SetToken(Prefix(1), QWord("p1"))
     val op2 = SetToken(Prefix(2), QWord("p2"))

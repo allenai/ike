@@ -14,9 +14,10 @@ class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
   TestData.createTestIndex(scratchDir)
   val searcher = TestData.testSearcher(scratchDir)
 
-  def testWeightedSample(wex: WeightedExample, label: Label, requiredEdits: Int): Unit = {
+  def testWeightedSample(wex: WeightedExample, label: Label, requiredEdits: Int, doc: Int): Unit = {
     assertResult(label)(wex.label)
     assertResult(wex.requiredEdits)(requiredEdits)
+    assertResult(wex.doc)(doc)
   }
 
   "GetExamples" should "label correctly" in {
@@ -97,9 +98,9 @@ class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
       table
     )
 
-    testWeightedSample(hitAnalysis.examples(0), Negative, 0)
-    testWeightedSample(hitAnalysis.examples(1), Unlabelled, 0)
-    testWeightedSample(hitAnalysis.examples(2), Positive, 0)
+    testWeightedSample(hitAnalysis.examples(0), Negative, 0, 0)
+    testWeightedSample(hitAnalysis.examples(1), Unlabelled, 0, 2)
+    testWeightedSample(hitAnalysis.examples(2), Positive, 0, 2)
     assertResult(3)(hitAnalysis.examples.size)
 
     val op10 = SetToken(Prefix(1), QPos("VBP"))
