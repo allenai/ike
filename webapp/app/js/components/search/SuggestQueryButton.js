@@ -5,7 +5,10 @@ var DropdownButton = bs.DropdownButton
 var Button = bs.Button
 var MenuItem = bs.MenuItem
 var Input = bs.Input
+var Label = bs.Label
+var Badge = bs.Badge
 var ButtonGroup = bs.ButtonGroup
+var Table = bs.Table
 var xhr = require('xhr');
 
 var SuggestQueryButton = React.createClass({
@@ -13,6 +16,7 @@ var SuggestQueryButton = React.createClass({
   getInitialState: function() {
     return {
       suggestions: [],
+      sampleSize: 0,
       disabled: false,
       narrow: false,
       waiting: false
@@ -21,11 +25,16 @@ var SuggestQueryButton = React.createClass({
 
   suggestQueryCallBack: function(err, resp, body) {
     this.setState({waiting: false})
+    console.log(resp.statusCode)
     if (resp.statusCode == 200) {
-      var newSuggestions = JSON.parse(body).scoredQueries
-      this.setState({suggestions: newSuggestions})
+      var suggestions = JSON.parse(body)
+      suggestions.suggestions.unshift(suggestions.original)
+      this.setState({
+        suggestions: suggestions.suggestions,
+        sampleSize: suggestions.samplePercent
+      })
     } else {
-      alert('Got Error: ' + err + '\n<' + body + '>')
+      alert('Got Error: ' + body)
     }
   },
 
@@ -43,15 +52,27 @@ var SuggestQueryButton = React.createClass({
     }
 
     var config = this.props.config.value.ml
+    if (this.state.narrow) {
+      var scoring = {
+        p: config.pWeightNarrow,
+        n: config.nWeightNarrow,
+        u: config.uWeightNarrow,
+      }
+    } else {
+      var scoring = {
+        p: config.pWeight,
+        n: config.nWeight,
+        u: config.uWeight,
+      }
+    }
     var requestConfig = {
       depth: config.depth,
       beamSize: config.beamSize,
       maxSampleSize: config.maxSampleSize,
       numEdits: config.numEdits,
-      pWeight: config.pWeight,
-      nWeight: config.nWeight,
-      uWeight: config.uWeight,
-      allowDisjunctions: config.allowDisjunctions
+      pWeight: scoring.p,
+      nWeight: scoring.n,
+      uWeight: scoring.u
     }
 
     var tables = TableManager.getTables()
@@ -68,32 +89,73 @@ var SuggestQueryButton = React.createClass({
       method: 'POST',
       headers: {'Content-Type': 'application/json'}
     };
-    console.log('Requesting suggestions for ' + queryValue)
     this.setState({waiting: true})
     var request = xhr(requestData, this.suggestQueryCallBack);
   },
+
   suggestedQuerySelect: function(eventKey, href, target) {
-    this.props.query.requestChange(target)
+    this.props.query.requestChange("changed")
   },
 
-  createMenuItem: function(scoredQuery) {
-    return  (
-            <MenuItem
-              onSelect={this.suggestedQuerySelect}
-              target={scoredQuery.query}>{scoredQuery.query}
-            </MenuItem>
-   )
+  numberString: function(number) {
+    if (number >= 10000) {
+      return (number/1000) + "k"
+    } else {
+      return number
+    }
   },
 
   checkBoxChange: function(event) {
     this.setState({narrow: !this.state.narrow})
   },
 
-  smallFont: function(string) {
-    return <div style={{fontSize: 'small'}}>{string}</div>
+  buildTableRow: function(scoredQuery) {
+    var query = this.props.query
+    function clicked() {
+      query.requestChange(scoredQuery.query)
+    }
+
+    return (
+      <tr className="queryRow" onClick={clicked} target={scoredQuery.query}>
+        <td className="queryCell">{scoredQuery.query}</td>
+        <td className="queryCell queryStat">
+          {scoredQuery.positiveScore.toFixed(0)}</td>
+        <td className="queryCell queryStat">
+          {scoredQuery.negativeScore.toFixed(0)}
+        </td>
+        <td className="queryCell queryStat">
+          {scoredQuery.unlabelledScore .toFixed(2)}
+        </td>
+      </tr>
+    )
   },
 
   render: function() {
+    var rows = []
+    for (var i = 0; i < this.state.suggestions.length; i++) {
+        rows.push(this.buildTableRow(this.state.suggestions[i]))
+    }
+
+    var tableInstance = (
+      <Table
+       condensed
+       bordered
+       id="suggestion-table"
+       hover>
+        <thead>
+          <tr>
+            <th className="queryHeader">{"Query (Sample Size: " +
+                Math.max((this.state.sampleSize * 100).toFixed(2), 0.01) + "%)"}</th>
+            <th className="queryHeader">Positive Rows</th>
+            <th className="queryHeader">Negative Rows</th>
+            <th className="queryHeader">(Approximate) Unlabelled Rows</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows}
+        </tbody>
+      </Table>)
+
     return (
     <div>
       <label className="control-label">Query</label>
@@ -102,16 +164,14 @@ var SuggestQueryButton = React.createClass({
           <DropdownButton
             style={{fontSize: 'small'}}
             pullRight
-            title="Suggestions"
-            disabled={this.props.disabled}>
-              {this.state.suggestions.map(this.createMenuItem)}
+            title="Suggestions">
+              {tableInstance}
           </DropdownButton>
           <Button
-            disabled={this.state.waiting || this.props.disabled}
+            disabled={this.state.waiting}
             style={{fontSize: 'small'}}
             onClick={this.suggestQuery}
-            >
-              Refresh
+            >Refresh
           </Button>
         </ButtonGroup>
         <Input

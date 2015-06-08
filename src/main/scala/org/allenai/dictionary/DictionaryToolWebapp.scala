@@ -20,6 +20,8 @@ import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 import scala.util.control.NonFatal
 
+import java.util.concurrent.TimeUnit
+
 object DictionaryToolWebapp {
   lazy val config = ConfigFactory.load().getConfig("DictionaryToolWebapp")
   val name = "dictionary-tool"
@@ -53,7 +55,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     config.getString("name") -> Future { SearchApp(config) }
   }.toMap
   val similarPhrasesSearcher =
-    new SimilarPhrasesSearcher(ConfigFactory.load()[Config]("SimilarPhrasesSearcher"))
+    new WordVecPhraseSearcher(ConfigFactory.load()[Config]("SimilarPhrasesSearcher"))
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
@@ -125,8 +127,10 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
         path("suggestQuery") {
           post {
             entity(as[SuggestQueryRequest]) { req =>
+              val timeout = config.getConfig("QuerySuggester").
+                getDuration("timeoutInSeconds", TimeUnit.SECONDS)
               complete(searchersFuture.map { searchers =>
-                SearchApp.suggestQuery(searchers.toSeq, req)
+                SearchApp.suggestQuery(searchers.toSeq, req, similarPhrasesSearcher, timeout)
               })
             }
           }
