@@ -12,6 +12,23 @@ homepage := Some(url("https://okcorpus.dev.allenai.org"))
 
 description := "buildin' them electric tables"
 
+import sbtrelease.ReleaseStateTransformations._
+
+// Override the problematic new release plugin.
+ReleaseKeys.releaseProcess := Seq(
+  checkSnapshotDependencies,
+  inquireVersions,
+  runClean,
+  runTest,
+  setReleaseVersion,
+  commitReleaseVersion,
+  tagRelease,
+  publishArtifacts,
+  setNextVersion,
+  commitNextVersion,
+  pushChanges
+)
+
 scmInfo := Some(ScmInfo(
   url("https://github.com/allenai/okcorpus"),
   "https://github.com/allenai/okcorpus.git"))
