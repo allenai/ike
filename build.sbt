@@ -4,9 +4,28 @@ scalaVersion := "2.11.5"
 
 val okcorpus = project.in(file(".")).enablePlugins(WebappPlugin)
 
+organization := "org.allenai"
+
 name := "okcorpus"
 
+homepage := Some(url("https://okcorpus.dev.allenai.org"))
+
 description := "buildin' them electric tables"
+
+scmInfo := Some(ScmInfo(
+  url("https://github.com/allenai/okcorpus"),
+  "https://github.com/allenai/okcorpus.git"))
+
+pomExtra :=
+  <developers>
+    <developer>
+      <id>allenai-dev-role</id>
+      <name>Allen Institute for Artificial Intelligence</name>
+      <email>dev-role@allenai.org</email>
+    </developer>
+  </developers>
+
+PublishTo.ai2Private
 
 libraryDependencies ++= Seq(
     allenAiCommon,
