@@ -44,9 +44,9 @@ object QueryEvaluator {
     sentenceId2EditCount: IntMap[Int],
     examples: IndexedSeq[WeightedExample]
   ): (Double, Double, Double) = {
-    var positive: Set[Int] = Set()
-    var negative: Set[Int] = Set()
-    var unlabelled: Set[Int] = Set()
+    var positive = scala.collection.mutable.Set[Int]()
+    var negative = scala.collection.mutable.Set[Int]()
+    var unlabelled = scala.collection.mutable.Set[Int]()
     sentenceId2EditCount.foreach {
       case (key, numEdits) =>
         val example = examples(key)
@@ -76,16 +76,15 @@ object QueryEvaluator {
     maxEdits: Int,
     editsLeft: Int
   ): (Double, Double, Double) = {
-    var positive: Set[Int] = Set()
-    var negative: Set[Int] = Set()
-    var unlabelled: Set[Int] = Set()
+    var positive = scala.collection.mutable.Set[Int]()
+    var negative = scala.collection.mutable.Set[Int]()
+    var unlabelled = scala.collection.mutable.Set[Int]()
     sentenceId2EditCount.foreach {
       case (exNum, numEditsDone) =>
         val example = examples(exNum)
         val requiredEdits = example.requiredEdits
         val editsStillNeeded = requiredEdits - numEditsDone
         if (editsStillNeeded <= editsLeft) {
-          val weight = example.weight * (1 - math.max(editsStillNeeded, 0) / maxEdits)
           example.label match {
             case Positive => positive += example.phraseId
             case Negative => negative += example.phraseId
