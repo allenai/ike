@@ -49,3 +49,5 @@ dependencyOverrides ++= Set(
   "org.apache.commons" % "commons-compress" % "1.8",
   "org.scala-lang" % "scala-reflect" % "2.11.5"
 )
+
+enablePlugins(ReleasePlugin)
