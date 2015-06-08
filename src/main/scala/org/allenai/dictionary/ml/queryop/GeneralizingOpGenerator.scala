@@ -24,7 +24,7 @@ case class GeneralizingOpGenerator(
   // QLeafs to avoid suggestion if we are making suggestion for QExpr
   private def avoidOp(qexpr: QExpr): Set[QLeaf] = qexpr match {
     case ql: QLeaf => Set(ql)
-    case QDisj(disj) => disj.map(avoidOp).reduce((a, b) => a ++ b)
+    case QDisj(disj) => disj.map(avoidOp).reduce(_ ++ _)
     case qr: QRepeating => avoidOp(qr.qexpr)
     case _ => Set()
   }

@@ -11,7 +11,7 @@ import scala.collection.immutable.IntMap
   */
 class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
 
-  // List of (sentenceIndex, minPOS needed to matched that sentence)
+  // List of (sentenceIndex, didMatch, minPOS needed to matched that sentence)
   private var hits: List[(Int, Int, Int)] = List()
 
   // Maps phrases -> minPos needed for qSimilarPhrases to match that phrase
