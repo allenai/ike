@@ -13,6 +13,8 @@ object OpConjunction {
 
 /** Class that combines operations that can be combined by ANDing them together
   */
+// Note that this OpConjunction is currently not used in favour of OpConjunctionOfDisjunction
+// with carefully restricted Disjunction slots.
 case class OpConjunction private (
     ops: Set[TokenQueryOp],
     numEdits: IntMap[Int]

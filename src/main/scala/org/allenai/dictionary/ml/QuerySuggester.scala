@@ -388,12 +388,14 @@ object QuerySuggester extends Logging {
     logger.info(s"Found $totalPositiveHits positive " +
       s"and $totalNegativeHits negative with ${hitAnalysis.operatorHits.size} possible operators")
 
-    val opCombiner =
-      if (config.allowDisjunctions) {
-        (x: EvaluatedOp) => OpConjunctionOfDisjunctions(x)
-      } else {
-        (x: EvaluatedOp) => OpConjunction(x)
+    val restrictDisjunctionTo = tokenizedQuery.getAnnotatedSeq.flatMap { qsd =>
+      qsd.qexpr.get match {
+        case QDisj(_) => Some(qsd.slot)
+        case qr: QRepeating if qr.qexpr.isInstanceOf[QDisj] => Some(qsd.slot)
+        case _ => None
       }
+    }.toSet
+    val opCombiner = (x: EvaluatedOp) => OpConjunctionOfDisjunctions(x, Some(restrictDisjunctionTo))
 
     val unlabelledBiasCorrection =
       Math.min(
@@ -460,7 +462,7 @@ object QuerySuggester extends Logging {
 
     // Remove queries that fail our diversity check
     val operatorsPruneByRepetition = if (narrow) {
-      var opsUsedCounts = operators.map(_._1.ops).flatten.groupBy(identity).mapValues(_.size)
+      var opsUsedCounts = operators.flatMap(_._1.ops).groupBy(identity).mapValues(_.size)
       val maxReturnOpReuse = querySuggestionConf.getInt("maxOpReuseReturn")
       val maxToRemove = operatorsPrunedByScore.size - maxToSuggest
       // Remove the lowest scoring ops that fail our diversity check

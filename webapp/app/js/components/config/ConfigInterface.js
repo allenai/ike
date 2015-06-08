@@ -44,7 +44,6 @@ var ConfigInterface = React.createClass({
     var pWeightChangeNarrow = this.onChange('pWeightNarrow', parseFloat, 'ml')
     var nWeightChangeNarrow = this.onChange('nWeightNarrow', parseFloat, 'ml')
     var uWeightChangeNarrow = this.onChange('uWeightNarrow', parseFloat, 'ml')
-    var allowDisjunctionChange = this.toggleCheckbox('allowDisjunctions', 'ml')
     var disable = this.toggleCheckbox('disable', 'ml')
     return (
       <div>
@@ -89,12 +88,6 @@ var ConfigInterface = React.createClass({
                 label='Disable'
                 checked={config.ml.disable}
                 onChange={disable}>
-              </Input>
-              <Input
-                type='checkbox'
-                label='Suggest Disjunctions'
-                checked={config.ml.allowDisjunctions}
-                onChange={allowDisjunctionChange}>
               </Input>
               <Input
                   type='select'
