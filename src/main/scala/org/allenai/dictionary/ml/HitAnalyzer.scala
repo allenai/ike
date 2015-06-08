@@ -279,8 +279,8 @@ object HitAnalyzer extends Logging {
 
     logger.debug("Calculating labels and weights...")
     val (examples, exampleTime) = Timing.time {
-      val unwieghtedExamples = hits.flatMap(getExamples(query, _, table))
-      getWeightedExamples(unwieghtedExamples)
+      val unweightedExamples = hits.flatMap(getExamples(query, _, table))
+      getWeightedExamples(unweightedExamples)
     }
     logger.debug(s"Done in ${exampleTime.toMillis / 1000.0} seconds")
 
