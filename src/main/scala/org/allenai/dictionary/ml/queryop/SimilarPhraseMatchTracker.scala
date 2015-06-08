@@ -155,7 +155,7 @@ class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
         curMatches = (sentenceIndex, editsMade) :: curMatches
     }
     // Add the last max POS op (checking for label continuity as usual)
-    if ((size - prevSize) >= minCoverageDifference) {
+    if ((size - prevSize) >= minCoverageDifference && curThreshold >= minPosThreshold) {
       if (curLabel.isDefined && (curLabel == prevLabel)) {
         ops = ops.tail
       }
