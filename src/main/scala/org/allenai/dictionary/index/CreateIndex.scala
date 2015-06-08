@@ -36,7 +36,7 @@ object  CreateIndex extends App {
       o.copy(textSource = t)
     } text "URL of a file or directory to load the text from"
 
-    opt[Unit]("oneSentencePerDoc") action { (_, o) =>
+    opt[Unit]('o',"oneSentencePerDoc") action { (_, o) =>
       o.copy(oneSentPerDoc = true)
     }
     help("help")

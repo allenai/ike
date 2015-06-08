@@ -12,19 +12,18 @@ object NlpAnnotate {
   def postag(tokens: Seq[Token]): Seq[PostaggedToken] = postagger.postagTokenized(tokens)
   def chunk(tokens: Seq[PostaggedToken]): Seq[ChunkedToken] = chunker.chunkPostagged(tokens)
   def addEndingMarkers(tokens: Seq[ChunkedToken]): Seq[ChunkedToken] = {
-    var tokenSlide : List[Seq[ChunkedToken]] = List()
-    if(tokens.length > 0) tokenSlide = tokens.sliding(2).toList :+ Seq(tokens.last)
-    tokenSlide.map {
-      case Seq(ChunkedToken(a, b, c, d), ChunkedToken(x, _, _, _)) if (a.startsWith("I-") && x.startsWith("B-")) => ChunkedToken("E-" + a.substring(2), b, c, d)
-      case Seq(ChunkedToken(a, b, c, d), ChunkedToken(x, _, _, _)) if (a.startsWith("B-") && x.startsWith("B-")) => ChunkedToken("BE-" + a.substring(2), b, c, d)
-      case Seq(ChunkedToken(a, b, c, d), ChunkedToken(x, _, _, _)) => ChunkedToken(a, b, c, d)
-      case Seq(ChunkedToken(a, b, c, d)) if a.startsWith("B-") => ChunkedToken("BE-" + a.substring(2), b, c, d)
-      case Seq(ChunkedToken(a, b, c, d)) => ChunkedToken(a, b, c, d)
+    if (tokens.isEmpty) List()
+    else {
+      (tokens.sliding(2).toList :+ Seq(tokens.last)).map {
+        case Seq(ChunkedToken(a, b, c, d), ChunkedToken(x, _, _, _)) if (a.startsWith("I-") && x.startsWith("B-")) => ChunkedToken("E-" + a.substring(2), b, c, d)
+        case Seq(ChunkedToken(a, b, c, d), ChunkedToken(x, _, _, _)) if (a.startsWith("B-") && x.startsWith("B-")) => ChunkedToken("BE-" + a.substring(2), b, c, d)
+        case Seq(ChunkedToken(a, b, c, d), ChunkedToken(x, _, _, _)) => ChunkedToken(a, b, c, d)
+        case Seq(ChunkedToken(a, b, c, d)) if a.startsWith("B-") => ChunkedToken("BE-" + a.substring(2), b, c, d)
+        case Seq(ChunkedToken(a, b, c, d)) => ChunkedToken(a, b, c, d)
+      }
     }
   }
-  def lemmatize(postagged: Seq[PostaggedToken]): Seq[Lemmatized[PostaggedToken]] =
-    postagged map lemmatizer.lemmatizePostaggedToken
-  def lemmatize_chunk(chunked: Seq[ChunkedToken]): Seq[Lemmatized[ChunkedToken]] =
+  def lemmatize(chunked: Seq[ChunkedToken]): Seq[Lemmatized[ChunkedToken]] =
     chunked.map {
       case x => lemmatizer.lemmatizePostaggedToken(x)
     }
@@ -33,7 +32,7 @@ object NlpAnnotate {
     val tagged = postag(tokens)
     val chunked = chunk(tagged)
     val chunkedWithEndingMarkers = addEndingMarkers(chunked)
-    lemmatize_chunk(chunkedWithEndingMarkers)
+    lemmatize(chunkedWithEndingMarkers)
   }
 }
 
