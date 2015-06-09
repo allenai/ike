@@ -7,6 +7,7 @@ var ModalTrigger = bs.ModalTrigger;
 var TableManager = require('../../managers/TableManager.js');
 
 var ProvenanceButton = React.createClass({
+  onRequestHide: function() {},
   render: function() {
     var rowvalues = this.props.rowvalues.map(TableManager.valueString)
 
@@ -41,7 +42,7 @@ var ProvenanceButton = React.createClass({
       }
 
       var cellStyle = { "padding": "5px", "verticalAlign": "top" };
-      var overlay = <Modal title={title}>
+      var overlay = <Modal title={title} onRequestHide={this.onRequestHide}>
         <div className='modal-body'><table>
         <tr>
           <th style={cellStyle}>Query:</th>
