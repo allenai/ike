@@ -2,6 +2,10 @@ var React = require('react');
 var bs = require('react-bootstrap');
 var Input = bs.Input;
 var Corpora = React.createClass({
+  propTypes: {
+    corpora: React.PropTypes.object.isRequired,
+    toggleCorpora: React.PropTypes.func.isRequired
+  },
   render: function() {
     return (
       <div>

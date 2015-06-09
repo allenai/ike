@@ -29,8 +29,13 @@ var SearchForm = React.createClass({
 
     return <span>{corporaLabel}</span>;
   },
+  onRequestHide: function() {},
   renderCorporaModal: function() {
-    var overlay = <Modal {...this.props} bsStyle='primary' title='Select Corpora to Query' animation={false}>
+    var overlay = <Modal {...this.props} 
+                          onRequestHide={this.onRequestHide}
+                          bsStyle='primary' 
+                          title='Select Corpora to Query' 
+                          animation={false}>
                     <div className='modal-body'>
                       <Corpora corpora={this.props.corpora} toggleCorpora={this.props.toggleCorpora} />
                     </div>
