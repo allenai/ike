@@ -213,9 +213,6 @@ var TableManager = {
   loadTablesFromServer: function() {
     if(!userEmail) throw "You have to sign in before retrieving tables.";
 
-    // delete old table storage from the browser
-    localStorage.removeItem('tables')
-
     // load tables from server
     var self = this;
     xhr({
