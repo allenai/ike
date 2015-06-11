@@ -1,23 +1,18 @@
 package org.allenai.dictionary.index
+
+import scala.util.control.NonFatal
+import org.allenai.nlpstack.chunk.{defaultChunker => chunker}
 import org.allenai.nlpstack.core._
-import org.allenai.nlpstack.lemmatize.{ MorphaStemmer => lemmatizer }
-import org.allenai.nlpstack.postag.{ defaultPostagger => postagger }
-import org.allenai.nlpstack.segment.{ defaultSegmenter => segmenter }
-import org.allenai.nlpstack.tokenize.{ defaultTokenizer => tokenizer }
-import org.allenai.nlpstack.chunk.{ defaultChunker => chunker }
+import org.allenai.nlpstack.lemmatize.{MorphaStemmer => lemmatizer}
+import org.allenai.nlpstack.postag.{defaultPostagger => postagger}
+import org.allenai.nlpstack.segment.{defaultSegmenter => segmenter}
+import org.allenai.nlpstack.tokenize.{defaultTokenizer => tokenizer}
 
 object NlpAnnotate {
   def segment(text: String): Seq[Segment] = segmenter.segment(text).toSeq
   def tokenize(segment: Segment): Seq[Token] = tokenizer.tokenize(segment.text)
   def postag(tokens: Seq[Token]): Seq[PostaggedToken] = postagger.postagTokenized(tokens)
-  def chunk(tokens: Seq[PostaggedToken]): Seq[ChunkedToken] = try {
-    chunker.chunkPostagged(tokens)
-  } catch {
-    case e: Throwable => for {
-      token <- tokens
-      chunk = ChunkedToken(token, "Error")
-    } yield chunk
-  }
+  def chunk(tokens: Seq[PostaggedToken]): Seq[ChunkedToken] = chunker.chunkPostagged(tokens)
   def addEndingMarkers(tokens: Seq[ChunkedToken]): Seq[ChunkedToken] = {
     if (tokens.isEmpty) List()
     else {
@@ -34,12 +29,17 @@ object NlpAnnotate {
     chunked.map {
       case x => lemmatizer.lemmatizePostaggedToken(x)
     }
-  def annotate(text: String): Seq[Seq[Lemmatized[ChunkedToken]]] = segment(text).map { segment =>
-    val tokens = tokenize(segment)
-    val tagged = postag(tokens)
-    val chunked = chunk(tagged)
-    val chunkedWithEndingMarkers = addEndingMarkers(chunked)
-    lemmatize(chunkedWithEndingMarkers)
+  def annotate(text: String): Seq[Seq[Lemmatized[ChunkedToken]]] = segment(text).flatMap {
+    segment =>
+      val tokens = tokenize(segment)
+      val tagged = postag(tokens)
+      try {
+        val chunked = chunk(tagged)
+        val chunkedWithEndingMarkers = addEndingMarkers(chunked)
+        Some(lemmatize(chunkedWithEndingMarkers))
+      } catch {
+        case NonFatal(e) => None
+      }
   }
 }
 
