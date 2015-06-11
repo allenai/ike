@@ -1,37 +1,90 @@
 package org.allenai.dictionary.ml
 
+import nl.inl.blacklab.search.Searcher
 import org.allenai.dictionary._
 
-case class UnconvertibleQuery(msg: String) extends Exception
-
-/** A sequence of of QExpr 'tokens' that make up one named capture group
-  * paired with the name of the capture group
+/** Indicates a 'slot' relative to a particular TokenizedQuery. A Slot indicates a token within
+  * the existing query, or an 'empty space' that occurs before of after the existing query
   */
-case class CaptureSequence(seq: Seq[QExpr], columnName: String) {
-  require(seq.nonEmpty)
-  def getQuery: QCapture = {
-    QNamed(TokenizedQuery.qexprFromSequence(seq), columnName)
+sealed abstract class Slot(val token: Int)
+
+case class Prefix(override val token: Int) extends Slot(token)
+case class QueryToken(override val token: Int) extends Slot(token)
+case class Suffix(override val token: Int) extends Slot(token)
+
+object QuerySlotData {
+
+  def apply(slot: Prefix): QuerySlotData = {
+    QuerySlotData(None, slot, false)
+  }
+
+  def apply(slot: Suffix): QuerySlotData = {
+    QuerySlotData(None, slot, false)
+  }
+
+}
+/** A 'slot' with a Tokenized query plus some additional data about that slot
+  *
+  * @param qexpr the QExpr in this slot, None if and only if slot is a Prefix or Suffix
+  * @param slot which query-token this data is about
+  * @param isCapture whether this slot is contained within a capture group
+  */
+case class QuerySlotData(qexpr: Option[QExpr], slot: Slot, isCapture: Boolean,
+    generalization: Option[Generalization] = None) {
+  if (slot.isInstanceOf[QueryToken]) {
+    require(qexpr.isDefined)
+  } else {
+    require(qexpr.isEmpty && generalization.isEmpty && !isCapture)
+  }
+}
+
+/** A 'chunk' of QueryTokens that may or may not be part of a capture group */
+sealed trait QueryTokenSequence {
+  def queryTokens: Seq[QExpr]
+  def getOriginalQuery: QExpr
+  def size: Int = queryTokens.size
+}
+case class TokenSequence(queryTokens: Seq[QExpr]) extends QueryTokenSequence {
+  override def getOriginalQuery: QExpr = TokenizedQuery.qexprFromSequence(queryTokens)
+}
+
+case class CapturedTokenSequence(
+    queryTokens: Seq[QExpr],
+    captureName: String, wasExplicitlyNamed: Boolean
+) extends QueryTokenSequence {
+  override def getOriginalQuery: QExpr = {
+    if (wasExplicitlyNamed) {
+      QNamed(TokenizedQuery.qexprFromSequence(queryTokens), captureName)
+    } else {
+      QUnnamed(TokenizedQuery.qexprFromSequence(queryTokens))
+    }
   }
 }
 
 object TokenizedQuery {
 
-  private def mergeToSeq(s1: List[CaptureSequence], s2: List[Seq[QExpr]]): List[Seq[QExpr]] = {
-    (s1, s2) match {
-      case (Nil, end :: Nil) => List(end)
-      case (capture :: restCapture, nonCapture :: restNonCapture) =>
-        List(nonCapture, capture.seq) ++ mergeToSeq(restCapture, restNonCapture)
-      case _ => throw new RuntimeException()
-    }
-  }
+  def getTokenName(tokenIndex: Int): String = s"___QueryToken${tokenIndex}___"
+  def getTokenNames(numTokens: Int): Seq[String] = Range(0, numTokens).map(getTokenName)
 
-  private def mergeToQExpr(s1: List[CaptureSequence], s2: List[Seq[QExpr]]): List[QExpr] = {
-    (s1, s2) match {
-      case (Nil, end :: Nil) => end.toList
-      case (capture :: restCapture, nonCapture :: restNonCapture) =>
-        nonCapture.toList ++ (capture.getQuery +: mergeToQExpr(restCapture, restNonCapture))
-      case _ => throw new RuntimeException()
-    }
+  def flattenQExpr(qexpr: QExpr): Seq[QExpr] = qexpr match {
+    case QSeq(seq) =>
+      if (seq.isEmpty) {
+        Seq()
+      } else if (seq.size == 1) {
+        flattenQExpr(seq.head)
+      } else {
+        seq.flatMap(flattenQExpr)
+      }
+    case QDisj(seq) =>
+      if (seq.isEmpty) {
+        Seq()
+      } else if (seq.size == 1) {
+        flattenQExpr(seq.head)
+      } else {
+        Seq(QDisj(seq))
+      }
+    case QNonCap(child) => flattenQExpr(child)
+    case _ => Seq(qexpr)
   }
 
   def qexprToSequence(qexpr: QExpr): Seq[QExpr] = qexpr match {
@@ -45,68 +98,165 @@ object TokenizedQuery {
 
   /** Builds a TokenizedQuery from a QExpr
     *
-    * @param qexpr Expression to tokenize
-    * @param tableCols Sequence of table columns, used to name the query's unnamed capture group
-    * @throws UnconvertibleQuery if the query was not fixed length
+    * @param qexpr Expression to tokenize, assumed to be fixed length (always matches the same
+    *     number of tokens) and with no unnamed capture groups
+    * @param tableCols tables columns to use when naming unnamed capture groups
     * @return the tokenized QExpr
     */
   def buildFromQuery(qexpr: QExpr, tableCols: Seq[String]): TokenizedQuery = {
-    buildFromQuery(QueryLanguage.nameCaptureGroups(qexpr, tableCols))
-  }
+    val asSeq = flattenQExpr(qexpr)
 
-  /** Builds a TokenizedQuery from a QExpr
-    *
-    * @param qexpr Expression to tokenize, assumed to be fixed length (always matches the same
-    *            number of tokens) and with no unnamed capture groups
-    * @return the tokenized QExpr
-    * @throws UnconvertibleQuery if the query was not fixed length
-    * @throws IllegalArgumentException if the query has unnamed capture groups
-    */
-  def buildFromQuery(qexpr: QExpr): TokenizedQuery = {
-    if (QueryLanguage.getQueryLength(qexpr) == -1) {
-      throw new UnconvertibleQuery("Query is not fixed length")
-    }
-
-    val asSeq = qexprToSequence(qexpr)
-
-    var captures = List[CaptureSequence]()
-    var currentNonCapture = List[QExpr]()
-    var nonCaptures = List[Seq[QExpr]]()
+    var columnNamesLeft = tableCols
+    var tokenSequences = Seq[QueryTokenSequence]()
+    var onSequence = List[QExpr]()
     asSeq.foreach {
       case c: QCapture =>
-        nonCaptures = currentNonCapture.reverse :: nonCaptures
-        currentNonCapture = List[QExpr]()
-        val captureSeq = c match {
-          case QUnnamed(expr) => throw new IllegalArgumentException("Cannot convert unnamed " +
-            "capture groups")
-          case QNamed(expr, name) => CaptureSequence(qexprToSequence(expr), name)
+        if (onSequence.nonEmpty) {
+          tokenSequences = tokenSequences :+ TokenSequence(onSequence.reverse)
+          onSequence = List()
         }
-        captures = captureSeq :: captures
-      case q: QExpr => currentNonCapture = q :: currentNonCapture
+        val columnName = c match {
+          case QUnnamed(expr) =>
+            val name = columnNamesLeft.head
+            columnNamesLeft = columnNamesLeft.tail
+            name
+          case QNamed(expr, name) =>
+            columnNamesLeft = columnNamesLeft.filter(_ != name)
+            name
+        }
+        tokenSequences = tokenSequences :+ CapturedTokenSequence(
+          flattenQExpr(c.qexpr), columnName, c.isInstanceOf[QNamed]
+        )
+      case q: QExpr => onSequence = q :: onSequence
     }
-    nonCaptures = currentNonCapture.reverse :: nonCaptures
-    TokenizedQuery(captures.reverse, nonCaptures.reverse)
+    if (onSequence.nonEmpty) {
+      tokenSequences = tokenSequences :+ TokenSequence(onSequence.reverse)
+    }
+
+    if ((tableCols.size == 1) &&
+      tokenSequences.size == 1 && tokenSequences.head.isInstanceOf[TokenSequence]) {
+      // No capture groups and one column table, assume the whole query was intended to be captured
+      tokenSequences =
+        Seq(CapturedTokenSequence(tokenSequences.head.queryTokens, tableCols.head, false))
+    } else {
+      require(columnNamesLeft.isEmpty, s"Could not align capture groups for " +
+        s"${QueryLanguage.getQueryString(qexpr)} with columns $tableCols")
+    }
+    tokenSequences.foreach(ts => require(ts.queryTokens.nonEmpty))
+    TokenizedQuery(tokenSequences)
+  }
+
+  def buildWithGeneralizations(
+    qexpr: QExpr,
+    searchers: Seq[Searcher],
+    tableCols: Seq[String],
+    similarPhrasesSearcher: SimilarPhrasesSearcher,
+    sampleSize: Int
+  ): TokenizedQuery = {
+    val tq = buildFromQuery(qexpr, tableCols)
+    val generalizations =
+      tq.getSeq.map(QueryGeneralizer.queryGeneralizations(_, searchers,
+        similarPhrasesSearcher, sampleSize))
+
+    // Special case when we have one word, only use 'phrase' generalization. Use POS
+    // generalizations here will make the POS matches dominate our sample and thus reduce our
+    // ability to select good phrase generalizations.
+    val correctedGeneralizations = generalizations match {
+      case Seq(GeneralizeToDisj(pos, phrase, fullyGeneralizes)) =>
+        Seq(GeneralizeToDisj(Seq(), phrase, fullyGeneralizes))
+      case _ => generalizations
+    }
+    tq.copy(generalizations = Some(correctedGeneralizations))
   }
 }
 
-/** Query that has been 'tokenized' into sequences of fixed length tokens
+/** Query that has been 'tokenized' into a sequence of QExpr, the QExpr are then chunked together
+  * into tokenSequence which can be marked as capture groups or not. Note this cannot represent
+  * queries with nested capture groups.
   *
-  * @param captures Sequence of capture groups in the query
-  * @param nonCaptures Sequence of of QExpr that occurs between each capture group, including
-  *                 to the left and right of the first and last capture group. Can contain
-  *                 empty sequences
-  * @throws IllegalArgumentException if capture.size + 1 != nonCapture.size
+  * @param tokenSequences Chunked sequence of QExpr
+  * @param generalizations Optionally, corresponding generalization for each QExpr
   */
-case class TokenizedQuery(captures: List[CaptureSequence], nonCaptures: List[Seq[QExpr]]) {
+case class TokenizedQuery(
+    tokenSequences: Seq[QueryTokenSequence],
+    generalizations: Option[Seq[Generalization]] = None
+) {
 
-  require(captures.size + 1 == nonCaptures.size)
+  val size: Int = tokenSequences.map(_.queryTokens.size).sum
+  require(generalizations.isEmpty || size == generalizations.get.size)
 
-  def getQuery: QExpr = {
-    TokenizedQuery.qexprFromSequence(TokenizedQuery.mergeToQExpr(captures, nonCaptures))
+  def getOriginalQuery: QExpr = {
+    TokenizedQuery.qexprFromSequence(tokenSequences.flatMap {
+      case TokenSequence(seq) => seq
+      case cts: CapturedTokenSequence => Seq(cts.getOriginalQuery)
+    })
   }
 
-  def getSeq: Seq[QExpr] = {
-    TokenizedQuery.mergeToSeq(captures, nonCaptures).flatten
+  def getSeq: Seq[QExpr] = tokenSequences.flatMap(_.queryTokens)
+
+  def getCaptureGroups: Seq[(String, Seq[QExpr])] = tokenSequences.flatMap {
+    case TokenSequence(_) => None
+    case CapturedTokenSequence(tokens, name, _) => Some((name, tokens))
+  }
+
+  /** @return the tokens of this, plus their Slot, and whether they are part
+    * of a capture group or not
+    */
+  def getAnnotatedSeq: Seq[QuerySlotData] = {
+    var onIndex = 0
+    tokenSequences.zipWithIndex.flatMap {
+      case (tokenSequence, sequenceIndex) =>
+        val isCapture = tokenSequence.isInstanceOf[CapturedTokenSequence]
+        tokenSequence.queryTokens.map { queryToken =>
+          val gen = if (generalizations.isDefined) {
+            Some(generalizations.get(onIndex))
+          } else {
+            None
+          }
+          val qsd = QuerySlotData(Some(queryToken), QueryToken(onIndex + 1), isCapture, gen)
+          onIndex += 1
+          qsd
+        }
+    }
+  }
+
+  /** @return the names each token in this.getSeq in order */
+  def getNames: Seq[String] = {
+    TokenizedQuery.getTokenNames(size)
+  }
+
+  /** @return each token in this paired with its name */
+  def getNamedTokens: Seq[(String, QExpr)] = getNames.zip(getSeq)
+
+  /** @return the sequence of QueryTokenSequence paired with the names of their tokens */
+  def getSequencesWithNames: Seq[(QueryTokenSequence, Seq[String])] = {
+    var remainingNames = getNames
+    tokenSequences.map { tseq =>
+      val (sequenceNames, rest) = remainingNames.splitAt(tseq.size)
+      remainingNames = rest
+      (tseq, sequenceNames)
+    }
+  }
+
+  /** @return the generalize version of this query, assumes Generalization has been set */
+  def getGeneralizeQuery: TokenizedQuery = {
+    var remainingGeneralization = generalizations.get
+    val newSequences = tokenSequences.map { tseq =>
+      val (generalizations, rest) = remainingGeneralization.splitAt(tseq.size)
+      remainingGeneralization = rest
+      val newSeq = generalizations.zip(tseq.queryTokens).map {
+        case (gen, qexpr) =>
+          gen match {
+            case GeneralizeToAny(min, max) => QRepetition(QWildcard(), min, max)
+            case GeneralizeToNone() => qexpr
+            case GeneralizeToDisj(pos, phrase, _) => QDisj((pos ++ phrase) :+ qexpr)
+          }
+      }
+      tseq match {
+        case cts: CapturedTokenSequence => cts.copy(queryTokens = newSeq)
+        case ts: TokenSequence => ts.copy(queryTokens = newSeq)
+      }
+    }
+    TokenizedQuery(newSequences, None)
   }
 }
-

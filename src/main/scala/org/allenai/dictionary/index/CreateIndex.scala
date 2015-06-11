@@ -9,7 +9,7 @@ import java.io.{ File, StringReader }
 import java.net.URI
 import java.nio.file.{ Files, Paths }
 
-object  CreateIndex extends App {
+object CreateIndex extends App {
   def addTo(indexer: Indexer)(text: IndexableText): Unit = {
     val xml = XmlSerialization.xml(text)
     val id = text.idText.id
@@ -36,7 +36,7 @@ object  CreateIndex extends App {
       o.copy(textSource = t)
     } text "URL of a file or directory to load the text from"
 
-    opt[Unit]('o',"oneSentencePerDoc") action { (_, o) =>
+    opt[Unit]('o', "oneSentencePerDoc") action { (_, o) =>
       o.copy(oneSentPerDoc = true)
     }
     help("help")
@@ -85,8 +85,7 @@ object  CreateIndex extends App {
 
             IndexableText(sentenceIdText, Seq(sent map indexableToken))
         }
-      }
-      else {
+      } else {
         val text = idText.text
         val sents = for {
           sent <- NlpAnnotate.annotate(text)

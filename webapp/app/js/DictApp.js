@@ -11,8 +11,14 @@ var TableManager = require('./managers/TableManager.js');
 var ConfigInterface = require('./components/config/ConfigInterface.js');
 var HelpInterface = require('./components/help/HelpInterface.js');
 var xhr = require('xhr');
+var Router = require('react-router');
+var { Route, DefaultRoute, Redirect, RouteHandler, Link } = Router;
+
 var DictApp = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
+  contextTypes: {
+    router: React.PropTypes.func
+  },
   componentDidMount: function() {
     TableManager.addChangeListener(function(tables) {
       var target = this.linkState('target');
@@ -53,13 +59,15 @@ var DictApp = React.createClass({
         groupsPerPage: 25,
         ml: {
            disable: true,
-           depth: 2,
-           beamSize: 30,
-           maxSampleSize: 15000,
-           pWeight: 1.0,
-           nWeight: -5.0,
-           uWeight: -1.0,
-           allowDisjunctions: false
+           depth: 3,
+           beamSize: 25,
+           maxSampleSize: 8000,
+           pWeight: 2.0,
+           nWeight: -1.0,
+           uWeight: 0.01,
+           pWeightNarrow: 2.0,
+           nWeightNarrow: -1.0,
+           uWeightNarrow: 0.01
         }
       },
       results: {
@@ -80,36 +88,29 @@ var DictApp = React.createClass({
     var results = this.linkState('results');
     var config = this.linkState('config');
     var corpora = this.linkState('corpora');
-    var searchInterface =
-      <SearchInterface 
-          config={config} 
-          corpora={corpora}
-          toggleCorpora={this.toggleCorpora}
-          results={results} 
-          target={target}/>;
-    var tablesInterface = <TablesInterface target={target}/>;
-    var configInterface = 
-      <ConfigInterface 
-          config={config} 
-          corpora={corpora}
-          toggleCorpora={this.toggleCorpora}/>;
-    var helpInterface = <HelpInterface/>;
+    var router = this.context.router;
+    var searchClass = (router.isActive('search')) ? 'active' : null;
+    var tablesClass = (router.isActive('tables')) ? 'active' : null;
+    var configClass = (router.isActive('config')) ? 'active' : null;
+    var helpClass = (router.isActive('help')) ? 'active' : null;
+    var userEmail = this.state.userEmail;
     return (
       <div>
-        <TabbedArea animation={false}>
-          <TabPane className="mainContent" eventKey={1} tab="Search">
-            {searchInterface}
-          </TabPane>
-          <TabPane className="mainContent" eventKey={2} tab="Tables">
-            {tablesInterface}
-          </TabPane>
-          <TabPane className="mainContent" eventKey={3} tab="Configuration">
-            {configInterface}
-          </TabPane>
-          <TabPane className="mainContent" eventKey={4} tab="Help">
-            {helpInterface}
-          </TabPane>
-        </TabbedArea>
+        <nav className="nav nav-tabs">
+          <li className={searchClass}><Link to="search">Search</Link></li>
+          <li className={tablesClass}><Link to="tables">Tables</Link></li>
+          <li className={configClass}><Link to="config">Config</Link></li>
+          <li className={helpClass}><Link to="help">Help</Link></li>
+        </nav>
+        <div className="container-fluid">
+          <RouteHandler
+            config={config} 
+            corpora={corpora}
+            results={results} 
+            target={target}
+            toggleCorpora={this.toggleCorpora}
+            userEmail={userEmail}/>
+        </div>
       </div>
     );
   },
@@ -197,4 +198,17 @@ var DictApp = React.createClass({
     return <div>{header}{content}</div>;
   }
 });
-React.render(<DictApp/>, document.body);
+
+var routes = (
+  <Route handler={DictApp}>
+    <Route name="search" path="search" handler={SearchInterface}/>
+    <Route name="tables" path="tables" handler={TablesInterface}/>
+    <Route name="config" path="config" handler={ConfigInterface}/>
+    <Route name="help" path="help" handler={HelpInterface}/>
+    <Redirect from="/" to="search" />
+  </Route>
+);
+
+Router.run(routes, function (Handler, state) {
+  React.render(<Handler/>, document.body);
+});

@@ -10,9 +10,9 @@ object NlpAnnotate {
   def segment(text: String): Seq[Segment] = segmenter.segment(text).toSeq
   def tokenize(segment: Segment): Seq[Token] = tokenizer.tokenize(segment.text)
   def postag(tokens: Seq[Token]): Seq[PostaggedToken] = postagger.postagTokenized(tokens)
-  def chunk(tokens: Seq[PostaggedToken]): Seq[ChunkedToken] = try{
+  def chunk(tokens: Seq[PostaggedToken]): Seq[ChunkedToken] = try {
     chunker.chunkPostagged(tokens)
-  } catch{
+  } catch {
     case e: Throwable => for {
       token <- tokens
       chunk = ChunkedToken(token, "Error")
