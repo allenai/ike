@@ -5,9 +5,10 @@ var TabbedArea = bs.TabbedArea;
 var TabPane = bs.TabPane;
 var DropdownButton = bs.DropdownButton;
 var MenuItem = bs.MenuItem;
+var TableManager = require('./managers/TableManager.js');
 var SearchInterface = require('./components/search/SearchInterface.js');
 var TablesInterface = require('./components/table/TablesInterface.js');
-var TableManager = require('./managers/TableManager.js');
+var PatternsInterface = require('./components/pattern/PatternsInterface.js');
 var ConfigInterface = require('./components/config/ConfigInterface.js');
 var HelpInterface = require('./components/help/HelpInterface.js');
 var xhr = require('xhr');
@@ -86,11 +87,13 @@ var DictApp = React.createClass({
   renderContent: function() {
     var target = this.linkState('target');
     var results = this.linkState('results');
+    var patterns = this.linkState('patterns');
     var config = this.linkState('config');
     var corpora = this.linkState('corpora');
     var router = this.context.router;
     var searchClass = (router.isActive('search')) ? 'active' : null;
     var tablesClass = (router.isActive('tables')) ? 'active' : null;
+    var patternsClass = (router.isActive('patterns')) ? 'active' : null;
     var configClass = (router.isActive('config')) ? 'active' : null;
     var helpClass = (router.isActive('help')) ? 'active' : null;
     var userEmail = this.state.userEmail;
@@ -99,6 +102,7 @@ var DictApp = React.createClass({
         <nav className="nav nav-tabs">
           <li className={searchClass}><Link to="search">Search</Link></li>
           <li className={tablesClass}><Link to="tables">Tables</Link></li>
+          <li className={patternsClass}><Link to="patterns">Patterns</Link></li>
           <li className={configClass}><Link to="config">Config</Link></li>
           <li className={helpClass}><Link to="help">Help</Link></li>
         </nav>
@@ -203,6 +207,7 @@ var routes = (
   <Route handler={DictApp}>
     <Route name="search" path="search" handler={SearchInterface}/>
     <Route name="tables" path="tables" handler={TablesInterface}/>
+    <Route name="patterns" path="patterns" handler={PatternsInterface}/>
     <Route name="config" path="config" handler={ConfigInterface}/>
     <Route name="help" path="help" handler={HelpInterface}/>
     <Redirect from="/" to="search" />
