@@ -51,7 +51,7 @@ object TestData {
     val ps = words.map(posTags.getOrElse(_, ""))
     val ls = words.map(lemmas.getOrElse(_, ""))
     val tokens = List(words, ps, ls).transpose map {
-      case List(w, p, l) => IndexableToken(w, p, l)
+      case List(w, p, l, c) => IndexableToken(w, p, l, c)
     }
     IndexableText(idText, List(tokens))
   }

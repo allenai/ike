@@ -12,7 +12,7 @@ object XmlSerialization {
     <sentence>{ children }</sentence>
   }
   def xml(token: IndexableToken): Elem =
-    <word pos={ token.pos } lemma={ token.lemma }>{ token.word }</word>
+    <word pos={ token.pos } lemma={ token.lemma } chunk={ token.chunk }>{ token.word }</word>
   def addSpaces(elems: Seq[Elem]): Seq[Node] = {
     val n = elems.size
     val spaces = List.fill(n)(Text(" "))

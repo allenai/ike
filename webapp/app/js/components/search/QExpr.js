@@ -188,6 +188,14 @@ var QPos = React.createClass({
     return menu;
   }
 });
+var QChunk = React.createClass({
+  mixins: [QExprMixin],
+  render: function() {
+    var value = this.props.qexpr.value;
+    var menu = <DropdownButton bsStyle="link" title={value}></DropdownButton>;
+    return menu;
+  }
+});
 var QWord = React.createClass({
   mixins: [QExprMixin],
   getWordInfo: function(callback) {
@@ -434,6 +442,7 @@ var QExpr = React.createClass({
     QSimilarPhrases: QSimilarPhrases,
     QGeneralizePhrase: QGeneralizePhrase,
     QPos: QPos,
+    QChunk: QChunk,
     QSeq: QSeq,
     QDict: QDict,
     QWildcard: QWildcard,
