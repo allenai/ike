@@ -39,6 +39,13 @@ object TestData {
     "not" -> "RB"
   )
 
+  val chunks = Map(
+    "doc1" -> "BE-NP BE-VP BE-ADJP O".split(' '),
+    "doc2" -> "BE-NP BE-VP BE-ADJP O".split(' '),
+    "doc3" -> "BE-NP NE-VP B-NP E-NP O".split(' '),
+    "doc4" -> "BE-NP BE-VP O BE-ADJP O".split(' ')
+  )
+
   val idTexts = Seq(
     IdText("doc1", "I like mango ."),
     IdText("doc2", "It tastes great ."),
@@ -50,7 +57,8 @@ object TestData {
     val words = idText.text.split(" ")
     val ps = words.map(posTags.getOrElse(_, ""))
     val ls = words.map(lemmas.getOrElse(_, ""))
-    val tokens = List(words, ps, ls).transpose map {
+    val ch = chunks(idText.id)
+    val tokens = List(words, ps, ls, ch).transpose map {
       case List(w, p, l, c) => IndexableToken(w, p, l, c)
     }
     IndexableText(idText, List(tokens))
