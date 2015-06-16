@@ -1,15 +1,68 @@
 package org.allenai.dictionary
 
-import nl.inl.blacklab.search.{ TextPattern, TextPatternAnd, TextPatternCaptureGroup, TextPatternOr, TextPatternPrefix, TextPatternProperty, TextPatternTerm }
 import nl.inl.blacklab.search.sequences.{ TextPatternAnyToken, TextPatternRepetition, TextPatternSequence }
+import nl.inl.blacklab.search.{ TextPattern, TextPatternAnd, TextPatternCaptureGroup, TextPatternOr, TextPatternProperty, TextPatternTerm }
 
 object BlackLabSemantics {
   var maxRepetition = 128
+  def notImplemented: Exception = new UnsupportedOperationException
+
+  def chunkPatternTerm(p: String) = {
+    p match {
+      //Covered ("NP", "VP", "PP", "ADJP" , "ADVP")
+      case "NP" => new TextPatternOr(
+        new TextPatternSequence(
+          new TextPatternTerm("B-NP"),
+          new TextPatternRepetition(new TextPatternTerm("I-NP"), 0, -1),
+          new TextPatternTerm("E-NP")
+        ),
+        new TextPatternTerm("BE-NP")
+      )
+
+      case "VP" => new TextPatternOr(
+        new TextPatternSequence(
+          new TextPatternTerm("B-VP"),
+          new TextPatternRepetition(new TextPatternTerm("I-VP"), 0, -1),
+          new TextPatternTerm("E-VP")
+        ),
+        new TextPatternTerm("BE-VP")
+      )
+
+      case "PP" => new TextPatternOr(
+        new TextPatternSequence(
+          new TextPatternTerm("B-PP"),
+          new TextPatternRepetition(new TextPatternTerm("I-PP"), 0, -1),
+          new TextPatternTerm("E-PP")
+        ),
+        new TextPatternTerm("BE-PP")
+      )
+
+      case "ADJP" => new TextPatternOr(
+        new TextPatternSequence(
+          new TextPatternTerm("B-ADJP"),
+          new TextPatternRepetition(new TextPatternTerm("I-ADJP"), 0, -1),
+          new TextPatternTerm("E-ADJP")
+        ),
+        new TextPatternTerm("BE-ADJP")
+      )
+
+      case "ADVP" => new TextPatternOr(
+        new TextPatternSequence(
+          new TextPatternTerm("B-ADVP"),
+          new TextPatternRepetition(new TextPatternTerm("I-ADVP"), 0, -1),
+          new TextPatternTerm("E-ADVP")
+        ),
+        new TextPatternTerm("BE-ADVP")
+      )
+    }
+  }
+
   def blackLabQuery(qexpr: QExpr): TextPattern = {
     var unnamedCnt = 0
     def blqHelper(qexpr: QExpr): TextPattern = qexpr match {
       case QWord(w) => new TextPatternTerm(w)
       case QPos(p) => new TextPatternProperty("pos", new TextPatternTerm(p))
+      case QChunk(p) => new TextPatternProperty("chunk", chunkPatternTerm(p))
       case QDict(_) =>
         throw new IllegalArgumentException("Can not convert QDict to TextPattern")
       case QGeneralizePhrase(_, _) =>

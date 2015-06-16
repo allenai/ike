@@ -22,7 +22,7 @@ class BlackLabExample extends UnitSpec with ScratchDirectory {
   val tokenSentences = for {
     sentence <- annotated
     indexableTokens = sentence.map { t =>
-      IndexableToken(t.token.string, t.token.postag, t.lemma)
+      IndexableToken(t.token.string, t.token.postag, t.lemma, "")
     }
   } yield indexableTokens
   val doc = IndexableText(IdText("doc1", text), tokenSentences)
