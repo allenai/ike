@@ -454,9 +454,8 @@ object CreatePhraseVectors extends App with Logging {
     val model: Word2VecModel = trainer.train(tokensIterable)
 
     // store the model
-    val modelByteArray = new TSerializer().serialize(model.toThrift)
-    Resource.using(new FileOutputStream(options.destination))(_.write(modelByteArray))
-    logger.info(s"Wrote ${modelByteArray.length} bytes to ${options.destination}")
+    Resource.using(new FileOutputStream(options.destination))(model.toBinFile(_))
+    logger.info(s"Wrote model to ${options.destination}")
   }
 }
 
