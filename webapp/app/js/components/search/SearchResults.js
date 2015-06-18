@@ -59,7 +59,7 @@ var SearchResults = React.createClass({
     }
   },
   bySize: function(group1, group2) {
-    var diff = group2.size - group1.size;
+    var diff = group2.relevanceScore - group1.relevanceScore;
     if (diff == 0) {
       return group1.keys > group2.keys ? 1 : -1;
     } else {

@@ -5,6 +5,7 @@ object SearchResultGrouper {
     target <- req.target
     table <- req.tables.get(target)
   } yield table
+
   /** Attempts to map the capture group names in the result to the target table's column names
     * in the request. If unable to do so, returns the result unchanged.
     */
@@ -26,14 +27,15 @@ object SearchResultGrouper {
     val newGroups = updatedGroups.getOrElse(groups)
     result.copy(captureGroups = newGroups)
   }
-  /** Constructs the string key used to join multiple result objects.
+
+  /** Constructs the key used to join multiple result objects.
     */
-  def keyString(kr: KeyedBlackLabResult): Seq[String] = for {
+  def keyString(kr: KeyedBlackLabResult): Seq[Seq[String]] = for {
     interval <- kr.keys
     wordData = kr.result.wordData.slice(interval.start, interval.end)
     words = wordData.map(_.word.toLowerCase.trim)
-    value = words mkString " "
-  } yield value
+  } yield words
+
   def keyResult(req: SearchRequest, result: BlackLabResult): KeyedBlackLabResult = {
     val groups = result.captureGroups
     val groupNames = groups.keys
@@ -50,17 +52,35 @@ object SearchResultGrouper {
     } yield interval
     KeyedBlackLabResult(intervals, result)
   }
+
   def createGroups(
     req: SearchRequest,
     keyed: Iterable[KeyedBlackLabResult]
   ): Seq[GroupedBlackLabResult] = {
-    val grouped = keyed groupBy keyString map {
+    val grouped = keyed groupBy keyString
+
+    def isSubset(subsetKey: Seq[Seq[String]], supersetKey: Seq[Seq[String]]): Boolean = {
+      (subsetKey zip supersetKey).forall {
+        case (subsetColumn, supersetColumn) =>
+          supersetColumn.containsSlice(subsetColumn)
+      }
+    }
+
+    grouped.map {
       case (keyString, group) =>
         val groupSubset = group.take(req.config.evidenceLimit)
-        GroupedBlackLabResult(keyString, group.size, groupSubset)
-    }
-    grouped.toSeq
+        GroupedBlackLabResult(
+          keyString.map(_.mkString(" ")),
+          group.size,
+          grouped.map {
+            case (innerKeyString, innerGroup) =>
+              if (isSubset(innerKeyString, keyString)) innerGroup.size else 0
+          }.sum,
+          groupSubset
+        )
+    }.toSeq
   }
+
   /** Groups the given results. The groups are keyed using the match groups corresponding to the
     * target table's columns.
     */
@@ -69,6 +89,7 @@ object SearchResultGrouper {
     val keyed = withColumnNames.map(keyResult(req, _))
     createGroups(req, keyed)
   }
+
   /** Groups each result into its own group. Useful when there is no target dictionary defined.
     */
   def identityGroupResults(
