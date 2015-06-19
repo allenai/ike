@@ -271,15 +271,14 @@ object QuerySuggester extends Logging {
   }
 
   case class SearcherExamples(unlabelled: Hits, labelled: Hits,
-      docsSearchedForUnlabelled: Int, totalDocsSearched: Int)
+    docsSearchedForUnlabelled: Int, totalDocsSearched: Int)
 
   // Get examples for the given query from a given searcher
   private def getExamples(query: TokenizedQuery, searcher: Searcher, targetTable: Table,
-        tables: Map[String, Table], sampler: Sampler,
-      maxUnlabelled: Int, maxLabelled: Int): SearcherExamples = {
+    tables: Map[String, Table], sampler: Sampler,
+    maxUnlabelled: Int, maxLabelled: Int): SearcherExamples = {
     val unlabelledHits =
-      sampler.getSample(query, searcher, targetTable, tables).
-          window(0, maxUnlabelled)
+      sampler.getSample(query, searcher, targetTable, tables).window(0, maxUnlabelled)
     val lastDoc = unlabelledHits.get(unlabelledHits.last()).doc
     val lastToken = unlabelledHits.get(unlabelledHits.last()).end
     val docsSearchedForUnlabelled = if (unlabelledHits.size() < maxUnlabelled) {
@@ -376,7 +375,7 @@ object QuerySuggester extends Logging {
     val allHits = allExamples.flatMap(examples => Seq(examples.unlabelled, examples.labelled))
 
     logger.debug(s"Fetching examples took ${allExampleTime.toMillis / 1000.0} seconds, " +
-        s"searched $numDocsSearched documents")
+      s"searched $numDocsSearched documents")
 
     logger.debug("Analyzing hits")
 
@@ -406,11 +405,14 @@ object QuerySuggester extends Logging {
         (0, 0)
       }
 
-      buildHitAnalysis(allHits,
-        tokenizedQuery, prefixCounts, suffixCounts, generator, targetTable)
+      buildHitAnalysis(
+        allHits,
+        tokenizedQuery, prefixCounts, suffixCounts, generator, targetTable
+      )
     }
     logger.debug(s"Done Analyzing hits in ${analysisTime.toMillis / 1000.0} seconds")
 
+    // Prune operators that effect too few sentences
     val beforePruning = unprunnedHitAnalysis.operatorHits.size
     val hitAnalysis =
       if (numDocsSearched >
@@ -424,9 +426,8 @@ object QuerySuggester extends Logging {
       } else {
         unprunnedHitAnalysis
       }
+    logger.debug(s"Pruned ${beforePruning - hitAnalysis.operatorHits.size} operators due to size")
 
-    logger.debug(s"Pruned ${beforePruning - hitAnalysis.operatorHits.size} " +
-      s"(${hitAnalysis.operatorHits.size} operators left)")
     val totalPositiveHits = hitAnalysis.examples.count(x => x.label == Positive)
     val totalNegativeHits = hitAnalysis.examples.count(x => x.label == Negative)
     logger.info(s"Found $totalPositiveHits positive " +
@@ -447,7 +448,7 @@ object QuerySuggester extends Logging {
     val unlabelledPhrases = hitAnalysis.examples.filter(_.label == Unlabelled).
       map(_.phraseId).toSet.size
     val expectedUnlabelledPhrases = if (unlabelledPhrases == 0 ||
-        numDocsSearched == numDocsSearchedForUnlabelled) {
+      numDocsSearched == numDocsSearchedForUnlabelled) {
       unlabelledPhrases
     } else {
       getExpectedUnlabelledPhrases(

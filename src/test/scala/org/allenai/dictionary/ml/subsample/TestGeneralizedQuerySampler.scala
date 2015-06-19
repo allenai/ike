@@ -64,7 +64,7 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
     )
   }
 
-  it should "Limit queries correctly" in {
+  it should "Limit two column queries correctly" in {
     val startingQuery =
       QueryLanguage.parse("(?<c1> {I, hate}) {those,hate} (?<c2> {mango, bananas, great})").get
     val table = Table(
@@ -83,6 +83,32 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
     val expectedResults = Seq(
       "I like mango",
       "hate those bananas"
+    )
+    val hits = GeneralizedQuerySampler(2, 100).getLabelledSample(
+      tokenized,
+      searcher, table, Map(), 0, 0
+    )
+    assertResult(expectedResults)(hitsToStrings(hits))
+    assertResult(2)(hits.size)
+  }
+
+  it should "limit one column queries correctly" in {
+    val startingQuery =
+      QueryLanguage.parse("{those,like} (?<c1> {mango, bananas, great})").get
+    val table = Table(
+      "test",
+      Seq("c1"),
+      Seq(
+        TableRow(Seq(TableValue(Seq(QWord("mango"))))),
+        TableRow(Seq(TableValue(Seq(QWord("those")))))
+      ),
+      Seq(TableRow(Seq(TableValue(Seq(QWord("bananas"))))))
+    )
+    val tokenized = TokenizedQuery.buildWithGeneralizations(startingQuery, Seq(searcher), Seq(),
+      ss, 10)
+    val expectedResults = Seq(
+      "like mango",
+      "those bananas"
     )
     val hits = GeneralizedQuerySampler(2, 100).getLabelledSample(
       tokenized,

@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.subsample
 
 import org.allenai.common.Logging
-import org.allenai.dictionary.ml.{ CapturedTokenSequence, TokenizedQuery }
+import org.allenai.dictionary.ml.{ QueryTokenSequence, CapturedTokenSequence, TokenizedQuery }
 
 import nl.inl.blacklab.search.{ Hits, Searcher }
 import org.allenai.dictionary._
