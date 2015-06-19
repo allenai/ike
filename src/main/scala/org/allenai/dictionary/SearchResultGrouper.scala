@@ -1,6 +1,8 @@
 package org.allenai.dictionary
 
-object SearchResultGrouper {
+import org.allenai.common.{ Timing, Logging }
+
+object SearchResultGrouper extends Logging {
   def targetTable(req: SearchRequest): Option[Table] = for {
     target <- req.target
     table <- req.tables.get(target)
@@ -28,28 +30,22 @@ object SearchResultGrouper {
     result.copy(captureGroups = newGroups)
   }
 
-  /** Constructs the key used to join multiple result objects.
+  /** Tokenized results for a single column, for example ["information", "extraction"]
     */
-  def keyString(kr: KeyedBlackLabResult): Seq[Seq[String]] = for {
-    interval <- kr.keys
-    wordData = kr.result.wordData.slice(interval.start, interval.end)
-    words = wordData.map(_.word.toLowerCase.trim)
-  } yield words
+  type Phrase = Seq[String]
 
   def keyResult(req: SearchRequest, result: BlackLabResult): KeyedBlackLabResult = {
     val groups = result.captureGroups
-    val groupNames = groups.keys
     val columns = targetTable(req) match {
       case Some(table) => table.cols
       case None => throw new IllegalArgumentException(s"No target table found")
     }
     val intervals = for {
       col <- columns
-      interval = groups.get(col) match {
-        case Some(interval) => interval
-        case None => throw new IllegalArgumentException(s"Could not find column $col in results")
-      }
-    } yield interval
+    } yield groups.getOrElse(
+      col,
+      throw new IllegalArgumentException(s"Could not find column $col in results")
+    )
     KeyedBlackLabResult(intervals, result)
   }
 
@@ -57,28 +53,37 @@ object SearchResultGrouper {
     req: SearchRequest,
     keyed: Iterable[KeyedBlackLabResult]
   ): Seq[GroupedBlackLabResult] = {
+    def keyString(kr: KeyedBlackLabResult): Seq[Phrase] = kr.keys.map { interval =>
+      kr.result.wordData.slice(interval.start, interval.end).map(_.word.toLowerCase.trim)
+    }
     val grouped = keyed groupBy keyString
 
-    def isSubset(subsetKey: Seq[Seq[String]], supersetKey: Seq[Seq[String]]): Boolean = {
+    def isSubset(subsetKey: Seq[Phrase], supersetKey: Seq[Phrase]): Boolean = {
+      require(subsetKey.length == supersetKey.length)
       (subsetKey zip supersetKey).forall {
         case (subsetColumn, supersetColumn) =>
           supersetColumn.containsSlice(subsetColumn)
       }
     }
 
-    grouped.map {
-      case (keyString, group) =>
-        val groupSubset = group.take(req.config.evidenceLimit)
-        GroupedBlackLabResult(
-          keyString.map(_.mkString(" ")),
-          group.size,
-          grouped.map {
-            case (innerKeyString, innerGroup) =>
-              if (isSubset(innerKeyString, keyString)) innerGroup.size else 0
-          }.sum,
-          groupSubset
-        )
-    }.toSeq
+    Timing.timeThen {
+      grouped.map {
+        case (keyString, group) =>
+          val groupSubset = group.take(req.config.evidenceLimit)
+          GroupedBlackLabResult(
+            keyString.map(_.mkString(" ")),
+            group.size,
+            grouped.map {
+              case (innerKeyString, innerGroup) =>
+                if (isSubset(innerKeyString, keyString)) innerGroup.size else 0
+            }.sum,
+            groupSubset
+          )
+      }.toSeq
+    } { duration =>
+      val seconds = duration.toSeconds
+      if (seconds > 1) logger.info(s"Scoring results took ${seconds}s")
+    }
   }
 
   /** Groups the given results. The groups are keyed using the match groups corresponding to the
