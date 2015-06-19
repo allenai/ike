@@ -81,14 +81,14 @@ object GeneralizedQuerySampler {
           // We already limited to the query by ANDing it when building chunked
           new SpanQueryStartAt(spanQuery, doc, token)
         } else {
+          // Otherwise we have to use the slower SpanQueryFilterByCaptureGroups
           val captureGroups = tokenizedQuery.tokenSequences.flatMap {
             case cts: CapturedTokenSequence => Some(cts.captureName)
             case _ => None
           }
           val tableQexpr = Sampler.buildLabelledQuery(tokenizedQuery, limitTo.get._1)
           new SpanQueryFilterByCaptureGroups(
-            spanQuery,
-            buildSpanQuery(tableQexpr), captureGroups, doc, token
+            spanQuery, buildSpanQuery(tableQexpr), captureGroups, doc, token
           )
         }
       case _ => spanQuery

@@ -5,7 +5,7 @@ import java.util
 import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 
-/** Modifies `clause` so that the returned Spans only occur after the given document and token
+/** Modifies `clause` so that it only matches Spans after the given document and token
   *
   * @param clause Spans to modify
   * @param startDoc document to start from, returns hits have doc >= startFromDoc

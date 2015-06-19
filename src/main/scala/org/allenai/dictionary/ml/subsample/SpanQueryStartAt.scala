@@ -7,7 +7,7 @@ import org.apache.lucene.index.{ TermContext, Term, AtomicReaderContext }
 import org.apache.lucene.search.spans.{ Spans, SpanQuery }
 import org.apache.lucene.util.Bits
 
-/** Modifies a SpanQuery so that returned Spans only occur after the given document and token
+/** Modifies a SpanQuery so that the returned Spans only occur after the given document and token
   *
   * @param query SpanQuery to modify
   * @param startDoc document to start from, returns hits have doc >= startFromDoc

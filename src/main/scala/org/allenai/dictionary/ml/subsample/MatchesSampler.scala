@@ -7,7 +7,7 @@ import org.allenai.dictionary.ml._
 object MatchesSampler {
 
   /** Returns a query that matches the same hits as `tokenSequence` but where any query-token that
-    * could match a variable number of tokens is wrapped in a capture group drawn form the
+    * could match a variable number of tokens is wrapped in a capture group drawn from the
     * corresponding entry in `name`
     */
   def captureQueryTokens(queryTokenSequence: QueryTokenSequence, names: Seq[String]): Seq[QExpr] = {
@@ -41,6 +41,8 @@ object MatchesSampler {
     * but already limited to the rows in single column table `table`
     */
   def getNamedColumnMatchingQuery(tokenizedQuery: TokenizedQuery, table: Table): QExpr = {
+    // We can optimize this case by ANDing the capture group with a query matching the table rows
+    // instead of using SpanQueryFilterByCaptureGroups
     require(table.cols.size == 1)
     val filteredRows = Sampler.getFilteredRows(tokenizedQuery, table)
     val captureQuery = QDisj(filteredRows.map(x => QSeq(x.head)))

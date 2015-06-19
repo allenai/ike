@@ -375,7 +375,7 @@ object QuerySuggester extends Logging {
     val allHits = allExamples.flatMap(examples => Seq(examples.unlabelled, examples.labelled))
 
     logger.debug(s"Fetching examples took ${allExampleTime.toMillis / 1000.0} seconds, " +
-      s"searched $numDocsSearched documents")
+      s"searched $numDocsSearched documents for ${allHits.map(_.size()).sum} examples")
 
     logger.debug("Analyzing hits")
 
@@ -426,7 +426,8 @@ object QuerySuggester extends Logging {
       } else {
         unprunnedHitAnalysis
       }
-    logger.debug(s"Pruned ${beforePruning - hitAnalysis.operatorHits.size} operators due to size")
+    logger.debug(s"Pruned ${beforePruning - hitAnalysis.operatorHits.size} operators due to size" +
+      s"(${hitAnalysis.operatorHits.size} operators left)")
 
     val totalPositiveHits = hitAnalysis.examples.count(x => x.label == Positive)
     val totalNegativeHits = hitAnalysis.examples.count(x => x.label == Negative)

@@ -201,8 +201,8 @@ case class SpecifyingOpGenerator(
           map(x => (x.index, x.required)): _*))
       }
       val setMaxOps = nRepeats.filter(n => n != repeatingOp.max &&
-          // SetMax(0) removes the token, which is redundant since we already have RemoveToken ops
-          n >= Math.max(1, repeatingOp.min)).map { n =>
+        // SetMax(0) removes the token, which is redundant since we already have RemoveToken ops
+        n >= Math.max(1, repeatingOp.min)).map { n =>
         (SetMax(queryTokenIndex, n), IntMap(editsWithSize.filter(_.repeats <= n).
           map(x => (x.index, x.required)): _*))
       }
