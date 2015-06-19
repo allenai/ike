@@ -44,8 +44,7 @@ var SearchResults = React.createClass({
   },
   displayGroup: function(group) {
     var config = this.props.config.value;
-    var result = !(config.hideAdded && this.targetHasRow(group));
-    return result;
+    return !(config.hideAdded && this.targetHasRow(group));
   },
   targetHasRow: function(group) {
     var row = TableManager.stringsRow(group.keys);
@@ -72,11 +71,13 @@ var SearchResults = React.createClass({
     groups.sort(this.bySize);
     return groups.filter(this.displayGroup);
   },
+
   pageGroups: function() {
     var groups = this.displayedGroups();
     var start = this.startGroup();
     return groups.slice(start, start + this.groupsPerPage());
   },
+
   cols: function() {
     var target = this.props.target.value;
     var tables = TableManager.getTables();
@@ -87,10 +88,11 @@ var SearchResults = React.createClass({
       return [];
     }
   },
+
   pageGroupComponents: function() {
     var target = this.props.target;
     var cols = this.cols();
-    var query = this.props.query
+    var query = this.props.query;
     return this.pageGroups().map(function(group) {
       var key = group.keys.join(",");
       return (
@@ -103,6 +105,7 @@ var SearchResults = React.createClass({
         );
     });
   },
+
   addHead: function() {
     var target = this.props.target.value;
     if (target == null) {
@@ -111,6 +114,7 @@ var SearchResults = React.createClass({
       return <th>Add to {target}</th>;
     }
   },
+
   colHeads: function() {
     var target = this.props.target.value;
     var tables = TableManager.getTables();
@@ -125,6 +129,7 @@ var SearchResults = React.createClass({
       return null;
     }
   },
+
   renderTable: function() {
     var results = this.props.results;
     var config = this.props.config;
@@ -159,9 +164,11 @@ var SearchResults = React.createClass({
       </div>
     );
   },
+
   renderBlank: function() {
     return <div/>;
   },
+
   renderErrorMessage: function() {
     return (
       <Panel header="Error" bsStyle="danger">
@@ -169,6 +176,7 @@ var SearchResults = React.createClass({
       </Panel>
     );
   },
+
   renderNoGroups: function() {
     var numGroups = this.props.results.value.groups.length;
     var numDisplayed = this.displayedGroups().length;
@@ -179,9 +187,11 @@ var SearchResults = React.createClass({
       </Panel>
     );
   },
+
   renderPending: function() {
     return <div>Loading...</div>;
   },
+
   render: function() {
     var results = this.props.results.value;
     if (results.request == null) {
@@ -197,4 +207,5 @@ var SearchResults = React.createClass({
     }
   }
 });
+
 module.exports = SearchResults;
