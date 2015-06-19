@@ -270,6 +270,40 @@ object QuerySuggester extends Logging {
     priorityQueue.dequeueAll.reverse.toSeq
   }
 
+  case class SearcherExamples(unlabelled: Hits, labelled: Hits,
+      docsSearchedForUnlabelled: Int, totalDocsSearched: Int)
+
+  // Get examples for the given query from a given searcher
+  private def getExamples(query: TokenizedQuery, searcher: Searcher, targetTable: Table,
+        tables: Map[String, Table], sampler: Sampler,
+      maxUnlabelled: Int, maxLabelled: Int): SearcherExamples = {
+    val unlabelledHits =
+      sampler.getSample(query, searcher, targetTable, tables).
+          window(0, maxUnlabelled)
+    val lastDoc = unlabelledHits.get(unlabelledHits.last()).doc
+    val lastToken = unlabelledHits.get(unlabelledHits.last()).end
+    val docsSearchedForUnlabelled = if (unlabelledHits.size() < maxUnlabelled) {
+      // We must have scanned the entire index
+      searcher.getIndexReader.numDocs()
+    } else {
+      // Assume docIds are in order and consecutive, this should be safe as long as
+      // we do not delete documents.
+      unlabelledHits.get(unlabelledHits.last()).doc
+    }
+
+    if (Thread.interrupted()) throw new InterruptedException()
+
+    val labelledHits = sampler.getLabelledSample(query, searcher, targetTable,
+      tables, lastDoc, lastToken + 1).window(0, maxLabelled)
+
+    val totalDocsSearched = if (labelledHits.size() < maxLabelled) {
+      searcher.getIndexReader.numDocs()
+    } else {
+      labelledHits.get(labelledHits.last()).doc
+    }
+    SearcherExamples(unlabelledHits, labelledHits, docsSearchedForUnlabelled, totalDocsSearched)
+  }
+
   /** Return a set of suggested queries given a starting query and a Table
     *
     * @param searchers Searchers to use when suggesting new queries
@@ -327,64 +361,22 @@ object QuerySuggester extends Logging {
       )
     }
 
-    logger.debug("Reading unlabelled hits")
     val maxUnlabelledPerSearcher = (config.maxSampleSize * percentUnlabelled).toInt / searchers.size
-    val numDocsPerSearcher = searchers.map(_.getIndexReader.numDocs())
-    val ((unlabelledHits, unlabelledSize), unlabelledReadTime) = Timing.time {
-      val hits = searchers.map(searcher =>
-        hitGatherer.getSample(tokenizedQuery, searcher, targetTable, tables).
-          window(0, maxUnlabelledPerSearcher))
-      (hits, hits.map(_.size()).sum)
-    }
-    logger.debug(s"Read $unlabelledSize unlabelled hits " +
-      s"in ${unlabelledReadTime.toMillis / 1000.0} seconds")
-    if (unlabelledSize == 0) {
-      logger.info("No unlabelled documents found")
-      return Suggestions(ScoredQuery(startingQuery, 0, 0, 0, 0), Seq(), 0)
-    }
-
-    // Number of documents we searched for unlabelled hits from, per each searcher
-    val numUnlabelledDocs = unlabelledHits.zip(numDocsPerSearcher).map {
-      case (hits, totalDocs) =>
-        if (hits.size() < maxUnlabelledPerSearcher) {
-          // We must have scanned the entire index
-          totalDocs
-        } else {
-          // Assume docIds correspond to document number, this should be safe as long as
-          // we do not delete documents.
-          hits.get(hits.last()).doc
-        }
-    }.sum
-    val unlabelledEndPoints = unlabelledHits.map { hits =>
-      if (hits.last() == -1) {
-        (0, 0)
-      } else {
-        (hits.get(hits.last()).doc, hits.get(hits.last()).start)
-      }
-    }
-    logger.debug(s"Reading labelled hits")
     val maxLabelledPerSearcher = config.maxSampleSize - maxUnlabelledPerSearcher
-    val ((labelledHits, labelledSize), labelledReadTime) = Timing.time {
-      val hits = searchers.zip(unlabelledEndPoints).map {
-        case (searcher, (lastDoc, lastToken)) =>
-          hitGatherer.getLabelledSample(tokenizedQuery, searcher, targetTable,
-            tables, lastDoc, lastToken + 1).window(0, maxLabelledPerSearcher)
-      }
-      (hits, hits.map(_.size).sum)
+    logger.debug("Fetching examples...")
+    val (allExamples, allExampleTime) = Timing.time {
+      val allExamples = searchers.par.map { searcher =>
+        getExamples(tokenizedQuery, searcher, targetTable, tables,
+          hitGatherer, maxUnlabelledPerSearcher, maxLabelledPerSearcher)
+      }.seq
+      allExamples
     }
-    logger.debug(s"Read $labelledSize labelled hits in" +
-      s" ${labelledReadTime.toMillis / 1000.0} seconds")
+    val numDocsSearched = allExamples.map(_.totalDocsSearched).sum
+    val numDocsSearchedForUnlabelled = allExamples.map(_.docsSearchedForUnlabelled).sum
+    val allHits = allExamples.flatMap(examples => Seq(examples.unlabelled, examples.labelled))
 
-    // Number of documents we searched for labelled hits from
-    val numDocs = (labelledHits, numDocsPerSearcher).zipped.map {
-      case (hits, totalDocsInSearcher) =>
-        if (hits.size < maxLabelledPerSearcher) {
-          // We must have scanned the entire index
-          totalDocsInSearcher
-        } else {
-          hits.get(hits.last()).doc
-        }
-    }.sum
+    logger.debug(s"Fetching examples took ${allExampleTime.toMillis / 1000.0} seconds, " +
+        s"searched $numDocsSearched documents")
 
     logger.debug("Analyzing hits")
 
@@ -414,16 +406,14 @@ object QuerySuggester extends Logging {
         (0, 0)
       }
 
-      buildHitAnalysis(
-        unlabelledHits ++ labelledHits,
-        tokenizedQuery, prefixCounts, suffixCounts, generator, targetTable
-      )
+      buildHitAnalysis(allHits,
+        tokenizedQuery, prefixCounts, suffixCounts, generator, targetTable)
     }
     logger.debug(s"Done Analyzing hits in ${analysisTime.toMillis / 1000.0} seconds")
 
     val beforePruning = unprunnedHitAnalysis.operatorHits.size
     val hitAnalysis =
-      if ((unlabelledSize + labelledSize) >
+      if (numDocsSearched >
         querySuggestionConf.getInt("pruneOperatorsIfMoreMatchesThan")) {
         val pruneLessThan = querySuggestionConf.getInt("pruneOperatorsIfLessThan")
         unprunnedHitAnalysis.copy(
@@ -456,12 +446,13 @@ object QuerySuggester extends Logging {
     // number of unlabelled documents we would have seen if the whole sample was not biased
     val unlabelledPhrases = hitAnalysis.examples.filter(_.label == Unlabelled).
       map(_.phraseId).toSet.size
-    val expectedUnlabelledPhrases = if (unlabelledPhrases == 0 || numDocs == numUnlabelledDocs) {
+    val expectedUnlabelledPhrases = if (unlabelledPhrases == 0 ||
+        numDocsSearched == numDocsSearchedForUnlabelled) {
       unlabelledPhrases
     } else {
       getExpectedUnlabelledPhrases(
         hitAnalysis.examples.filter(_.label == Unlabelled),
-        numUnlabelledDocs, numDocs
+        numDocsSearchedForUnlabelled, numDocsSearched
       )
     }
     val unlabelledBiasCorrection =
@@ -557,6 +548,6 @@ object QuerySuggester extends Logging {
     }
     logger.info(s"Done suggesting query for " +
       s"${QueryLanguage.getQueryString(queryWithNamedCaptures)}")
-    Suggestions(original, scoredOps, numDocs)
+    Suggestions(original, scoredOps, numDocsSearched)
   }
 }

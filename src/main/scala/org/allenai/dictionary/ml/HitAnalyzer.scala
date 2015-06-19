@@ -286,7 +286,8 @@ object HitAnalyzer extends Logging {
 
     logger.debug("Calculating match data...")
     val (opMap, opMaptime) = Timing.time {
-      val matchDataPerSearcher = hits.map(getMatchData(_, query, prefixCounts, suffixCounts))
+      val matchDataPerSearcher = hits.par.map(
+        getMatchData(_, query, prefixCounts, suffixCounts)).seq
       val matchDataPerSlot = matchDataPerSearcher.transpose.map { slotMatchData =>
         assert(slotMatchData.forall(_.queryToken == slotMatchData.head.queryToken))
         QueryMatches(slotMatchData.head.queryToken, slotMatchData.flatMap(_.matches))
