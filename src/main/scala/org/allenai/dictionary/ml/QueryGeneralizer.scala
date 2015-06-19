@@ -52,7 +52,7 @@ object QueryGeneralizer {
       "UH", "SYM", "POS", "PRP", "PDT", "EX", "MD", "LS"),
     Set("WRB", "WP$", "WDT", "WP"),
     Set("RBS", "RBR", "RP", "SYM", "RB", "IN", "CD", "MD")
-  ).map(_ + "FW")
+  )
 
   private def getWordPosTags(
     qexpr: QExpr,
