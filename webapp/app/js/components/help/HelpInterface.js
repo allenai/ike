@@ -96,6 +96,11 @@ var HelpInterface = React.createClass({
       descr: 'Matches the word "the" followed by the word "dog"'
     },
     {
+      name: 'Phrase',
+      example: '"that brown dog"',
+      descr: 'Matches the full phrase contained within the quotes, "that brown dog"'
+    },
+    {
       name: 'Part-of-Speech (POS)',
       example: 'DT dog',
       descr: 'Matches a determiner like "the" or "a" followed by the word "dog" (see below for table of POS symbols)'
@@ -111,9 +116,19 @@ var HelpInterface = React.createClass({
       descr: 'Captures a determiner before the word "dog" and names the capture group "myGroup"'
     },
     {
+      name: 'Non-Capturing Groups',
+      example: 'dog (?:PP NP)*',
+      descr: 'Captures a repeating prepositional phrase and noun phrase group after the word "dog" without creating a capture group'
+    },
+    {
       name: 'Disjunctions',
       example: 'the {cat, dog}',
       descr: 'Matches the word "the" followed by either "cat" or "dog"'
+    },
+    {
+      name: 'Disjunctions',
+      example: 'the dog's {NN, NNS, NNP}',
+      descr: 'Matches the phrase "the dog's" followed by either a noun, a plural noun, or a proper noun (see below for table of POS symbols)'
     },
     {
       name: 'Repetitions',
@@ -135,6 +150,21 @@ var HelpInterface = React.createClass({
       name: 'Repetitions',
       example: 'JJ[2,-1] dog',
       descr: 'Matches the word "dog" with at least two adjectives before it'
+    },
+    {
+      name: 'Similar Words',
+      example: 'dog~50',
+      descr: 'Matches "dog" as well as the 50 words most similar to "dog"'
+    },
+    {
+      name: 'Similar Phrases',
+      example: '"that brown dog"~50',
+      descr: 'Matches the phrase "that brown dog" as well as the 50 phrases most similar to "that brown dog"'
+    },
+    {
+      name: 'Special Characters',
+      example: 'N/A',
+      descr: 'Currently you cannot escape special characters in our query syntax -- this functionality will be added in the near future'
     },
     {
       name: 'Wildcards',
