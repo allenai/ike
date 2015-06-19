@@ -66,7 +66,6 @@ var SearchResults = React.createClass({
     var results = this.props.results.value;
     var groups = results.groups;
 
-
     var orderByRelevance = function(group1, group2) {
       return group2.relevanceScore - group1.relevanceScore;
     };
