@@ -6,11 +6,15 @@ var Table = bs.Table;
 var Panel = bs.Panel;
 var Pager = bs.Pager;
 var PageItem = bs.PageItem;
+var ButtonToolbar = bs.ButtonToolbar;
+var DropdownButton = bs.DropdownButton;
+var MenuItem = bs.MenuItem;
 var ResultGroup = require('./ResultGroup.js');
 var SearchResults = React.createClass({
   getInitialState: function() {
     return {
-      currentPage: 0
+      currentPage: 0,
+      orderBy: "count"
     };
   },
   startGroup: function() {
@@ -57,18 +61,33 @@ var SearchResults = React.createClass({
       return hasPos || hasNeg;
     }
   },
-  bySize: function(group1, group2) {
-    var diff = group2.relevanceScore - group1.relevanceScore;
-    if (diff == 0) {
-      return group1.keys > group2.keys ? 1 : -1;
-    } else {
-      return diff;
-    }
-  },
+
   displayedGroups: function() {
     var results = this.props.results.value;
     var groups = results.groups;
-    groups.sort(this.bySize);
+
+
+    var orderByRelevance = function(group1, group2) {
+      return group2.relevanceScore - group1.relevanceScore;
+    };
+
+    var orderByCount = function(group1, group2) {
+      return group2.size - group1.size;
+    };
+
+    var orderFn = orderByCount;
+    if(this.state.orderBy === "relevance") {
+      orderFn = orderByRelevance;
+    }
+
+    groups.sort(function(group1, group2) {
+      var diff = orderFn(group1, group2);
+      if (diff == 0) {
+        return group1.keys > group2.keys ? 1 : -1;
+      } else {
+        return diff;
+      }
+    });
     return groups.filter(this.displayGroup);
   },
 
@@ -131,6 +150,7 @@ var SearchResults = React.createClass({
   },
 
   renderTable: function() {
+    var self = this;
     var results = this.props.results;
     var config = this.props.config;
     var target = this.props.target;
@@ -145,6 +165,23 @@ var SearchResults = React.createClass({
       </PageItem>
     ) : null;
     var pager = <Pager>{nextPage} {prevPage}</Pager>;
+
+    // figure out sort order options
+    var currentSortOrder = this.state.orderBy;
+    var sortOptions = ["count", "relevance"].map(function(sortOption) {
+      return (
+        <MenuItem
+          key={sortOption}
+          eventKey={sortOption}
+          active={sortOption === currentSortOrder}
+          onSelect={function() {
+            self.setState({orderBy: sortOption});
+          }}>
+          Order by {sortOption}
+        </MenuItem>);
+    });
+    var sortOrderDropdownTitle = "Order by " + currentSortOrder;
+
     return (
       <div>
         <Table striped bordered condensed hover>
@@ -153,7 +190,14 @@ var SearchResults = React.createClass({
               {this.addHead()}
               {this.colHeads()}
               <th>Count</th>
-              <th>Context</th>
+              <th>
+                Context
+                <ButtonToolbar className="order-by-dropdown">
+                  <DropdownButton className="order-by-dropdown-entry" pullRight bsStyle='link' title={sortOrderDropdownTitle}>
+                    {sortOptions}
+                  </DropdownButton>
+                </ButtonToolbar>
+              </th>
             </tr>
           </thead>
           <tbody>
