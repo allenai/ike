@@ -96,7 +96,7 @@ object QueryGeneralizer {
         Generalization.to(pos, Seq(QSimilarPhrases(words, phrases.size, phrases)), true)
       case QWord(word) => // For words we sample the corpus for some possible POS tags
         val posTags = getWordPosTags(QWord(word), searchers, sampleSize)
-        val similarPhrases = similarPhrasesSearcher.getSimilarPhrases(word.toLowerCase)
+        val similarPhrases = similarPhrasesSearcher.getSimilarPhrases(word)
         val qSimPhrases = if (similarPhrases.nonEmpty) {
           Seq(QSimilarPhrases(Seq(QWord(word)), similarPhrases.size, similarPhrases))
         } else {
