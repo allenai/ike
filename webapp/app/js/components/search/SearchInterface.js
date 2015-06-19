@@ -12,7 +12,6 @@ var Button = bs.Button;
 var Input = bs.Input;
 var Row = bs.Row;
 var Col = bs.Col;
-var InputGroup = bs.InputGroup;
 var Glyphicon = bs.Glyphicon;
 var SearchInterface = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
