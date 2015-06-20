@@ -154,8 +154,8 @@ object HitAnalyzer extends Logging {
 
     // Set up our hits object, call .get(0) so it initializes captureGroupsNames
     val props = List("word", "pos")
-    hits.setContextField(props.asJava)
     hits.setContextSize(math.max(prefixCounts, suffixCounts))
+    hits.setForwardIndexConcordanceParameters("word", null, List("pos").asJava)
     hits.get(0)
 
     val captureGroups = hits.getCapturedGroupNames
@@ -273,8 +273,7 @@ object HitAnalyzer extends Logging {
     table: Table
   ): HitAnalysis = {
 
-    val props = List("word", "pos")
-    hits.foreach(_.setContextField(props.asJava))
+    hits.foreach(_.setForwardIndexConcordanceParameters("word", null, List("pos").asJava))
     hits.foreach(_.setContextSize(math.max(prefixCounts, suffixCounts)))
 
     logger.debug("Calculating labels and weights...")
