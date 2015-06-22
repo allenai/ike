@@ -8,6 +8,6 @@ object Dependencies extends CoreDependencies {
   val luceneVersion = "4.2.1"
   def lucene(part: String) = luceneGroup % s"lucene-${part}" % luceneVersion
   val allenAiDatastore = "org.allenai" %% "datastore" % "2015.04.02-0"
-  val nlpstackVersion = "1.9"
+  val nlpstackVersion = "1.10"
   def nlpstackModule(id: String) = "org.allenai.nlpstack" %% s"nlpstack-${id}" % nlpstackVersion
 }
