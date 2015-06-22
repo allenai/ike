@@ -58,6 +58,13 @@ object SearchResultGrouper extends Logging {
     }
     val grouped = keyed groupBy keyString
 
+    /** Checks if subsetKey is a subset of supersetKey.
+      *
+      * ["sky", "blue and white"] is a subset of
+      * ["big sky", "blue and white during the day"]. A key is always a subset of
+      * itself. Column order matters, so ["a", "b"] is not a subset of
+      * ["b", "a"].
+      */
     def isSubset(subsetKey: Seq[Phrase], supersetKey: Seq[Phrase]): Boolean = {
       require(subsetKey.length == supersetKey.length)
       (subsetKey zip supersetKey).forall {
@@ -69,14 +76,17 @@ object SearchResultGrouper extends Logging {
     Timing.timeThen {
       grouped.map {
         case (keyString, group) =>
+          val keys = keyString.map(_.mkString(" "))
           val groupSubset = group.take(req.config.evidenceLimit)
+          val relevanceScore = grouped.map {
+            case (innerKeyString, innerGroup) =>
+              if (isSubset(innerKeyString, keyString)) innerGroup.size else 0
+          }.sum
+
           GroupedBlackLabResult(
-            keyString.map(_.mkString(" ")),
+            keys,
             group.size,
-            grouped.map {
-              case (innerKeyString, innerGroup) =>
-                if (isSubset(innerKeyString, keyString)) innerGroup.size else 0
-            }.sum,
+            relevanceScore,
             groupSubset
           )
       }.toSeq
