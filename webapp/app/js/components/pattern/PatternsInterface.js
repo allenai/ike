@@ -7,6 +7,7 @@ var NavItem = bs.NavItem;
 var Row = bs.Row;
 var Col = bs.Col;
 var Input = bs.Input;
+var PatternEditor = require('./PatternEditor.js');
 
 var PatternsInterface = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
@@ -36,8 +37,6 @@ var PatternsInterface = React.createClass({
           patterns[patternObject.name] = patternObject.pattern;
         });
 
-        self.setState({patterns: patterns});
-
         // set active pattern name
         var activePatternName = self.state.activePatternName;
         if(activePatternName && !patterns.hasOwnProperty(activePatternName))
@@ -46,7 +45,11 @@ var PatternsInterface = React.createClass({
         if(!activePatternName)
           activePatternName = patternsObjects.length > 0 ? patternsObjects[0].name : null;
 
-        self.setState({activePatternName: activePatternName});
+        self.setState({
+          patterns: patterns,
+          activePatternName: activePatternName,
+          error: null
+        });
       } else {
         self.setState({error: resp.body + " (" + resp.statusCode + ")"});
         console.log(resp);
@@ -56,6 +59,29 @@ var PatternsInterface = React.createClass({
 
   patternClicked: function(patternName) {
     this.setState({activePatternName: patternName});
+  },
+
+  newPatternNameValidationState: function() {
+    var result = "success";
+    var newPatternName = this.state.newPatternName;
+    if(!newPatternName)
+      result = null;
+    else if(newPatternName.includes(" ") || this.state.patterns.hasOwnProperty(newPatternName))
+      result = "error";
+
+    return result;
+  },
+
+  createPattern: function() {
+    if(this.newPatternNameValidationState() === "success") {
+      var patterns = this.state.patterns;
+      patterns[this.state.newPatternName] = "";
+      this.setState({
+        patterns: patterns,
+        activePatternName: this.state.newPatternName,
+        newPatternName: ""
+      });
+    }
   },
 
   render: function() {
@@ -68,34 +94,35 @@ var PatternsInterface = React.createClass({
         if(this.state.patterns.hasOwnProperty(patternName)) {
           items.push(
             <NavItem key={patternName} eventKey={patternName}>
-            {patternName}
+              {patternName}
             </NavItem>);
         }
       }
 
-      var newPatternNameValidationState = "success";
-      var newPatternName = self.state.newPatternName;
-      if(!newPatternName)
-        newPatternName = "none";
-      else if(self.state.patterns.hasOwnProperty(newPatternName))
-        newPatternNameValidationState = "error";
-
       var patternChooser = <div>
         <Nav stacked bsStyle='pills'
              activeKey={this.state.activePatternName}
-             onSelect={this.patternClicked}>{items}</Nav>
+             onSelect={this.patternClicked}>
+          {items}
+        </Nav>
         <hr/>
-        <Input type='text'
-               placeholder='Pattern Name'
-               help='Enter a name for a new pattern and press enter.'
-               valueLink={this.linkState('newPatternName')}
-               bsStyle={newPatternNameValidationState}
-               hasFeedback />
+        <form onSubmit={this.createPattern}>
+          <Input type='text'
+                 placeholder='Pattern Name'
+                 label='Add a new pattern'
+                 help='Enter a name for a new pattern and press enter.'
+                 valueLink={this.linkState('newPatternName')}
+                 bsStyle={this.newPatternNameValidationState()}
+                 hasFeedback />
+        </form>
         </div>;
+
+      var activeQuery = this.state.patterns[this.state.activePatternName];
+      var patternEditor = <PatternEditor initialQuery={activeQuery}/>
 
       return <Row>
         <Col xs={3}>{patternChooser}</Col>
-        <Col xs={7}></Col>
+        <Col xs={9}>{patternEditor}</Col>
       </Row>;
     }
   }
