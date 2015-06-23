@@ -9,7 +9,7 @@ import org.apache.lucene.util.PriorityQueue
 
 /** Disjunction of spans, ensures the returned Hits are unique. For each Hit, additionally puts that
   * Hit's span in a capture group. That capture group will be positive if `firstSpan`
-  * produced the returned Hit and negated otherwise.
+  * produced the returned Hit and negated otherwise
   *
   * @param firstSpan Span in the disjunction that returns positive capture groups
   * @param alternatives Spans in the disjunction that return negated capture groups

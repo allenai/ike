@@ -43,8 +43,10 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
       QDisj(Seq(QWord("like"), QWord("tastes"))),
       QNamed(QDisj(Seq(QPos("DT"), QPos("JJ"), QPos("NNS"))), "c1")
     ))
-    val tokenized = TokenizedQuery.buildWithGeneralizations(testQuery, Seq(searcher),
-      Seq("c1"), ss, 10)
+    val tokenized = TokenizedQuery.buildWithGeneralizations(
+      testQuery,
+      Seq("c1"), ss, Seq(searcher), 10
+    )
     val cnames = tokenized.getNames :+ "c1"
     val hits = GeneralizedQuerySampler(1, 100).getSample(tokenized, searcher,
       Table("", Seq("c1"), Seq(), Seq()), Map())
@@ -80,8 +82,7 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
       )
     )
     val tokenized = TokenizedQuery.buildWithGeneralizations(
-      startingQuery,
-      Seq(searcher), Seq("c1", "c2"), ss, 10
+      startingQuery, Seq("c1", "c2"), ss, Seq(searcher), 10
     )
     val expectedResults = Seq(
       "I like mango",
@@ -107,8 +108,8 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
       ),
       Seq(TableRow(Seq(TableValue(Seq(QWord("bananas"))))))
     )
-    val tokenized = TokenizedQuery.buildWithGeneralizations(startingQuery, Seq(searcher), Seq("c1"),
-      ss, 10)
+    val tokenized = TokenizedQuery.buildWithGeneralizations(startingQuery, Seq("c1"),
+      ss, Seq(searcher), 10)
     val expectedResults = Seq(
       "like mango",
       "those bananas"

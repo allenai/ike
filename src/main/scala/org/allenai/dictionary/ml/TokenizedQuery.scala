@@ -47,7 +47,6 @@ sealed trait QueryTokenSequence {
 case class TokenSequence(queryTokens: Seq[QExpr]) extends QueryTokenSequence {
   override def getOriginalQuery: QExpr = TokenizedQuery.qexprFromSequence(queryTokens)
 }
-
 case class CapturedTokenSequence(
     queryTokens: Seq[QExpr],
     captureName: String, wasExplicitlyNamed: Boolean
@@ -98,8 +97,7 @@ object TokenizedQuery {
 
   /** Builds a TokenizedQuery from a QExpr
     *
-    * @param qexpr Expression to tokenize, assumed to be fixed length (always matches the same
-    *     number of tokens) and with no unnamed capture groups
+    * @param qexpr QExpr to tokenize
     * @param tableCols tables columns to use when naming unnamed capture groups
     * @return the tokenized QExpr
     */
@@ -150,27 +148,36 @@ object TokenizedQuery {
     TokenizedQuery(tokenSequences)
   }
 
+  /** Builds a TokenizedQuery with generalizations included
+    *
+    * @param qexpr QExpr to tokenize
+    * @param tableCols tables columns to use when naming unnamed capture groups
+    * @param similarPhrasesSearcher to use when generalizing tokens
+    * @param searchers to use when deciding how to generalize words to POS tags
+    * @param posSampleSize sample size to use when deciding how to generalize words to POS tags
+    * @return the tokenized QExpr
+    */
   def buildWithGeneralizations(
     qexpr: QExpr,
-    searchers: Seq[Searcher],
     tableCols: Seq[String],
     similarPhrasesSearcher: SimilarPhrasesSearcher,
-    sampleSize: Int
+    searchers: Seq[Searcher],
+    posSampleSize: Int
   ): TokenizedQuery = {
     val tq = buildFromQuery(qexpr, tableCols)
     val generalizations =
       tq.getSeq.map(QueryGeneralizer.queryGeneralizations(_, searchers,
-        similarPhrasesSearcher, sampleSize))
+        similarPhrasesSearcher, posSampleSize))
 
     // Special case when we have one word, only use 'phrase' generalization. Use POS
     // generalizations here will make the POS matches dominate our sample and thus reduce our
     // ability to select good phrase generalizations.
-    val correctedGeneralizations = generalizations match {
+    val phraseOnlyGeneralizations = generalizations match {
       case Seq(GeneralizeToDisj(pos, phrase, fullyGeneralizes)) =>
         Seq(GeneralizeToDisj(Seq(), phrase, fullyGeneralizes))
       case _ => generalizations
     }
-    tq.copy(generalizations = Some(correctedGeneralizations))
+    tq.copy(generalizations = Some(phraseOnlyGeneralizations))
   }
 }
 
@@ -244,6 +251,7 @@ case class TokenizedQuery(
 
   /** @return the generalize version of this query, assumes Generalization has been set */
   def getGeneralizeQuery: TokenizedQuery = {
+    require(generalizations.isDefined)
     var remainingGeneralization = generalizations.get
     val newSequences = tokenSequences.map { tseq =>
       val (generalizations, rest) = remainingGeneralization.splitAt(tseq.size)

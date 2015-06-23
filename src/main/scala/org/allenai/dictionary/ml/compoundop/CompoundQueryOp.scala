@@ -1,6 +1,5 @@
 package org.allenai.dictionary.ml.compoundop
 
-import opennlp.tools.tokenize.TokenizerME
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml._
 import org.allenai.dictionary.ml.queryop._
@@ -162,7 +161,7 @@ object CompoundQueryOp {
     }
   }
 
-  /** Applies a sequence of TokenQueryOps to a query, building a new, transformed query
+  /** Applies a sequence of TokenQueryOps to a query building a new, transformed query
     *
     * @param query to transform
     * @param tokenOps to apply to the query
@@ -206,11 +205,9 @@ object CompoundQueryOp {
     // Build a new token sequence to be use in our new TokenizedQuery by taking the modified
     // tokens if it exists otherwise using the previous tokens. None means the previous token
     // should be removed and not replaced
-    var newQuerySequence =
-      query.getSeq.zipWithIndex.map {
-        case (qexpr, i) =>
-          modifierOps.getOrElse(i + 1, Seq(qexpr))
-      }
+    var newQuerySequence = query.getSeq.zipWithIndex.map {
+      case (qexpr, i) => modifierOps.getOrElse(i + 1, Seq(qexpr))
+    }
 
     // Now chunk up new token sequence, this is done by consuming tokens from our sequence in
     // the same proportions as found in the old query
@@ -255,17 +252,11 @@ abstract class CompoundQueryOp() {
 
   def add(op: QueryOp, matches: IntMap[Int]): CompoundQueryOp
 
-  def add(evaluatedOp: EvaluatedOp): CompoundQueryOp = {
-    add(evaluatedOp.op, evaluatedOp.matches)
-  }
+  def add(evaluatedOp: EvaluatedOp): CompoundQueryOp = add(evaluatedOp.op, evaluatedOp.matches)
 
-  def applyOps(query: TokenizedQuery): TokenizedQuery = {
-    CompoundQueryOp.applyOps(query, ops)
-  }
+  def applyOps(query: TokenizedQuery): TokenizedQuery = CompoundQueryOp.applyOps(query, ops)
 
-  override def toString: String = {
-    ops.toString()
-  }
+  override def toString: String = ops.toString()
 
   def toString(query: TokenizedQuery): String = {
     "<" + QueryLanguage.getQueryString(applyOps(query).getOriginalQuery) + ">"

@@ -1,13 +1,10 @@
 package org.allenai.dictionary.ml.subsample
 
-import nl.inl.blacklab.search.lucene.{ SpanQueryAnd, SpanQueryCaptureGroup }
-import nl.inl.blacklab.search.sequences.{ TextPatternSequence, SpanQuerySequence }
+import org.apache.lucene.search.spans.SpanQuery
+import nl.inl.blacklab.search.sequences.TextPatternSequence
 import nl.inl.blacklab.search._
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml._
-import org.apache.lucene.search.spans.SpanQuery
-
-import scala.collection.JavaConverters._
 
 object GeneralizedQuerySampler {
 
@@ -30,7 +27,8 @@ object GeneralizedQuerySampler {
     }
     val generalizations = tokenizedQuery.generalizations.get
 
-    val oneCapture = tokenizedQuery.tokenSequences.count(_.isInstanceOf[CapturedTokenSequence]) == 1
+    val oneCaptureGroup =
+      tokenizedQuery.tokenSequences.count(_.isInstanceOf[CapturedTokenSequence]) == 1
 
     // Build span queries for each query/generalization
     val generalizingSpanQueries = generalizations.zip(tokenizedQuery.getNamedTokens).map {
@@ -55,14 +53,13 @@ object GeneralizedQuerySampler {
       remaining = rest
       val next = ts match {
         case CapturedTokenSequence(_, name, _) =>
-          if (oneCapture && limitTo.isDefined) {
-            // Use SpanQueryAnd to make sure this capture group must match tokens with in the
-            // given table
+          if (oneCaptureGroup && limitTo.isDefined) {
+            // In this case use TextPatternAnd to make sure this capture group must match tokens
+            // with in the given table
             val filteredRows = Sampler.getFilteredRows(tokenizedQuery, limitTo.get._1)
-            val tableQExpr = QDisj(filteredRows.map(x => QSeq(x.head)))
-            val tableSpanQuery = toTextPattern(tableQExpr)
+            val tableTextPattern = toTextPattern(QDisj(filteredRows.map(x => QSeq(x.head))))
             Seq(new TextPatternCaptureGroup(new TextPatternAnd(
-              new TextPatternSequence(chunk: _*), tableSpanQuery
+              new TextPatternSequence(chunk: _*), tableTextPattern
             ), name))
           } else {
             Seq(new TextPatternCaptureGroup(new TextPatternSequence(chunk: _*), name))
@@ -71,12 +68,12 @@ object GeneralizedQuerySampler {
       }
       chunked = chunked ++ next
     }
-    require(remaining.isEmpty)
+    assert(remaining.isEmpty)
     val spanQuery = searcher.createSpanQuery(new TextPatternSequence(chunked: _*))
     limitTo match {
       case Some((_, doc, token)) =>
-        if (oneCapture) {
-          // We already limited to the query by ANDing it when building chunked
+        if (oneCaptureGroup) {
+          // We already limited to the query by ANDing it when building `chunked`
           new SpanQueryStartAt(spanQuery, doc, token)
         } else {
           // Otherwise we have to use the slower SpanQueryFilterByCaptureGroups

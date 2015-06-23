@@ -62,7 +62,7 @@ object QueryGeneralizer {
     val posTags = searchers.flatMap { searcher =>
       val hits = searcher.find(BlackLabSemantics.blackLabQuery(qexpr)).window(0, sampleSize)
       hits.setContextSize(0)
-      hits.setContextField(List("pos").asJava)
+      hits.setForwardIndexConcordanceParameters(null, null, List("pos").asJava)
       hits.asScala.map { hit =>
         val kwic = hits.getKwic(hit)
         val pos = kwic.getTokens("pos").get(0)

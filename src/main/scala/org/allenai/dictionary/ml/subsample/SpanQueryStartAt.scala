@@ -10,7 +10,7 @@ import org.apache.lucene.util.Bits
 /** Modifies a SpanQuery so that the returned Spans only occur after the given document and token
   *
   * @param query SpanQuery to modify
-  * @param startDoc document to start from, returns hits have doc >= startFromDoc
+  * @param startDoc document to start from, returned hits have doc >= startFromDoc
   * @param startToken token to start from, returned hits have doc > startFromDoc or
   *                      start >= startFromToken
   */
@@ -25,6 +25,6 @@ class SpanQueryStartAt(query: SpanQuery, startDoc: Int, startToken: Int)
     new SpansStartAt(clauseSpans, startDoc, startToken)
   }
 
-  override def toString(s: String): String = s"${query.toString(s)} AFTER " +
-    s"DOC: $startDoc TOKEN $startToken"
+  override def toString(s: String): String = s"${query.toString(s)}<AFTER " +
+    s"DOC=$startDoc TOKEN=$startToken>"
 }
