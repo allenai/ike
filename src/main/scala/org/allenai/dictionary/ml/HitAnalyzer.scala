@@ -69,6 +69,7 @@ object HitAnalyzer extends Logging {
     * @return The examples
     */
   def getExamples(query: TokenizedQuery, hits: Hits, table: Table): Iterable[Example] = {
+    require(hits.sizeAtLeast(1))
     val positiveStrings = table.positive.seq.map(_.values.map(
       _.qwords.map(_.value.toLowerCase)
     )).toSet
@@ -151,6 +152,7 @@ object HitAnalyzer extends Logging {
     prefixCounts: Int,
     suffixCounts: Int
   ): Seq[QueryMatches] = {
+    require(hits.sizeAtLeast(1))
 
     // Set up our hits object, call .get(0) so it initializes captureGroupsNames
     val props = List("word", "pos")
