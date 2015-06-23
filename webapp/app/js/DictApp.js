@@ -199,7 +199,7 @@ var DictApp = React.createClass({
   render: function() {
     var content = this.renderContent();
     var header = this.renderHeader();
-    return <div>{header}{content}</div>;
+    return <div>{header} {content}</div>;
   }
 });
 
