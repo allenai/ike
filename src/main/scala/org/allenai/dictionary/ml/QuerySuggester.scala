@@ -421,7 +421,7 @@ object QuerySuggester extends Logging {
     }
     logger.debug(s"Done Analyzing hits in ${analysisTime.toMillis / 1000.0} seconds")
 
-    // Prune operators that effect too few sentences
+    // Prune operators that affect too few sentences
     val beforePruning = unprunnedHitAnalysis.operatorHits.size
     val hitAnalysis =
       if (numDocsSearched >
