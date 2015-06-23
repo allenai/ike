@@ -127,8 +127,8 @@ var HelpInterface = React.createClass({
     },
     {
       name: 'Disjunctions',
-      example: 'the dog's {NN, NNS, NNP}',
-      descr: 'Matches the phrase "the dog's" followed by either a noun, a plural noun, or a proper noun (see below for table of POS symbols)'
+      example: '"the dog and the" {NN, NNS, NNP}',
+      descr: 'Matches the phrase "the dog and the" followed by either a noun, a plural noun, or a proper noun (see below for table of POS symbols)'
     },
     {
       name: 'Repetitions',
@@ -158,8 +158,8 @@ var HelpInterface = React.createClass({
     },
     {
       name: 'Similar Phrases',
-      example: '"that brown dog"~50',
-      descr: 'Matches the phrase "that brown dog" as well as the 50 phrases most similar to "that brown dog"'
+      example: '"information extraction"~50',
+      descr: 'Matches the phrase "information extraction" as well as the 50 phrases most similar to "that brown dog"'
     },
     {
       name: 'Special Characters',
