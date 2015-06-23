@@ -6,10 +6,12 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import org.allenai.common.Logging
+import org.allenai.dictionary.patterns.NamedPattern
 import org.allenai.dictionary.persistence.Tablestore
 import spray.can.Http
 import spray.http.{ CacheDirectives, HttpHeaders, StatusCodes }
 import spray.httpx.SprayJsonSupport
+import spray.json.CollectionFormats
 import spray.routing.{ ExceptionHandler, HttpService }
 import spray.util.LoggingContext
 import org.allenai.common.Config._
@@ -181,13 +183,26 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   }
 
+  val patternsRoute = pathPrefix("api" / "patterns") {
+    pathEndOrSingleSlash {
+      get {
+        complete {
+          Seq(
+            NamedPattern("DirkNP", "(?:NP PP|ADJP)* NN+"),
+            NamedPattern("KevinNP", "PDT* {DT,PRP$}* {JJ,VBG}* {NN,NNS,NNP,NNPS}+ {{IN,POS} PDT* {DT,PRP$}* {JJ,VBG}* {NN,NNS,NNP,NNPS}+}*")
+          )
+        }
+      }
+    }
+  }
+
   val corporaRoute = path("api" / "corpora") {
     pathEnd {
       complete {
         val readySearchApps = searchApps.filter(_._2.isCompleted)
-        JsArray(readySearchApps.map {
+        readySearchApps.map {
           case (corpusName, app) => CorpusDescription(corpusName, app.get.description).toJson
-        }.toSeq: _*)
+        }
       }
     }
   }
@@ -200,5 +215,11 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
 
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
-  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoute ~ tablesRoute ~ corporaRoute)
+  def receive: Actor.Receive = runRoute(
+    mainPageRoute ~
+      serviceRoute ~
+      tablesRoute ~
+      patternsRoute ~
+      corporaRoute
+  )
 }
