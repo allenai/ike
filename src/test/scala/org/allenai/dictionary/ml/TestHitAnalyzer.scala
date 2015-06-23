@@ -83,6 +83,9 @@ class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
     val query = QNamed(QDisj(Seq(QWord("mango"), QWord("bananas"), QWord("those"))), "c1")
     val hits = searcher.find(BlackLabSemantics.blackLabQuery(query))
 
+    // Pass an empty Hits object to make sure HitAanalyer does not break
+    val emptyHits = searcher.find(BlackLabSemantics.blackLabQuery(QWord("????")))
+
     // Double check to make sure things are ordered as we expect
     val hitsFounds = hits.asScala.map(hits.getKwic(_).getMatch("word").get(0))
     assertResult(Seq("mango", "those", "bananas"))(hitsFounds)
@@ -93,7 +96,7 @@ class TestHitAnalyzer extends UnitSpec with ScratchDirectory {
 
     // Get the hits
     val hitAnalysis = HitAnalyzer.buildHitAnalysis(
-      Seq(hits), TokenizedQuery.buildFromQuery(query, Seq()),
+      Seq(hits, emptyHits), TokenizedQuery.buildFromQuery(query, Seq()),
       1, 0, SpecifyingOpGenerator(true, false),
       table
     )

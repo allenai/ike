@@ -279,28 +279,37 @@ object QuerySuggester extends Logging {
     maxUnlabelled: Int, maxLabelled: Int): SearcherExamples = {
     val unlabelledHits =
       sampler.getSample(query, searcher, targetTable, tables).window(0, maxUnlabelled)
-    val lastDoc = unlabelledHits.get(unlabelledHits.last()).doc
-    val lastToken = unlabelledHits.get(unlabelledHits.last()).end
-    val docsSearchedForUnlabelled = if (unlabelledHits.size() < maxUnlabelled) {
-      // We must have scanned the entire index
-      searcher.getIndexReader.numDocs()
-    } else {
-      // Assume docIds are in order and consecutive, this should be safe as long as
-      // we do not delete documents.
-      unlabelledHits.get(unlabelledHits.last()).doc
-    }
 
     if (Thread.interrupted()) throw new InterruptedException()
 
-    val labelledHits = sampler.getLabelledSample(query, searcher, targetTable,
-      tables, lastDoc, lastToken + 1).window(0, maxLabelled)
-
-    val totalDocsSearched = if (labelledHits.size() < maxLabelled) {
-      searcher.getIndexReader.numDocs()
+    if (unlabelledHits.size() < maxUnlabelled) {
+      // Must have scanned the entire index during the unlabelled pass
+      SearcherExamples(unlabelledHits, new Hits(searcher),
+        searcher.getIndexReader.numDocs(), searcher.getIndexReader.numDocs())
     } else {
-      labelledHits.get(labelledHits.last()).doc
+
+      val lastDoc = unlabelledHits.get(unlabelledHits.last()).doc
+      val lastToken = unlabelledHits.get(unlabelledHits.last()).end
+
+      val docsSearchedForUnlabelled = if (unlabelledHits.size() < maxUnlabelled) {
+        // We must have scanned the entire index
+        searcher.getIndexReader.numDocs()
+      } else {
+        // Assume docIds are in order and consecutive, this should be safe as long as
+        // we do not delete documents.
+        unlabelledHits.get(unlabelledHits.last()).doc
+      }
+
+      val labelledHits = sampler.getLabelledSample(query, searcher, targetTable,
+        tables, lastDoc, lastToken + 1).window(0, maxLabelled)
+
+      val totalDocsSearched = if (labelledHits.size() < maxLabelled) {
+        searcher.getIndexReader.numDocs()
+      } else {
+        labelledHits.get(labelledHits.last()).doc
+      }
+      SearcherExamples(unlabelledHits, labelledHits, docsSearchedForUnlabelled, totalDocsSearched)
     }
-    SearcherExamples(unlabelledHits, labelledHits, docsSearchedForUnlabelled, totalDocsSearched)
   }
 
   /** Return a set of suggested queries given a starting query and a Table
@@ -364,7 +373,7 @@ object QuerySuggester extends Logging {
     val maxLabelledPerSearcher = config.maxSampleSize - maxUnlabelledPerSearcher
     logger.debug("Fetching examples...")
     val (allExamples, allExampleTime) = Timing.time {
-      val allExamples = searchers.par.map { searcher =>
+      val allExamples = searchers.map { searcher =>
         getExamples(tokenizedQuery, searcher, targetTable, tables,
           hitGatherer, maxUnlabelledPerSearcher, maxLabelledPerSearcher)
       }.seq
