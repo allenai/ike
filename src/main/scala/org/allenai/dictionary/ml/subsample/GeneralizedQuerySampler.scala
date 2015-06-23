@@ -1,8 +1,8 @@
 package org.allenai.dictionary.ml.subsample
 
 import nl.inl.blacklab.search.lucene.{ SpanQueryAnd, SpanQueryCaptureGroup }
-import nl.inl.blacklab.search.sequences.SpanQuerySequence
-import nl.inl.blacklab.search.{ Hits, Searcher }
+import nl.inl.blacklab.search.sequences.{ TextPatternSequence, SpanQuerySequence }
+import nl.inl.blacklab.search._
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml._
 import org.apache.lucene.search.spans.SpanQuery
@@ -22,10 +22,8 @@ object GeneralizedQuerySampler {
     posSampleSize: Int,
     limitTo: Option[(Table, Int, Int)]
   ): SpanQuery = {
-    def buildSpanQuery(qexpr: QExpr): SpanQuery = {
-      searcher.createSpanQuery(
-        BlackLabSemantics.blackLabQuery(QueryLanguage.interpolateTables(qexpr, tables).get)
-      )
+    def toTextPattern(qexpr: QExpr): TextPattern = {
+      BlackLabSemantics.blackLabQuery(QueryLanguage.interpolateTables(qexpr, tables).get)
     }
     def phrase2QExpr(phrase: Seq[QWord]): QExpr = {
       if (phrase.size == 1) phrase.head else QSeq(phrase)
@@ -37,21 +35,21 @@ object GeneralizedQuerySampler {
     // Build span queries for each query/generalization
     val generalizingSpanQueries = generalizations.zip(tokenizedQuery.getNamedTokens).map {
       case (GeneralizeToDisj(qpos, qsimiliar, _), (name, original)) =>
-        val originalSq = buildSpanQuery(original)
+        val originalSq = toTextPattern(original)
         // 'Flatten' the qSimQueries into individual QExpr, this gives us the chance to filter
         // out repeats and minimize nesting of Disjunction queries
         val qSimQueries = qsimiliar.flatMap { qsim =>
           phrase2QExpr(qsim.qwords) +: qsim.phrases.map(sp => phrase2QExpr(sp.qwords))
         }
-        val extensions = (qpos ++ qSimQueries).distinct.map(buildSpanQuery)
-        new SpanQueryTrackingDisjunction(originalSq, extensions, name)
+        val extensions = (qpos ++ qSimQueries).distinct.map(toTextPattern)
+        new TextPatternTrackingDisjunction(originalSq, extensions, name)
       // Currently we do not handle GeneralizeToAll
-      case (_, (name, original)) => buildSpanQuery(QNamed(original, name))
+      case (_, (name, original)) => toTextPattern(QNamed(original, name))
     }
 
     // Group the span queries into chunks and wrap the right chunks in capture groups
     var remaining = generalizingSpanQueries
-    var chunked = List[SpanQuery]()
+    var chunked = List[TextPattern]()
     tokenizedQuery.tokenSequences.foreach { ts =>
       val (chunk, rest) = remaining.splitAt(ts.size)
       remaining = rest
@@ -62,19 +60,19 @@ object GeneralizedQuerySampler {
             // given table
             val filteredRows = Sampler.getFilteredRows(tokenizedQuery, limitTo.get._1)
             val tableQExpr = QDisj(filteredRows.map(x => QSeq(x.head)))
-            val tableSpanQuery = buildSpanQuery(tableQExpr)
-            Seq(new SpanQueryCaptureGroup(new SpanQueryAnd(
-              new SpanQuerySequence(chunk.asJava), tableSpanQuery
+            val tableSpanQuery = toTextPattern(tableQExpr)
+            Seq(new TextPatternCaptureGroup(new TextPatternAnd(
+              new TextPatternSequence(chunk: _*), tableSpanQuery
             ), name))
           } else {
-            Seq(new SpanQueryCaptureGroup(new SpanQuerySequence(chunk.asJava), name))
+            Seq(new TextPatternCaptureGroup(new TextPatternSequence(chunk: _*), name))
           }
         case TokenSequence(_) => chunk
       }
       chunked = chunked ++ next
     }
     require(remaining.isEmpty)
-    val spanQuery = new SpanQuerySequence(chunked.asJava)
+    val spanQuery = searcher.createSpanQuery(new TextPatternSequence(chunked: _*))
     limitTo match {
       case Some((_, doc, token)) =>
         if (oneCapture) {
@@ -87,9 +85,9 @@ object GeneralizedQuerySampler {
             case _ => None
           }
           val tableQexpr = Sampler.buildLabelledQuery(tokenizedQuery, limitTo.get._1)
-          new SpanQueryFilterByCaptureGroups(
-            spanQuery, buildSpanQuery(tableQexpr), captureGroups, doc, token
-          )
+          val tableTextPattern = BlackLabSemantics.blackLabQuery(tableQexpr)
+          val tableSpanQuery = searcher.createSpanQuery(tableTextPattern)
+          new SpanQueryFilterByCaptureGroups(spanQuery, tableSpanQuery, captureGroups, doc, token)
         }
       case _ => spanQuery
     }
