@@ -117,10 +117,14 @@ object TokenizedQuery {
         }
         val columnName = c match {
           case QUnnamed(expr) =>
+            require(columnNamesLeft.nonEmpty, "Query has more captures groups then there are " +
+              "table columns")
             val name = columnNamesLeft.head
             columnNamesLeft = columnNamesLeft.tail
             name
           case QNamed(expr, name) =>
+            require(columnNamesLeft.contains(name), "Could not find a table column corresponding " +
+              s"to capture group $name")
             columnNamesLeft = columnNamesLeft.filter(_ != name)
             name
         }
