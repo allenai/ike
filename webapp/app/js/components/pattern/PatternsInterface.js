@@ -6,6 +6,7 @@ var Nav = bs.Nav;
 var NavItem = bs.NavItem;
 var Row = bs.Row;
 var Col = bs.Col;
+var Input = bs.Input;
 
 var PatternsInterface = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
@@ -14,7 +15,8 @@ var PatternsInterface = React.createClass({
     return {
       error: null,
       patterns: [],
-      activePatternName: null
+      activePatternName: null,
+      newPatternName: ""
     };
   },
 
@@ -71,10 +73,26 @@ var PatternsInterface = React.createClass({
         }
       }
 
-      var patternChooser = <Nav stacked bsStyle='pills'
-                                activeKey={this.state.activePatternName}
-                                onSelect={this.patternClicked}>{items}</Nav>;
-      
+      var newPatternNameValidationState = "success";
+      var newPatternName = self.state.newPatternName;
+      if(!newPatternName)
+        newPatternName = "none";
+      else if(self.state.patterns.hasOwnProperty(newPatternName))
+        newPatternNameValidationState = "error";
+
+      var patternChooser = <div>
+        <Nav stacked bsStyle='pills'
+             activeKey={this.state.activePatternName}
+             onSelect={this.patternClicked}>{items}</Nav>
+        <hr/>
+        <Input type='text'
+               placeholder='Pattern Name'
+               help='Enter a name for a new pattern and press enter.'
+               valueLink={this.linkState('newPatternName')}
+               bsStyle={newPatternNameValidationState}
+               hasFeedback />
+        </div>;
+
       return <Row>
         <Col xs={3}>{patternChooser}</Col>
         <Col xs={7}></Col>
