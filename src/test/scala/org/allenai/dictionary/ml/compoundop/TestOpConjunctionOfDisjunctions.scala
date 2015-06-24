@@ -28,6 +28,11 @@ class TestOpConjunctionOfDisjunctions extends UnitSpec {
     List((3, 1), (4, 0), (5, 0))
   )
 
+  val add2 = EvaluatedOp.fromPairs(
+    AddToken(2, QWord("a3")),
+    List((3, 1), (4, 0), (5, 0))
+  )
+
   "OpConjunctionOfDisjunctions" should "calculate matches correctly" in {
     var op = OpConjunctionOfDisjunctions(suffix1).get.add(replace3)
     // Suffix1 AND replace3
@@ -42,7 +47,11 @@ class TestOpConjunctionOfDisjunctions extends UnitSpec {
     // Suffix1 AND (replace3 OR add3) AND (prefix21 OR prefix22)
     assertResult(List((1, 2), (2, 1), (3, 1), (4, 2)))(op.numEdits.toSeq.sorted)
 
-    assertResult(Set(suffix1.op, replace3.op, prefix21.op, prefix22.op, add3.op))(op.ops)
+    op = op.add(add2)
+    // Suffix1 AND (replace3 OR add3) AND (prefix21 OR prefix22) AND (add2)
+    assertResult(List((3, 2), (4, 2)))(op.numEdits.toSeq.sorted)
+
+    assertResult(Set(suffix1.op, replace3.op, prefix21.op, prefix22.op, add3.op, add2.op))(op.ops)
   }
 
   val replace11 = EvaluatedOp.fromPairs(

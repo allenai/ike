@@ -10,7 +10,7 @@ import nl.inl.blacklab.search.lucene.{ BLSpansWrapper, SpanQueryBase }
 import org.apache.lucene.search.spans.{ Spans, SpanQuery }
 
 /** Disjunction of SpanQueries that uses a capture group to mark whether 'firstSpan' created each
-  * returned Span or if one of the 'alternatives' Spans did. See SpansTrackingDisjunction.
+  * returned Span or if one of the 'alternatives' Spans did. See `SpansTrackingDisjunction`.
   */
 class SpanQueryTrackingDisjunction(
     firstSpan: SpanQuery,

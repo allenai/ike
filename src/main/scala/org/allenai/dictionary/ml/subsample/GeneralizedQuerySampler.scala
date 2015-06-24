@@ -1,62 +1,93 @@
 package org.allenai.dictionary.ml.subsample
 
-import nl.inl.blacklab.search.lucene.SpanQueryCaptureGroup
-import nl.inl.blacklab.search.sequences.SpanQuerySequence
-import nl.inl.blacklab.search.{ Hits, Searcher }
+import org.apache.lucene.search.spans.SpanQuery
+import nl.inl.blacklab.search.sequences.TextPatternSequence
+import nl.inl.blacklab.search._
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml._
-import org.apache.lucene.search.spans.SpanQuery
-
-import scala.collection.JavaConverters._
 
 object GeneralizedQuerySampler {
 
+  /** Builds a SpanQuery that matches the generalized version of `tokenizedQuery`. If `limitTo`
+    * is defined it contains (table, startDoc, startToken) and the returned query will only match
+    * rows from table and will only return Hits after startDoc and startToken
+    */
   def buildGeneralizedSpanQuery(
     tokenizedQuery: TokenizedQuery,
     searcher: Searcher,
     tables: Map[String, Table],
-    sampleSize: Int
+    posSampleSize: Int,
+    limitTo: Option[(Table, Int, Int)]
   ): SpanQuery = {
-    def buildSpanQuery(qexpr: QExpr): SpanQuery = {
-      searcher.createSpanQuery(
-        BlackLabSemantics.blackLabQuery(QueryLanguage.interpolateTables(qexpr, tables).get)
-      )
+    def toTextPattern(qexpr: QExpr): TextPattern = {
+      BlackLabSemantics.blackLabQuery(QueryLanguage.interpolateTables(qexpr, tables).get)
     }
     def phrase2QExpr(phrase: Seq[QWord]): QExpr = {
       if (phrase.size == 1) phrase.head else QSeq(phrase)
     }
     val generalizations = tokenizedQuery.generalizations.get
 
+    val oneCaptureGroup =
+      tokenizedQuery.tokenSequences.count(_.isInstanceOf[CapturedTokenSequence]) == 1
+
     // Build span queries for each query/generalization
     val generalizingSpanQueries = generalizations.zip(tokenizedQuery.getNamedTokens).map {
       case (GeneralizeToDisj(qpos, qsimiliar, _), (name, original)) =>
-        val originalSq = buildSpanQuery(original)
+        val originalSq = toTextPattern(original)
         // 'Flatten' the qSimQueries into individual QExpr, this gives us the chance to filter
         // out repeats and minimize nesting of Disjunction queries
         val qSimQueries = qsimiliar.flatMap { qsim =>
           phrase2QExpr(qsim.qwords) +: qsim.phrases.map(sp => phrase2QExpr(sp.qwords))
         }
-        val extensions = (qpos ++ qSimQueries).distinct.map(buildSpanQuery)
-        new SpanQueryTrackingDisjunction(originalSq, extensions, name)
+        val extensions = (qpos ++ qSimQueries).distinct.map(toTextPattern)
+        new TextPatternTrackingDisjunction(originalSq, extensions, name)
       // Currently we do not handle GeneralizeToAll
-      case (_, (name, original)) => buildSpanQuery(QNamed(original, name))
+      case (_, (name, original)) => toTextPattern(QNamed(original, name))
     }
 
     // Group the span queries into chunks and wrap the right chunks in capture groups
     var remaining = generalizingSpanQueries
-    var chunked = List[SpanQuery]()
+    var chunked = List[TextPattern]()
     tokenizedQuery.tokenSequences.foreach { ts =>
       val (chunk, rest) = remaining.splitAt(ts.size)
       remaining = rest
       val next = ts match {
         case CapturedTokenSequence(_, name, _) =>
-          Seq(new SpanQueryCaptureGroup(new SpanQuerySequence(chunk.asJava), name))
+          if (oneCaptureGroup && limitTo.isDefined) {
+            // In this case use TextPatternAnd to make sure this capture group must match tokens
+            // with in the given table
+            val filteredRows = Sampler.getFilteredRows(tokenizedQuery, limitTo.get._1)
+            val tableTextPattern = toTextPattern(QDisj(filteredRows.map(x => QSeq(x.head))))
+            Seq(new TextPatternCaptureGroup(new TextPatternAnd(
+              new TextPatternSequence(chunk: _*), tableTextPattern
+            ), name))
+          } else {
+            Seq(new TextPatternCaptureGroup(new TextPatternSequence(chunk: _*), name))
+          }
         case TokenSequence(_) => chunk
       }
       chunked = chunked ++ next
     }
-    require(remaining.isEmpty)
-    new SpanQuerySequence(chunked.asJava)
+    assert(remaining.isEmpty)
+    val spanQuery = searcher.createSpanQuery(new TextPatternSequence(chunked: _*))
+    limitTo match {
+      case Some((_, doc, token)) =>
+        if (oneCaptureGroup) {
+          // We already limited to the query by ANDing it when building `chunked`
+          new SpanQueryStartAt(spanQuery, doc, token)
+        } else {
+          // Otherwise we have to use the slower SpanQueryFilterByCaptureGroups
+          val captureGroups = tokenizedQuery.tokenSequences.flatMap {
+            case cts: CapturedTokenSequence => Some(cts.captureName)
+            case _ => None
+          }
+          val tableQexpr = Sampler.buildLabelledQuery(tokenizedQuery, limitTo.get._1)
+          val tableTextPattern = BlackLabSemantics.blackLabQuery(tableQexpr)
+          val tableSpanQuery = searcher.createSpanQuery(tableTextPattern)
+          new SpanQueryFilterByCaptureGroups(spanQuery, tableSpanQuery, captureGroups, doc, token)
+        }
+      case _ => spanQuery
+    }
   }
 }
 
@@ -64,6 +95,7 @@ object GeneralizedQuerySampler {
   * query.
   *
   * @param maxEdits maximum edits a sentence can be from the query to be returned
+  * @param posSampleSize number of Hits to sample when deciding what POS to generalize words to
   */
 case class GeneralizedQuerySampler(maxEdits: Int, posSampleSize: Int)
     extends Sampler() {
@@ -72,10 +104,10 @@ case class GeneralizedQuerySampler(maxEdits: Int, posSampleSize: Int)
   require(posSampleSize > 0)
 
   def buildGeneralizingQuery(tokenizedQuery: TokenizedQuery, searcher: Searcher,
-    tables: Map[String, Table]): SpanQuery = {
+    tables: Map[String, Table], limitTo: Option[(Table, Int, Int)]): SpanQuery = {
     val gs = GeneralizedQuerySampler.buildGeneralizedSpanQuery(
       tokenizedQuery,
-      searcher, tables, posSampleSize
+      searcher, tables, posSampleSize, limitTo
     )
     if (tokenizedQuery.size < maxEdits) {
       new SpanQueryMinimumValidCaptures(gs, maxEdits, tokenizedQuery.getNames)
@@ -86,7 +118,7 @@ case class GeneralizedQuerySampler(maxEdits: Int, posSampleSize: Int)
 
   override def getSample(qexpr: TokenizedQuery, searcher: Searcher,
     targetTable: Table, tables: Map[String, Table]): Hits = {
-    searcher.find(buildGeneralizingQuery(qexpr, searcher, tables))
+    searcher.find(buildGeneralizingQuery(qexpr, searcher, tables, None))
   }
 
   override def getLabelledSample(
@@ -97,10 +129,9 @@ case class GeneralizedQuerySampler(maxEdits: Int, posSampleSize: Int)
     startFromDoc: Int,
     startFromToken: Int
   ): Hits = {
-    val tableQuery = Sampler.buildLabelledQuery(qexpr.getGeneralizeQuery, targetTable)
-    val tableSpanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(tableQuery))
-    val qexprQuery = buildGeneralizingQuery(qexpr, searcher, tables)
-    searcher.find(new SpanQueryFilterByCaptureGroups(qexprQuery, tableSpanQuery,
-      targetTable.cols, startFromDoc, startFromToken))
+    val spanQuery = buildGeneralizingQuery(
+      qexpr, searcher, tables, Some((targetTable, startFromDoc, startFromToken))
+    )
+    searcher.find(spanQuery)
   }
 }

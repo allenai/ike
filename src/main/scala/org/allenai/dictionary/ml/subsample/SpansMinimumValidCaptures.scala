@@ -6,7 +6,7 @@ import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 
 /** Returns spans that have a minimum number of valid capture groups, where a valid capture
-  * group is one that is non-null and whose end is non-negative.
+  * group is one that is non-null and whose end is non-negative
   *
   * @param clause Spans to filter
   * @param requiredMatches Number of required matches

@@ -52,7 +52,7 @@ object QueryGeneralizer {
       "UH", "SYM", "POS", "PRP", "PDT", "EX", "MD", "LS"),
     Set("WRB", "WP$", "WDT", "WP"),
     Set("RBS", "RBR", "RP", "SYM", "RB", "IN", "CD", "MD")
-  ).map(_ + "FW")
+  )
 
   private def getWordPosTags(
     qexpr: QExpr,
@@ -62,7 +62,7 @@ object QueryGeneralizer {
     val posTags = searchers.flatMap { searcher =>
       val hits = searcher.find(BlackLabSemantics.blackLabQuery(qexpr)).window(0, sampleSize)
       hits.setContextSize(0)
-      hits.setContextField(List("pos").asJava)
+      hits.setForwardIndexConcordanceParameters(null, null, List("pos").asJava)
       hits.asScala.map { hit =>
         val kwic = hits.getKwic(hit)
         val pos = kwic.getTokens("pos").get(0)
@@ -119,8 +119,11 @@ object QueryGeneralizer {
                 Some((pos, phrase))
               case _ => None
             }
-            val (allPos, allPhrase) = candidates
-              .reduce((g1, g2) => (g1._1 ++ g2._1, g1._2 ++ g2._2))
+            val (allPos, allPhrase) = if (candidates.nonEmpty) {
+              candidates.reduce((g1, g2) => (g1._1 ++ g2._1, g1._2 ++ g2._2))
+            } else {
+              (Seq(), Seq())
+            }
             val existingPos = qexprs.flatMap {
               case qp: QPos => Some(qp)
               case _ => None

@@ -63,11 +63,20 @@ case class GeneralizingOpGenerator(
           case (qm, index) => qm.didMatch
         }.map { case (qm, index) => (index, 1) }: _*
       )
-      posMap.toMap.map {
+      posMap.toMap.flatMap {
         case (k, v) =>
           val qOp: QueryOp = AddToken(slot.token, k)
-          val newMap = IntMap(v.reverse: _*) ++ alreadyMatches
-          (qOp, newMap)
+          // No point in using an AddToken op that does not introduce new positive Hits
+          val addsAnyPositive = v.exists {
+            case (sentenceIndex, required) =>
+              examples(sentenceIndex).label == Positive && required == 1
+          }
+          if (addsAnyPositive) {
+            val newMap = IntMap(v.reverse: _*) ++ alreadyMatches
+            Some((qOp, newMap))
+          } else {
+            None
+          }
       }
     }
 

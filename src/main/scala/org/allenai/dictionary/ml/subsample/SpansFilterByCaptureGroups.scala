@@ -7,7 +7,7 @@ import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 
 /** Filters hits from a BLSpans that do not return capture groups that would also be
   * returned by another BLSpans. In other words it is a AND operation between the capture groups
-  * of two queries. Note, however, the Spans and capture group from the `filter` Spans will not be
+  * of two queries. Note, however, the Spans and capture groups from the `filter` Spans will not be
   * returned.
   *
   * @param query the Spans to return
