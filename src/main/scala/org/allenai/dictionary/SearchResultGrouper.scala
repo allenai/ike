@@ -1,10 +1,13 @@
 package org.allenai.dictionary
 
-object SearchResultGrouper {
+import org.allenai.common.{ Timing, Logging }
+
+object SearchResultGrouper extends Logging {
   def targetTable(req: SearchRequest): Option[Table] = for {
     target <- req.target
     table <- req.tables.get(target)
   } yield table
+
   /** Attempts to map the capture group names in the result to the target table's column names
     * in the request. If unable to do so, returns the result unchanged.
     */
@@ -26,41 +29,73 @@ object SearchResultGrouper {
     val newGroups = updatedGroups.getOrElse(groups)
     result.copy(captureGroups = newGroups)
   }
-  /** Constructs the string key used to join multiple result objects.
+
+  /** Tokenized results for a single column, for example ["information", "extraction"]
     */
-  def keyString(kr: KeyedBlackLabResult): Seq[String] = for {
-    interval <- kr.keys
-    wordData = kr.result.wordData.slice(interval.start, interval.end)
-    words = wordData.map(_.word.toLowerCase.trim)
-    value = words mkString " "
-  } yield value
+  type Phrase = Seq[String]
+
   def keyResult(req: SearchRequest, result: BlackLabResult): KeyedBlackLabResult = {
     val groups = result.captureGroups
-    val groupNames = groups.keys
     val columns = targetTable(req) match {
       case Some(table) => table.cols
       case None => throw new IllegalArgumentException(s"No target table found")
     }
     val intervals = for {
       col <- columns
-      interval = groups.get(col) match {
-        case Some(interval) => interval
-        case None => throw new IllegalArgumentException(s"Could not find column $col in results")
-      }
-    } yield interval
+    } yield groups.getOrElse(
+      col,
+      throw new IllegalArgumentException(s"Could not find column $col in results")
+    )
     KeyedBlackLabResult(intervals, result)
   }
+
   def createGroups(
     req: SearchRequest,
     keyed: Iterable[KeyedBlackLabResult]
   ): Seq[GroupedBlackLabResult] = {
-    val grouped = keyed groupBy keyString map {
-      case (keyString, group) =>
-        val groupSubset = group.take(req.config.evidenceLimit)
-        GroupedBlackLabResult(keyString, group.size, groupSubset)
+    def keyString(kr: KeyedBlackLabResult): Seq[Phrase] = kr.keys.map { interval =>
+      kr.result.wordData.slice(interval.start, interval.end).map(_.word.toLowerCase.trim)
     }
-    grouped.toSeq
+    val grouped = keyed groupBy keyString
+
+    /** Checks if subsetKey is a subset of supersetKey.
+      *
+      * ["sky", "blue and white"] is a subset of
+      * ["big sky", "blue and white during the day"]. A key is always a subset of
+      * itself. Column order matters, so ["a", "b"] is not a subset of
+      * ["b", "a"].
+      */
+    def isSubset(subsetKey: Seq[Phrase], supersetKey: Seq[Phrase]): Boolean = {
+      require(subsetKey.length == supersetKey.length)
+      (subsetKey zip supersetKey).forall {
+        case (subsetColumn, supersetColumn) =>
+          supersetColumn.containsSlice(subsetColumn)
+      }
+    }
+
+    Timing.timeThen {
+      grouped.map {
+        case (keyString, group) =>
+          val keys = keyString.map(_.mkString(" "))
+          val groupSubset = group.take(req.config.evidenceLimit)
+          val relevanceScore = grouped.map {
+            case (innerKeyString, innerGroup) =>
+              if (isSubset(innerKeyString, keyString)) innerGroup.size else 0
+          }.sum
+
+          GroupedBlackLabResult(
+            keys,
+            group.size,
+            relevanceScore,
+            groupSubset
+          )
+      }.toSeq
+    } { duration =>
+      val seconds = duration.toSeconds
+      if (seconds > 1) logger.info(s"Scoring results took ${seconds}s")
+    }
   }
+
   /** Groups the given results. The groups are keyed using the match groups corresponding to the
     * target table's columns.
     */
@@ -69,6 +104,7 @@ object SearchResultGrouper {
     val keyed = withColumnNames.map(keyResult(req, _))
     createGroups(req, keyed)
   }
+
   /** Groups each result into its own group. Useful when there is no target dictionary defined.
     */
   def identityGroupResults(

@@ -8,7 +8,7 @@ object JsonSerialization {
   implicit val wordDataFormat = jsonFormat2(WordData.apply)
   implicit val blackLabResultFormat = jsonFormat4(BlackLabResult.apply)
   implicit val keyedBlackLabResultFormat = jsonFormat2(KeyedBlackLabResult.apply)
-  implicit val groupedBlackLabResultFormat = jsonFormat3(GroupedBlackLabResult.apply)
+  implicit val groupedBlackLabResultFormat = jsonFormat4(GroupedBlackLabResult.apply)
   implicit val qwordFormat = jsonFormat1(QWord.apply)
   implicit val tableValueFormat = jsonFormat1(TableValue.apply)
   implicit val tableRowForamt = jsonFormat2(TableRow.apply)
