@@ -10,10 +10,13 @@ var TableManager = require('../../managers/TableManager.js');
 var TableAdder = React.createClass({
   componentDidMount: function() {
     var callback = function() {
-      if(TableManager.userEmail()) {
-        this.setState({error: null});
-      } else {
-        this.setState({error: "You must be logged in to create tables."});
+      // Since this is a callback, the component could have been unmounted in the meantime.
+      if(this.isMounted()) {
+        if (TableManager.userEmail()) {
+          this.setState({error: null});
+        } else {
+          this.setState({error: "You must be logged in to create tables."});
+        }
       }
     }.bind(this)
 

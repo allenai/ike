@@ -29,30 +29,32 @@ var PatternsInterface = React.createClass({
       uri: '/api/patterns',
       method: 'GET'
     }, function(err, resp, body) {
-      if(resp.statusCode == 200) {
-        // set patterns
-        var patternsObjects = JSON.parse(body);
-        var patterns = {};
-        patternsObjects.forEach(function(patternObject) {
-          patterns[patternObject.name] = patternObject.pattern;
-        });
+      if (self.isMounted()) {
+        if (resp.statusCode == 200) {
+          // set patterns
+          var patternsObjects = JSON.parse(body);
+          var patterns = {};
+          patternsObjects.forEach(function (patternObject) {
+            patterns[patternObject.name] = patternObject.pattern;
+          });
 
-        // set active pattern name
-        var activePatternName = self.state.activePatternName;
-        if(activePatternName && !patterns.hasOwnProperty(activePatternName))
-          activePatternName = null;
+          // set active pattern name
+          var activePatternName = self.state.activePatternName;
+          if (activePatternName && !patterns.hasOwnProperty(activePatternName))
+            activePatternName = null;
 
-        if(!activePatternName)
-          activePatternName = patternsObjects.length > 0 ? patternsObjects[0].name : null;
+          if (!activePatternName)
+            activePatternName = patternsObjects.length > 0 ? patternsObjects[0].name : null;
 
-        self.setState({
-          patterns: patterns,
-          activePatternName: activePatternName,
-          error: null
-        });
-      } else {
-        self.setState({error: resp.body + " (" + resp.statusCode + ")"});
-        console.log(resp);
+          self.setState({
+            patterns: patterns,
+            activePatternName: activePatternName,
+            error: null
+          });
+        } else {
+          self.setState({error: resp.body + " (" + resp.statusCode + ")"});
+          console.log(resp);
+        }
       }
     });
   },
