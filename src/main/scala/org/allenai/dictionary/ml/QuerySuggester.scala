@@ -439,8 +439,9 @@ object QuerySuggester extends Logging {
 
     val totalPositiveHits = hitAnalysis.examples.count(x => x.label == Positive)
     val totalNegativeHits = hitAnalysis.examples.count(x => x.label == Negative)
-    logger.info(s"Found $totalPositiveHits positive " +
-      s"and $totalNegativeHits negative with ${hitAnalysis.operatorHits.size} possible operators")
+    val totalUnlabelledHits = hitAnalysis.examples.count(x => x.label == Unlabelled)
+    logger.info(s"Found $totalPositiveHits positive, $totalNegativeHits negative, and " +
+      s"$totalUnlabelledHits unlabelled with ${hitAnalysis.operatorHits.size} possible operators")
 
     // Now select the CompoundOps we want to suggest
     val restrictDisjunctionTo = tokenizedQuery.getAnnotatedSeq.flatMap { qsd =>
