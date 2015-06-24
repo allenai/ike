@@ -119,8 +119,11 @@ object QueryGeneralizer {
                 Some((pos, phrase))
               case _ => None
             }
-            val (allPos, allPhrase) = candidates
-              .reduce((g1, g2) => (g1._1 ++ g2._1, g1._2 ++ g2._2))
+            val (allPos, allPhrase) = if (candidates.nonEmpty) {
+              candidates.reduce((g1, g2) => (g1._1 ++ g2._1, g1._2 ++ g2._2))
+            } else {
+              (Seq(), Seq())
+            }
             val existingPos = qexprs.flatMap {
               case qp: QPos => Some(qp)
               case _ => None
