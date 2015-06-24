@@ -25,6 +25,7 @@ var SearchForm = React.createClass({
              </Input>
            </Col>
   },
+
   render: function() {
     var handleSubmit = this.props.handleSubmit;
     var target = this.props.target;

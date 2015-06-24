@@ -74,7 +74,7 @@ var SearchInterface = React.createClass({
     results.value.groups = response.groups;
     this.props.results.value.errorMessage = null;
     results.requestChange(results.value);
-    this.refs.searchResults.pageTo(0)
+    this.refs.searchResults.pageTo(0);
     this.setState({qexpr: response.qexpr});
   },
   searchFailure: function(message) {
