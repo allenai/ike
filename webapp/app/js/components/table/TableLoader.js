@@ -169,9 +169,9 @@ var TableLoader = React.createClass({
     var alert = <Alert bsStyle="danger">{this.state.error}</Alert>
     var submitButton = this.submitButton();
     if(this.state.error.length == 0)
-      return <div>{nameInput}{fileUpload}{submitButton}</div>
+      return <div>{nameInput} {fileUpload} {submitButton}</div>
     else
-      return <div>{nameInput}{fileUpload}{alert}{submitButton}</div>
+      return <div>{nameInput} {fileUpload} {alert} {submitButton}</div>
   }
 });
 module.exports = TableLoader;

@@ -83,7 +83,7 @@ var TableAdder = React.createClass({
       onAdd={this.addCol}
       onRemove={this.removeCol}
       value={this.state.cols}/>;
-    return <div key="columnList">{label}{list}</div>;
+    return <div key="columnList">{label} {list}</div>;
   },
   submitButton: function() {
     return <Input
