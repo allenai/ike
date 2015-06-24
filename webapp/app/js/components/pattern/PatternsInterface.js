@@ -78,7 +78,8 @@ var PatternsInterface = React.createClass({
     return result;
   },
 
-  createPattern: function() {
+  createPattern: function(e) {
+    e.preventDefault();
     if(this.newPatternNameValidationState() === "success") {
       var patterns = this.state.patterns;
       patterns[this.state.newPatternName] = "";
