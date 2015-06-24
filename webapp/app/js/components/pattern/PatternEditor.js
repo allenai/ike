@@ -21,6 +21,10 @@ var PatternEditor = React.createClass({
     };
   },
 
+  componentWillReceiveProps: function(newProps) {
+    this.setState({query: newProps.initialQuery});
+  },
+
   selectedCorpora: function() {
     return this.props.corpora.value.filter(function(corpus) {
       return corpus.selected;
