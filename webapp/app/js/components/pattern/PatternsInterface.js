@@ -12,6 +12,10 @@ var PatternEditor = require('./PatternEditor.js');
 var PatternsInterface = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
 
+  propTypes: {
+    corpora: React.PropTypes.object.isRequired,
+  },
+
   getInitialState: function() {
     return {
       error: null,
@@ -119,12 +123,16 @@ var PatternsInterface = React.createClass({
         </form>
         </div>;
 
-      var activeQuery = this.state.patterns[this.state.activePatternName];
-      var patternEditor = <PatternEditor initialQuery={activeQuery}/>
-
+      var patternEditor = <div/>;
+      if(this.state.activePatternName) {
+        var activeQuery = this.state.patterns[this.state.activePatternName];
+        patternEditor = <PatternEditor patternName={this.state.activePatternName}
+                                       initialQuery={activeQuery}
+                                       corpora={this.props.corpora}/>;
+      }
       return <Row>
-        <Col xs={3}>{patternChooser}</Col>
-        <Col xs={9}>{patternEditor}</Col>
+        <Col md={2}>{patternChooser}</Col>
+        <Col md={10}>{patternEditor}</Col>
       </Row>;
     }
   }
