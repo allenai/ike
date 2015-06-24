@@ -66,7 +66,8 @@ class TestQueryLanguage extends UnitSpec {
     }
     check("a b[1,2] (c d)* e")
     check("a {d,e}* e")
-    assert(QueryLanguage.getQueryString(QStar(QSeq(Seq(QWord("a"), QWord("b")))))
-      == "(?:a b)*")
+    check("((?:NP PP)*)")
+    assert(QueryLanguage.getQueryString(QStar(QSeq(Seq(QWord("a"), QWord("b"))))) == "(?:a b)*")
+
   }
 }
