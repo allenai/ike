@@ -119,7 +119,7 @@ var DictApp = React.createClass({
     );
   },
   onSignIn: function(authResult) {
-    var self = this
+    var self = this;
     if (authResult['status']['signed_in']) {
       gapi.client.load('plus','v1', function() {
         var request = gapi.client.plus.people.get({ userId: "me" });
