@@ -75,7 +75,6 @@ var SuggestQueryButton = React.createClass({
     // only be changed in a different tab, so we will be re-rendered and hence reset anyway
     var uri = this.props.makeUri('suggestQuery');
     var suggestingFor = {query: queryValue, uri: uri};
-    console.log(JSON.stringify(suggestingFor))
     if (this.state.suggestionsFor != null &&
       (suggestingFor.query == this.state.suggestionsFor.query &&
       suggestingFor.uri == this.state.suggestionsFor.uri)) {
