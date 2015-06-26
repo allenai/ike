@@ -34,7 +34,7 @@ var SuggestQueryButton = React.createClass({
   },
 
   tableChanged: function(table) {
-    // So the suggestions will be refreshed if a table is updated or corpra added
+    // So the suggestions will be refreshed if a table is updated
     this.setState({suggestionsFor: null})
   },
 
@@ -48,7 +48,7 @@ var SuggestQueryButton = React.createClass({
         sampleSize: suggestions.samplePercent
       })
     } else {
-      console.log("Server error: " + resp.body)
+      console.log("Suggest query server error: " + resp.body)
       this.setState({error: 'Server Error'});
     }
   },
