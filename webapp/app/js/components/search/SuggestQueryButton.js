@@ -70,17 +70,6 @@ var SuggestQueryButton = React.createClass({
       return;
     }
 
-    // We store the URI so we refresh if new corpra are added
-    // Note we currently don't worry about the configuration changing since the config settings can
-    // only be changed in a different tab, so we will be re-rendered and hence reset anyway
-    var uri = this.props.makeUri('suggestQuery');
-    var suggestingFor = {query: queryValue, uri: uri};
-    if (this.state.suggestionsFor != null &&
-      (suggestingFor.query == this.state.suggestionsFor.query &&
-      suggestingFor.uri == this.state.suggestionsFor.uri)) {
-      return;
-    }
-
     var config = this.props.config.value.ml
     if (this.props.narrow) {
       var scoring = {
@@ -103,6 +92,13 @@ var SuggestQueryButton = React.createClass({
       pWeight: scoring.p,
       nWeight: scoring.n,
       uWeight: scoring.u
+    }
+
+    // We store the URI so we refresh if new corpra are added
+    var uri = this.props.makeUri('suggestQuery');
+    var suggestingFor = {query: queryValue, uri: uri, config: requestConfig, target: targetValue};
+    if (JSON.stringify(this.state.suggestionsFor) == JSON.stringify(suggestingFor)) {
+      return;
     }
 
     var tables = TableManager.getTables()
