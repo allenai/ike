@@ -15,6 +15,14 @@ var Col = bs.Col;
 var Glyphicon = bs.Glyphicon;
 var SearchInterface = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
+  propTypes: {
+    authenticated: React.PropTypes.bool.isRequired,
+    config: React.PropTypes.object.isRequired,
+    corpora: React.PropTypes.object.isRequired,
+    results: React.PropTypes.object.isRequired,
+    target: React.PropTypes.object.isRequired,
+    toggleCorpora: React.PropTypes.func.isRequired
+  },
   getInitialState: function() {
     return {
       query: null,
@@ -149,13 +157,14 @@ var SearchInterface = React.createClass({
     var qexpr = this.linkStateCallback('qexpr');
     var form = 
       <SearchForm
-        handleSubmit={handleSubmit}
-        target={target}
+        authenticated={this.props.authenticated}
         config={config}
-        query={query}
         corpora={corpora}
-        toggleCorpora={toggleCorpora}
-        makeUri={makeUri}/>;
+        handleSubmit={handleSubmit}
+        makeUri={makeUri}
+        query={query}
+        target={target}
+        toggleCorpora={toggleCorpora}/>;
     var queryViewer =
       <QueryViewer
         target={target}

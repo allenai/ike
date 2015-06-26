@@ -1,26 +1,31 @@
 var React = require('react/addons');
 var bs = require('react-bootstrap');
-var PageHeader = bs.PageHeader;
-var TabbedArea = bs.TabbedArea;
-var TabPane = bs.TabPane;
-var DropdownButton = bs.DropdownButton;
-var MenuItem = bs.MenuItem;
-var TableManager = require('./managers/TableManager.js');
 var SearchInterface = require('./components/search/SearchInterface.js');
 var TablesInterface = require('./components/table/TablesInterface.js');
+var TableManager = require('./managers/TableManager.js');
 var PatternsInterface = require('./components/pattern/PatternsInterface.js');
 var ConfigInterface = require('./components/config/ConfigInterface.js');
 var HelpInterface = require('./components/help/HelpInterface.js');
 var xhr = require('xhr');
 var Router = require('react-router');
 var { Route, DefaultRoute, Redirect, RouteHandler, Link } = Router;
+const Header = require('./components/Header.js');
+const AuthStore = require('./stores/AuthStore.js');
+const assign = require('object-assign');
 
 var DictApp = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
   contextTypes: {
     router: React.PropTypes.func
   },
-  componentDidMount: function() {
+
+  componentWillUnmount() {
+    AuthStore.removeChangeListener(this.onAuthChange);
+  },
+
+  componentDidMount() {
+    AuthStore.addChangeListener(this.onAuthChange);
+
     TableManager.addChangeListener(function(tables) {
       var target = this.linkState('target');
       this.setState({tables: tables});
@@ -33,7 +38,7 @@ var DictApp = React.createClass({
         }
       }
     }.bind(this));
-    TableManager.setUserEmail(localStorage["userEmail"]);
+    TableManager.setUserEmail(AuthStore.getUserEmail());
 
     // Get the corpora via API request
     xhr({
@@ -50,8 +55,10 @@ var DictApp = React.createClass({
       this.setState({corpora: corpora});
     }.bind(this));
   },
-  getInitialState: function() {
+
+  getInitialState() {
     return {
+      authenticated: AuthStore.authenticated(),
       corpora: [],
       config: {
         limit: 1000,
@@ -78,13 +85,29 @@ var DictApp = React.createClass({
         request: null,
         errorMessage: null
       },
-      userEmail: localStorage["userEmail"],
-      userImageUrl: localStorage["userImageUrl"],
       tables: [],
       target: null
     };
   },
-  renderContent: function() {
+
+  onAuthChange() {
+    let newState = { authenticated: AuthStore.authenticated() };
+    if (!AuthStore.authenticated()) {
+      assign(newState, { target: null });
+    }
+    this.setState(newState);
+    TableManager.setUserEmail(AuthStore.getUserEmail());
+  },
+
+  toggleCorpora(i) {
+    return function(e) {
+      var corpora = this.state.corpora.slice();
+      corpora[i].selected = e.target.checked;
+      this.setState({corpora: corpora});
+    }.bind(this);
+  },
+
+  renderContent() {
     var target = this.linkState('target');
     var results = this.linkState('results');
     var patterns = this.linkState('patterns');
@@ -96,110 +119,31 @@ var DictApp = React.createClass({
     var patternsClass = (router.isActive('patterns')) ? 'active' : null;
     var configClass = (router.isActive('config')) ? 'active' : null;
     var helpClass = (router.isActive('help')) ? 'active' : null;
-    var userEmail = this.state.userEmail;
     return (
       <div>
         <nav className="nav nav-tabs">
           <li className={searchClass}><Link to="search">Search</Link></li>
-          <li className={tablesClass}><Link to="tables">Tables</Link></li>
+          {(this.state.authenticated) ? <li className={tablesClass}><Link to="tables">Tables</Link></li> : null}
           <li className={patternsClass}><Link to="patterns">Patterns</Link></li>
           <li className={configClass}><Link to="config">Config</Link></li>
           <li className={helpClass}><Link to="help">Help</Link></li>
         </nav>
         <div className="container-fluid">
           <RouteHandler
+            authenticated={this.state.authenticated}
             config={config} 
             corpora={corpora}
             results={results} 
             target={target}
-            toggleCorpora={this.toggleCorpora}
-            userEmail={userEmail}/>
+            toggleCorpora={this.toggleCorpora}/>
         </div>
       </div>
     );
   },
-  onSignIn: function(authResult) {
-    var self = this;
-    if (authResult['status']['signed_in']) {
-      gapi.client.load('plus','v1', function() {
-        var request = gapi.client.plus.people.get({ userId: "me" });
-        request.execute(function(resp) {
-          var userEmail = resp.emails[0].value;
-          self.setState({
-            userEmail: userEmail,
-            userImageUrl: resp.image.url
-          });
-          TableManager.setUserEmail(userEmail);
-          localStorage["userEmail"] = userEmail;
-          localStorage["userImageUrl"] = resp.image.url;
-        });
-      });
-    } else {
-      self.setState({
-        userEmail: null,
-        userImageUrl: null
-      });
-      TableManager.setUserEmail(null);
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("userImageUrl");
-    }
-  },
-  signIn: function() {
-    var additionalParams = {
-      scope: "email",
-      callback: this.onSignIn,
-      cookiepolicy: "single_host_origin",
-      clientid: "793503486502-8q1pf7shj3jq7ak2q8ib1ca5hlufdfv7.apps.googleusercontent.com"
-    };
-    gapi.auth.signIn(additionalParams);
-  },
-  signOut: function() {
-    gapi.auth.signOut();
-    this.setState({
-      userEmail: null,
-      userImageUrl: null
-    });
-    TableManager.setUserEmail(null);
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("userImageUrl");
-  },
-  toggleCorpora: function(i) {
-    return function(e) {
-      var corpora = this.state.corpora.slice();
-      corpora[i].selected = e.target.checked;
-      this.setState({corpora: corpora});
-    }.bind(this);
-  },
-  renderHeader: function() {
-    window.onSignIn = this.onSignIn;
-    var userImage = this.state.userEmail ? this.state.userEmail : "Please sign in!";
-    userImage = [userImage + " "];
-    userImage.push(
-      <img
-        src={this.state.userImageUrl ? this.state.userImageUrl : "/assets/blank_user.png"}
-        key="userImage"
-        width="24"
-        height="24"/>);
-    var authMenuOption =
-      this.state.userEmail ?
-        <MenuItem key="signOut" onSelect={this.signOut}>{"Sign out"}</MenuItem> :
-        <MenuItem key="signIn" onSelect={this.signIn}>{"Sign in"}</MenuItem>;
 
-    var authButtons =
-      <DropdownButton title={userImage} pullRight>
-        {authMenuOption}
-      </DropdownButton>;
-
-    return (<header>
-      <a href="/"><img src="/assets/logo.png" width="64"/></a>
-      <em>&ldquo;The Pacific Northwest&#39;s Cutest Extraction Tool&rdquo;</em>
-      <div className="pull-right">{authButtons}</div>
-    </header>);
-  },
-  render: function() {
+  render() {
     var content = this.renderContent();
-    var header = this.renderHeader();
-    return <div>{header} {content}</div>;
+    return <div><Header authenticated={this.state.authenticated}/>{content}</div>;
   }
 });
 
