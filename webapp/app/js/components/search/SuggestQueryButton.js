@@ -25,6 +25,19 @@ var SuggestQueryButton = React.createClass({
     };
   },
 
+  componentDidMount: function() {
+    TableManager.addChangeListener(this.tableChanged)
+  },
+
+  componentWillUnmount: function(){
+    TableManager.removeChangeListener(this.tableChanged)
+  },
+
+  tableChanged: function(table) {
+    // So the suggestions will be refreshed if a table is updated or corpra added
+    this.setState({suggestionsFor: null})
+  },
+
   suggestQueryCallBack: function(err, resp, body) {
     this.setState({waiting: false})
     if (resp.statusCode == 200) {
@@ -57,11 +70,17 @@ var SuggestQueryButton = React.createClass({
       return;
     }
 
-    if (queryValue == this.state.suggestionsFor) {
+    // We store the URI so we refresh if new corpra are added
+    // Note we currently don't worry about the configuration changing since the config settings can
+    // only be changed in a different tab, so we will be re-rendered and hence reset anyway
+    var uri = this.props.makeUri('suggestQuery');
+    var suggestingFor = {query: queryValue, uri: uri};
+    console.log(JSON.stringify(suggestingFor))
+    if (this.state.suggestionsFor != null &&
+      (suggestingFor.query == this.state.suggestionsFor.query &&
+      suggestingFor.uri == this.state.suggestionsFor.uri)) {
       return;
     }
-
-    this.setState({error: null, suggestionsFor: queryValue});
 
     var config = this.props.config.value.ml
     if (this.props.narrow) {
@@ -88,7 +107,6 @@ var SuggestQueryButton = React.createClass({
     }
 
     var tables = TableManager.getTables()
-    var uri = this.props.makeUri('suggestQuery');
     var requestData = {
       body: JSON.stringify({
         query: queryValue,
@@ -101,13 +119,14 @@ var SuggestQueryButton = React.createClass({
       method: 'POST',
       headers: {'Content-Type': 'application/json'}
     };
-    this.setState({waiting: true})
+    this.setState({error: null, suggestionsFor: suggestingFor, waiting: true});
     var request = xhr(requestData, this.suggestQueryCallBack);
   },
 
-  buildTableRow: function(scoredQuery) {
+  buildTableRow: function(scoredQuery, key) {
 
     var clicked = function clicked(event, target, href) {
+      // Stop the click reaching the <div> around the dropdown
       event.stopPropagation();
       this.props.query.requestChange(scoredQuery.query);
       this.props.submitQuery(event);
@@ -115,7 +134,7 @@ var SuggestQueryButton = React.createClass({
     }.bind(this);
 
     return (
-      <tr className="queryRow" onClick={clicked} target={scoredQuery.query}>
+      <tr className="queryRow" onClick={clicked} target={scoredQuery.query} key={key}>
         <td className="queryCell">{scoredQuery.query}</td>
         <td className="queryCell queryStat">
           {scoredQuery.positiveScore.toFixed(0)}</td>
@@ -130,11 +149,6 @@ var SuggestQueryButton = React.createClass({
   },
 
   render: function() {
-    var rows = []
-    for (var i = 0; i < this.state.suggestions.length; i++) {
-        rows.push(this.buildTableRow(this.state.suggestions[i]))
-    }
-
     var title;
     if (this.props.narrow) {
       title = "Narrow";
@@ -144,7 +158,6 @@ var SuggestQueryButton = React.createClass({
 
     var instanceToShow;
     if (this.state.waiting) {
-
       instanceToShow =
         <div style={{height: "35px"}}>
           <Loader scale={0.70}/>
@@ -153,6 +166,11 @@ var SuggestQueryButton = React.createClass({
       instanceToShow = (<div style={{textAlign: 'center', fontStyle: 'italic'}}>
         {"(" + this.state.error + ")"}</div>)
     } else {
+      var rows = []
+      for (var i = 0; i < this.state.suggestions.length; i++) {
+          rows.push(this.buildTableRow(this.state.suggestions[i], i))
+      }
+
       instanceToShow =
         <Table
          condensed
