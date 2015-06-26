@@ -8,7 +8,7 @@ var ModalTrigger = bs.ModalTrigger;
 var Glyphicon = bs.Glyphicon;
 var Corpora = require('../corpora/Corpora.js');
 var TargetSelector = require('./TargetSelector.js');
-var SuggestQueryButton = require('./SuggestQueryButton.js');
+var SuggestQueryButtonGroup = require('./SuggestQueryButtonGroup.js');
 var SearchForm = React.createClass({
   selectedCorpora: function() {
     return this.props.corpora.value.filter(function(corpus) {
@@ -70,18 +70,20 @@ var SearchForm = React.createClass({
             {this.getQueryTextInterface(10, query)}
           </Row>
     } else {
+      var disabled = this.selectedCorpora().length == 0
       var queryForm =
           <Row>
             <Col xs={2}>{selector}</Col>
             {this.getQueryTextInterface(7, query)}
             <Col xs={3}>
-              <SuggestQueryButton
+              <SuggestQueryButtonGroup
                 config={config}
                 target={target}
                 query={query}
                 makeUri={makeUri}
-                disabled={this.selectedCorpora().length == 0}
-              ></SuggestQueryButton>
+                submitQuery={handleSubmit}
+                disabled={disabled}
+              />
             </Col>
           </Row>
     }
