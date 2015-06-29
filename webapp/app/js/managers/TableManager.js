@@ -77,8 +77,6 @@ var TableManager = {
   },
   deleteTable: function(tableName) {
     if(!userEmail) throw "You have to sign in before deleting tables.";
-    var posRows = this.getRows(tableName, "positive");
-    var negRows = this.getRows(tableName, "negative");
     if (this.hasTable(tableName)) {
       delete tables[tableName];
       this.updateListeners();
@@ -227,6 +225,6 @@ var TableManager = {
         console.log("Unexpected response requesting tables: " + response)
       }
     });
-  },
+  }
 };
 module.exports = TableManager;

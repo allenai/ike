@@ -41,6 +41,7 @@ var SearchInterface = React.createClass({
       target: this.props.target.value
     };
   },
+
   makeUri: function(endpoint) {
     var uri = '/api/' + endpoint + '?corpora=';
     var selectedCorpora = this.props.corpora.value.filter(function(corpus) {
@@ -56,6 +57,7 @@ var SearchInterface = React.createClass({
     });
     return uri;
   },
+
   makeRequestData: function(queryValue) {
     var query = this.makeQuery(queryValue);
     var uri = this.makeUri('groupedSearch');
@@ -66,6 +68,7 @@ var SearchInterface = React.createClass({
       headers: {'Content-Type': 'application/json'}
     };
   },
+
   searchCallback: function(err, resp, body) {
     var results = this.props.results;
     results.value.pending = false;
@@ -77,6 +80,7 @@ var SearchInterface = React.createClass({
       this.searchFailure(resp.body);
     }
   },
+
   searchSuccess: function(response) {
     var results = this.props.results;
     results.value.groups = response.groups;
@@ -85,15 +89,18 @@ var SearchInterface = React.createClass({
     this.refs.searchResults.pageTo(0);
     this.setState({qexpr: response.qexpr});
   },
+
   searchFailure: function(message) {
     var results = this.props.results;
     results.value.errorMessage = message;
     results.requestChange(results.value);
   },
+
   hasPendingRequest: function() {
     var results = this.props.results.value;
     return results.pending;
   },
+
   cancelRequest: function() {
     var results = this.props.results;
     results.value.request.abort();
@@ -101,17 +108,21 @@ var SearchInterface = React.createClass({
     results.value.pending = false;
     results.requestChange(results.value);
   },
+
   clearGroups: function() {
     var results = this.props.results;
     results.value.groups = [];
     results.requestChange(results.value);
   },
+
   clearQuery: function() {
     this.setState({query: ''});
   },
+
   clearQueryViewer: function(callback) {
     this.setState({qexpr: null}, callback);
   },
+
   search: function() {
     if (this.hasPendingRequest()) {
       this.cancelRequest();
@@ -130,10 +141,12 @@ var SearchInterface = React.createClass({
     results.value.pending = true;
     results.requestChange(results.value);
   },
+
   handleSubmit: function(e) {
     e.preventDefault();
     this.clearQueryViewer(this.search);
   },
+
   linkStateCallback: function(name) {
     return {
       value: this.state[name],
@@ -144,6 +157,7 @@ var SearchInterface = React.createClass({
       }.bind(this)
     };
   },
+
   render: function() {
     var query = this.linkState('query');
     var target = this.props.target;

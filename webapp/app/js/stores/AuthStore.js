@@ -93,7 +93,6 @@ const AuthStore = assign({}, EventEmitter.prototype, {
   removeChangeListener: function(callback) {
     this.removeListener(CHANGE_EVENT, callback);
   }
-
 });
 
 AuthStore.Mixin = {
