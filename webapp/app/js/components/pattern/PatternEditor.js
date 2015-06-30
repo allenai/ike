@@ -42,19 +42,8 @@ var PatternEditor = React.createClass({
       config={this.props.config}
       target={null}
       queryLink={this.linkState('query')}
-      showQueryViewer={false} />;
-
-    /*
-    return <div>
-      <Input type="text"
-             placeholder="Enter Query"
-             label="Query"
-             valueLink={this.linkState('query')}
-             disabled={this.selectedCorpora().length == 0}
-             buttonAfter={saveButton} />
-
-    </div>
-    */
+      showQueryViewer={false}
+      buttonAfterQuery={saveButton} />;
   }
 });
 

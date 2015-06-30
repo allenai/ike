@@ -16,7 +16,8 @@ var SearchForm = React.createClass({
     handleSubmit: React.PropTypes.func.isRequired,
     makeUri: React.PropTypes.func.isRequired,
     query: React.PropTypes.object.isRequired,
-    target: React.PropTypes.object
+    target: React.PropTypes.object,
+    buttonAfterQuery: React.PropTypes.element
   },
 
   render: function() {
@@ -64,8 +65,8 @@ var SearchForm = React.createClass({
                placeholder="Enter Query"
                label="Query"
                valueLink={this.props.query}
-               disabled={this.props.selectedCorpusNames.value.length == 0}>
-             </Input>
+               disabled={this.props.selectedCorpusNames.value.length == 0}
+               buttonAfter={this.props.buttonAfterQuery} />
            </Col>
             {(config.value.ml.disable) ? null : queryForm}
           </Row>
