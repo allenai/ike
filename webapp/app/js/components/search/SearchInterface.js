@@ -60,8 +60,20 @@ var SearchInterface = React.createClass({
     };
   },
 
-  componentDidMount() { CorporaStore.addChangeListener(this.corporaChanged); },
-  componentWillUnmount() { CorporaStore.removeChangeListener(this.corporaChanged); },
+  componentDidMount() {
+    CorporaStore.addChangeListener(this.corporaChanged);
+
+    if(this.queryLink().value)
+      this.search();
+  },
+
+  componentWillUnmount() {
+    CorporaStore.removeChangeListener(this.corporaChanged);
+
+    if (this.hasPendingRequest())
+      this.cancelRequest();
+  },
+
   corporaChanged() {
     this.setState({
       corpora: CorporaStore.getCorpora(),
@@ -127,9 +139,7 @@ var SearchInterface = React.createClass({
   },
 
   hasPendingRequest: function() {
-    var results = this.state.results;
-    results.pending = true;
-    this.setState({results: results});
+    return this.state.results.pending;
   },
 
   cancelRequest: function() {
