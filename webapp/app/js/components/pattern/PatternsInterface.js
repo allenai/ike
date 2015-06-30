@@ -13,7 +13,7 @@ var PatternsInterface = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
 
   propTypes: {
-    corpora: React.PropTypes.object.isRequired,
+    config: React.PropTypes.object.isRequired
   },
 
   getInitialState: function() {
@@ -128,8 +128,8 @@ var PatternsInterface = React.createClass({
       if(this.state.activePatternName) {
         var activeQuery = this.state.patterns[this.state.activePatternName];
         patternEditor = <PatternEditor patternName={this.state.activePatternName}
-                                       initialQuery={activeQuery}
-                                       corpora={this.props.corpora}/>;
+                                       config={this.props.config}
+                                       initialQuery={activeQuery} />;
       }
       return <Row>
         <Col md={2}>{patternChooser}</Col>

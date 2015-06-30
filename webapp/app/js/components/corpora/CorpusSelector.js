@@ -7,27 +7,22 @@ var Corpora = require('../corpora/Corpora.js');
 
 var CorpusSelector = React.createClass({
   propTypes: {
-    corpora: React.PropTypes.object.isRequired,
+    corpora: React.PropTypes.array.isRequired,
+    selectedCorpusNames: React.PropTypes.array.isRequired,
     toggleCorpora: React.PropTypes.func.isRequired
-  },
-
-  selectedCorpora: function() {
-    return this.props.corpora.value.filter(function(corpus) {
-      return corpus.selected;
-    });
   },
 
   renderCorporaLabel: function() {
     // Get the number of selected corpora
-    var corpora = this.props.corpora.value;
-    var selectedCorpora = this.selectedCorpora();
+    var corpora = this.props.corpora;
+    var selectedCorpusNames = this.props.selectedCorpusNames;
     var corporaLabel = 'Searching ';
-    if (selectedCorpora.length === corpora.length) {
+    if (selectedCorpusNames.length === corpora.length) {
       corporaLabel += ' All ';
     }
-    corporaLabel += (selectedCorpora.length === 1)
-      ? selectedCorpora[0].name + ' Corpus'
-      : selectedCorpora.length + ' Corpora';
+    corporaLabel += (selectedCorpusNames.length === 1)
+      ? selectedCorpusNames + ' Corpus'
+      : selectedCorpusNames.length + ' Corpora';
 
     return <span>{corporaLabel}</span>;
   },
@@ -42,7 +37,10 @@ var CorpusSelector = React.createClass({
              title='Select Corpora to Query'
              animation={false}>
         <div className='modal-body'>
-          <Corpora corpora={this.props.corpora} toggleCorpora={this.props.toggleCorpora} />
+          <Corpora
+            corpora={this.props.corpora}
+            selectedCorpusNames={this.props.selectedCorpusNames}
+            toggleCorpora={this.props.toggleCorpora} />
         </div>
       </Modal>;
     return <ModalTrigger trigger='click' modal={overlay}>

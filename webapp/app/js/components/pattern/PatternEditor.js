@@ -1,18 +1,17 @@
 var React = require('react/addons');
 var bs = require('react-bootstrap');
 var xhr = require('xhr');
-var CorpusSelector = require('../corpora/CorpusSelector.js');
-var Input = bs.Input;
 var Button = bs.Button;
 var Row = bs.Row;
 var Col = bs.Col;
+var SearchInterface = require("../search/SearchInterface");
 
 var PatternEditor = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
 
   propTypes: {
-    corpora: React.PropTypes.object.isRequired,
-    patternName: React.PropTypes.string.isRequired
+    patternName: React.PropTypes.string.isRequired,
+    config: React.PropTypes.object.isRequired
   },
 
   getInitialState: function() {
@@ -32,15 +31,23 @@ var PatternEditor = React.createClass({
   },
 
   render: function() {
-    var toggleCorpora = function(i) {
-      console.log(i);
-    };
 
     var saveAllowed =
       (this.state.query.trim() !== this.props.initialQuery.trim()) &&
       (this.state.query.trim() !== "");
     var saveText = "Save as " + this.props.patternName;
     var saveButton = <Button disabled={!saveAllowed}>{saveText}</Button>;
+
+    return <SearchInterface
+      config={this.props.config}
+      target={null}
+      queryLink={this.linkState('query')}
+      showQueryViewer={false} />;
+
+    /*
+     var toggleCorpora = function(i) {
+       console.log(i);
+     };
 
     return <div>
       <CorpusSelector corpora={this.props.corpora} toggleCorpora={toggleCorpora} />
@@ -50,7 +57,9 @@ var PatternEditor = React.createClass({
              valueLink={this.linkState('query')}
              disabled={this.selectedCorpora().length == 0}
              buttonAfter={saveButton} />
+
     </div>
+    */
   }
 });
 

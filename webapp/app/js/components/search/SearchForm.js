@@ -10,52 +10,61 @@ const AuthStore = require('../../stores/AuthStore.js');
 
 var SearchForm = React.createClass({
   propTypes: {
-    authenticated: React.PropTypes.bool.isRequired,
     config: React.PropTypes.object.isRequired,
-    corpora: React.PropTypes.object.isRequired,
+    corpora: React.PropTypes.array.isRequired,
+    selectedCorpusNames: React.PropTypes.object.isRequired, // This is a linkState.
     handleSubmit: React.PropTypes.func.isRequired,
     makeUri: React.PropTypes.func.isRequired,
     query: React.PropTypes.object.isRequired,
-    target: React.PropTypes.object.isRequired,
-    toggleCorpora: React.PropTypes.func.isRequired
-  },
-  selectedCorpora: function() {
-    return this.props.corpora.value.filter(function(corpus) {
-      return corpus.selected;
-    });
+    target: React.PropTypes.object
   },
 
   render: function() {
-    var handleSubmit = this.props.handleSubmit;
-    var target = this.props.target;
-    var query = this.props.query;
+    var self = this;
     var config = this.props.config;
-    var makeUri = this.props.makeUri;
     var queryWidth = (config.value.ml.disable) ? 10 : 7;
-    queryWidth = (this.props.authenticated) ? queryWidth : queryWidth+2;
+    queryWidth = (this.props.target) ? queryWidth : queryWidth + 2;
     var queryForm =
           <Col xs={3}>
             <SuggestQueryButton
               config={config}
-              target={target}
-              query={query}
-              makeUri={makeUri}
-              disabled={this.selectedCorpora().length == 0}
+              target={this.props.target}
+              query={this.props.query}
+              makeUri={this.props.makeUri}
+              disabled={this.props.selectedCorpusNames.value.length == 0}
             ></SuggestQueryButton>
-          </Col>
+          </Col>;
+
+    var toggleCorpora = function(corpusIndex) {
+      var toggledCorpusName = self.props.corpora[corpusIndex].name;
+      var selectedCorpusNames = self.props.selectedCorpusNames.value;
+      var remove = selectedCorpusNames.indexOf(toggledCorpusName) >= 0;
+      var newSelectedCorpusNames = [];
+      selectedCorpusNames.forEach(function(corpusName) {
+        if(!(remove && corpusName == toggledCorpusName))
+          newSelectedCorpusNames.push(corpusName);
+      });
+      if(!remove)
+        newSelectedCorpusNames.push(toggledCorpusName);
+      self.props.selectedCorpusNames.requestChange(newSelectedCorpusNames);
+    };
+
     return (
       <div>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={this.props.handleSubmit}>
           <Row>
-            {(this.props.authenticated) ? <Col xs={2}><TargetSelector target={target}/></Col> : null}
+            {(this.props.target) ? <Col xs={2}><TargetSelector target={this.props.target}/></Col> : null}
             <Col xs={queryWidth}>
-            <CorpusSelector corpora={this.props.corpora} toggleCorpora={this.props.toggleCorpora}/>
+            <CorpusSelector
+              corpora={this.props.corpora}
+              selectedCorpusNames={this.props.selectedCorpusNames.value}
+              toggleCorpora={toggleCorpora} />
              <Input
                type="text"
                placeholder="Enter Query"
                label="Query"
-               valueLink={query}
-               disabled={this.selectedCorpora().length == 0}>
+               valueLink={this.props.query}
+               disabled={this.props.selectedCorpusNames.value.length == 0}>
              </Input>
            </Col>
             {(config.value.ml.disable) ? null : queryForm}

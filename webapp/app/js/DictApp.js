@@ -11,6 +11,7 @@ var Router = require('react-router');
 var { Route, DefaultRoute, Redirect, RouteHandler, Link } = Router;
 const Header = require('./components/Header.js');
 const AuthStore = require('./stores/AuthStore.js');
+const CorporaStore = require('./stores/CorporaStore.js');
 const assign = require('object-assign');
 
 var DictApp = React.createClass({
@@ -39,27 +40,11 @@ var DictApp = React.createClass({
       }
     }.bind(this));
     TableManager.setUserEmail(AuthStore.getUserEmail());
-
-    // Get the corpora via API request
-    xhr({
-      uri: '/api/corpora',
-      method: 'GET'
-    }, function(err, resp, body) {
-      var corpora = JSON.parse(body).map(function(corpus, i) {
-        return { 
-          name: corpus.name,
-          description: corpus.description,
-          selected: true 
-        }
-      });
-      this.setState({corpora: corpora});
-    }.bind(this));
   },
 
   getInitialState() {
     return {
       authenticated: AuthStore.authenticated(),
-      corpora: [],
       config: {
         limit: 1000,
         evidenceLimit: 10,
@@ -78,13 +63,6 @@ var DictApp = React.createClass({
            uWeightNarrow: 0.01
         }
       },
-      results: {
-        groups: [],
-        qexpr: null,
-        pending: false,
-        request: null,
-        errorMessage: null
-      },
       tables: [],
       target: null
     };
@@ -99,20 +77,10 @@ var DictApp = React.createClass({
     TableManager.setUserEmail(AuthStore.getUserEmail());
   },
 
-  toggleCorpora(i) {
-    return function(e) {
-      var corpora = this.state.corpora.slice();
-      corpora[i].selected = e.target.checked;
-      this.setState({corpora: corpora});
-    }.bind(this);
-  },
-
   renderContent() {
     var target = this.linkState('target');
-    var results = this.linkState('results');
     var patterns = this.linkState('patterns');
     var config = this.linkState('config');
-    var corpora = this.linkState('corpora');
     var router = this.context.router;
     var searchClass = (router.isActive('search')) ? 'active' : null;
     var tablesClass = (router.isActive('tables')) ? 'active' : null;
@@ -132,10 +100,7 @@ var DictApp = React.createClass({
           <RouteHandler
             authenticated={this.state.authenticated}
             config={config} 
-            corpora={corpora}
-            results={results} 
-            target={target}
-            toggleCorpora={this.toggleCorpora}/>
+            target={target} />
         </div>
       </div>
     );
