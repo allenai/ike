@@ -45,12 +45,7 @@ var PatternEditor = React.createClass({
       showQueryViewer={false} />;
 
     /*
-     var toggleCorpora = function(i) {
-       console.log(i);
-     };
-
     return <div>
-      <CorpusSelector corpora={this.props.corpora} toggleCorpora={toggleCorpora} />
       <Input type="text"
              placeholder="Enter Query"
              label="Query"
