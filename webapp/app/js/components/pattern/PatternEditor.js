@@ -31,7 +31,6 @@ var PatternEditor = React.createClass({
   },
 
   render: function() {
-
     var saveAllowed =
       (this.state.query.trim() !== this.props.initialQuery.trim()) &&
       (this.state.query.trim() !== "");
