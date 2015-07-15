@@ -160,7 +160,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
             entity(as[Table]) { table =>
               complete {
                 if (table.name == tableName) {
-                  Tablestore.put(userEmail, table)
+                  Tablestore.putTable(userEmail, table)
                 } else {
                   StatusCodes.BadRequest
                 }
@@ -168,7 +168,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
             }
           } ~ delete {
             complete {
-              Tablestore.delete(userEmail, tableName)
+              Tablestore.deleteTable(userEmail, tableName)
               StatusCodes.OK
             }
           }
@@ -184,13 +184,10 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   }
 
   val patternsRoute = pathPrefix("api" / "patterns") {
-    pathEndOrSingleSlash {
-      get {
-        complete {
-          Seq(
-            NamedPattern("DirkNP", "(?:NP PP|ADJP)* NN+"),
-            NamedPattern("KevinNP", "PDT* {DT,PRP$}* {JJ,VBG}* {NN,NNS,NNP,NNPS}+ {{IN,POS} PDT* {DT,PRP$}* {JJ,VBG}* {NN,NNS,NNP,NNPS}+}*")
-          )
+    pathPrefix(Segment) { userEmail =>
+      pathEndOrSingleSlash {
+        get {
+          complete(Tablestore.namedPatterns(userEmail).values)
         }
       }
     }
