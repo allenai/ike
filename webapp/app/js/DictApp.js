@@ -57,10 +57,10 @@ var DictApp = React.createClass({
            maxSampleSize: 8000,
            pWeight: 2.0,
            nWeight: -1.0,
-           uWeight: 0.01,
+           uWeight: -0.05,
            pWeightNarrow: 2.0,
            nWeightNarrow: -1.0,
-           uWeightNarrow: 0.01
+           uWeightNarrow: -0.05
         }
       },
       tables: [],

@@ -8,7 +8,7 @@ import org.apache.lucene.util.Bits
 import java.util
 
 /** SpanQuery the filters hits from a query that do not capture and the same spans as another
-  * query. In other words a capture group level end between two queries.
+  * query. In other words a capture group level AND between two queries.
   *
   * @param _query The query to filter
   * @param _filter the filter to AND the query against

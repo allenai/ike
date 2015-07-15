@@ -29,7 +29,7 @@ object RemoveToken {
 }
 /** Remove the query-token at the specified slot */
 case class RemoveToken(slot: QueryToken) extends TokenQueryOp() {
-  def combinable(other: TokenQueryOp): TokenCombination = NONE
+  override def combinable(other: TokenQueryOp): TokenCombination = NONE
 }
 
 /** Changes a top level modifier of a QExpr, such as * or + operators */

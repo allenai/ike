@@ -10,22 +10,23 @@ class TestQueryGeneralizer extends UnitSpec with ScratchDirectory {
   val searcher = TestData.testSearcher(scratchDir)
   val searchers = Seq(searcher)
   val ss = new SimilarPhrasesSearcherStub(Map(
-    "I" -> Seq(
+    "i" -> Seq(
       SimilarPhrase(Seq(QWord("It")), 0.8),
       SimilarPhrase(Seq(QWord("like")), 0.4)
     )
   ))
-  val qsimForI = QSimilarPhrases(Seq(QWord("I")), 2, ss.getSimilarPhrases("I"))
+  val qsimForI = QSimilarPhrases(Seq(QWord("i")), 2, ss.getSimilarPhrases("i"))
 
   it should "cover all PosTags" in {
-    val tagSet = QueryLanguage.parser.posTagSet.toSet
-    val generalizingTagset = QueryGeneralizer.posSets.reduce((a, b) => a ++ b)
-    assert((tagSet == generalizingTagset))
+    // This test will raise an error if there are
+    val tagSet = QueryLanguage.parser.posTagSet.toSet - "FW"
+    val generalizingTagset = QueryGeneralizer.posSets.reduce(_ ++ _)
+    assert(tagSet == generalizingTagset)
   }
 
   it should "suggest correct generalizations" in {
     {
-      val gens = QueryGeneralizer.queryGeneralizations(QPos("NN"), (searchers), ss, 10)
+      val gens = QueryGeneralizer.queryGeneralizations(QPos("NN"), searchers, ss, 10)
       val qexprs = gens.asInstanceOf[GeneralizeToDisj].pos
       assert(qexprs.contains(QPos("NNS")))
       assert(!qexprs.contains(QPos("VBG")))
@@ -43,12 +44,12 @@ class TestQueryGeneralizer extends UnitSpec with ScratchDirectory {
       assert(!qexprs.contains(QPos("VBG")))
     }
     {
-      val gens = QueryGeneralizer.queryGeneralizations(QWord("I"), searchers, ss, 10)
-      assert(gens == GeneralizeToDisj(Seq(QPos("PRP")), Seq(qsimForI), true))
+      val gens = QueryGeneralizer.queryGeneralizations(QWord("i"), searchers, ss, 10)
+      assertResult(gens)(GeneralizeToDisj(Seq(QPos("PRP")), Seq(qsimForI), true))
     }
     {
       val testQuery = QDisj(Seq(
-        QPos("NN"), QSimilarPhrases(Seq(QWord("I")), 1, ss.getSimilarPhrases("I"))
+        QPos("NN"), QSimilarPhrases(Seq(QWord("i")), 1, ss.getSimilarPhrases("i"))
       ))
       val gens = QueryGeneralizer.queryGeneralizations(testQuery, searchers, ss, 10).
         asInstanceOf[GeneralizeToDisj]

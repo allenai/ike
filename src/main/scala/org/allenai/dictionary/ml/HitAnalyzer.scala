@@ -64,11 +64,12 @@ object HitAnalyzer extends Logging {
 
   /** Builds a list of Example objects, one for each Hit in Hits
     *
-    * @param hits Hits to build examples from
+    * @param hits Hits to build examples from, should not be empty
     * @param table Table to use when deciding each Hit's label
     * @return The examples
     */
   def getExamples(query: TokenizedQuery, hits: Hits, table: Table): Iterable[Example] = {
+    require(hits.sizeAtLeast(1))
     val positiveStrings = table.positive.seq.map(_.values.map(
       _.qwords.map(_.value.toLowerCase)
     )).toSet
@@ -140,10 +141,10 @@ object HitAnalyzer extends Logging {
     }.toIndexedSeq
   }
 
-  /** Build a sequence of QueryMatches for the given Hits object and query. For token in the given
-    * TokenizedQuery, a QueryMatches object will be built that shows what that token matched, or
-    * should have matched, for each Hit in Hits. QueryMatches objects will also be built for each
-    * prefix and suffix slot as specified by prefixCounts and suffixCounts.
+  /** Build a sequence of QueryMatches for the given non-empty Hits object and query. For token in
+    * the given TokenizedQuery, a QueryMatches object will be built that shows what that token
+    * matched, or should have matched, for each Hit in Hits. QueryMatches objects will also be
+    * built for each prefix and suffix slot as specified by prefixCounts and suffixCounts.
     */
   def getMatchData(
     hits: Hits,
@@ -151,11 +152,12 @@ object HitAnalyzer extends Logging {
     prefixCounts: Int,
     suffixCounts: Int
   ): Seq[QueryMatches] = {
+    require(hits.sizeAtLeast(1))
 
     // Set up our hits object, call .get(0) so it initializes captureGroupsNames
     val props = List("word", "pos")
-    hits.setContextField(props.asJava)
     hits.setContextSize(math.max(prefixCounts, suffixCounts))
+    hits.setForwardIndexConcordanceParameters("word", null, List("pos").asJava)
     hits.get(0)
 
     val captureGroups = hits.getCapturedGroupNames
@@ -273,21 +275,24 @@ object HitAnalyzer extends Logging {
     table: Table
   ): HitAnalysis = {
 
-    val props = List("word", "pos")
-    hits.foreach(_.setContextField(props.asJava))
-    hits.foreach(_.setContextSize(math.max(prefixCounts, suffixCounts)))
+    val nonEmptyHits = hits.filter(_.size() > 0)
+
+    nonEmptyHits.foreach(_.setForwardIndexConcordanceParameters("word", null, List("pos").asJava))
+    nonEmptyHits.foreach(_.setContextSize(math.max(prefixCounts, suffixCounts)))
 
     logger.debug("Calculating labels and weights...")
     val (examples, exampleTime) = Timing.time {
-      val unweightedExamples = hits.flatMap(getExamples(query, _, table))
+      val unweightedExamples = nonEmptyHits.flatMap(getExamples(query, _, table))
       getWeightedExamples(unweightedExamples)
     }
     logger.debug(s"Done in ${exampleTime.toMillis / 1000.0} seconds")
 
     logger.debug("Calculating match data...")
     val (opMap, opMaptime) = Timing.time {
-      val matchDataPerSearcher = hits.map(getMatchData(_, query, prefixCounts, suffixCounts))
-      val matchDataPerSlot = matchDataPerSearcher.transpose.map { slotMatchData =>
+      val matchDataPerHit = nonEmptyHits.par.map(
+        getMatchData(_, query, prefixCounts, suffixCounts)
+      ).seq
+      val matchDataPerSlot = matchDataPerHit.transpose.map { slotMatchData =>
         assert(slotMatchData.forall(_.queryToken == slotMatchData.head.queryToken))
         QueryMatches(slotMatchData.head.queryToken, slotMatchData.flatMap(_.matches))
       }

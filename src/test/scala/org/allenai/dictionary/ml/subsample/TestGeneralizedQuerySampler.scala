@@ -43,7 +43,10 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
       QDisj(Seq(QWord("like"), QWord("tastes"))),
       QNamed(QDisj(Seq(QPos("DT"), QPos("JJ"), QPos("NNS"))), "c1")
     ))
-    val tokenized = TokenizedQuery.buildWithGeneralizations(testQuery, Seq(searcher), Seq(), ss, 10)
+    val tokenized = TokenizedQuery.buildWithGeneralizations(
+      testQuery,
+      Seq("c1"), ss, Seq(searcher), 10
+    )
     val cnames = tokenized.getNames :+ "c1"
     val hits = GeneralizedQuerySampler(1, 100).getSample(tokenized, searcher,
       Table("", Seq("c1"), Seq(), Seq()), Map())
@@ -64,7 +67,7 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
     )
   }
 
-  it should "Limit queries correctly" in {
+  it should "Limit two column queries correctly" in {
     val startingQuery =
       QueryLanguage.parse("(?<c1> {I, hate}) {those,hate} (?<c2> {mango, bananas, great})").get
     val table = Table(
@@ -78,11 +81,38 @@ class TestGeneralizedQuerySampler extends UnitSpec with ScratchDirectory {
         TableRow(Seq(TableValue(Seq(QWord("hate"))), TableValue(Seq(QWord("bananas")))))
       )
     )
-    val tokenized = TokenizedQuery.buildWithGeneralizations(startingQuery, Seq(searcher), Seq(),
-      ss, 10)
+    val tokenized = TokenizedQuery.buildWithGeneralizations(
+      startingQuery, Seq("c1", "c2"), ss, Seq(searcher), 10
+    )
     val expectedResults = Seq(
       "I like mango",
       "hate those bananas"
+    )
+    val hits = GeneralizedQuerySampler(2, 100).getLabelledSample(
+      tokenized,
+      searcher, table, Map(), 0, 0
+    )
+    assertResult(expectedResults)(hitsToStrings(hits))
+    assertResult(2)(hits.size)
+  }
+
+  it should "limit one column queries correctly" in {
+    val startingQuery =
+      QueryLanguage.parse("{those,like} (?<c1> {mango, bananas, great})").get
+    val table = Table(
+      "test",
+      Seq("c1"),
+      Seq(
+        TableRow(Seq(TableValue(Seq(QWord("mango"))))),
+        TableRow(Seq(TableValue(Seq(QWord("those")))))
+      ),
+      Seq(TableRow(Seq(TableValue(Seq(QWord("bananas"))))))
+    )
+    val tokenized = TokenizedQuery.buildWithGeneralizations(startingQuery, Seq("c1"),
+      ss, Seq(searcher), 10)
+    val expectedResults = Seq(
+      "like mango",
+      "those bananas"
     )
     val hits = GeneralizedQuerySampler(2, 100).getLabelledSample(
       tokenized,

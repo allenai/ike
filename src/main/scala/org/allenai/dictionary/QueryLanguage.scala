@@ -222,7 +222,7 @@ object QueryLanguage {
     }
 
     def modifiableString(qexpr: QExpr): String = qexpr match {
-      case _: QLeaf | _: QCapture | _: QDisj => recurse(qexpr)
+      case _: QLeaf | _: QCapture | _: QDisj | _: QNonCap => recurse(qexpr)
       case _ => "(?:" + recurse(qexpr) + ")"
     }
 
