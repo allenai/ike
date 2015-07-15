@@ -1,6 +1,5 @@
 var React = require('react/addons');
 var bs = require('react-bootstrap');
-var xhr = require('xhr');
 var Alert = bs.Alert;
 var Nav = bs.Nav;
 var NavItem = bs.NavItem;
@@ -9,6 +8,7 @@ var Col = bs.Col;
 var Input = bs.Input;
 var Well = bs.Well;
 var PatternEditor = require('./PatternEditor.js');
+const PatternsStore = require('../../stores/NamedPatternsStore.js');
 const AuthStore = require('../../stores/AuthStore.js');
 
 var PatternsInterface = React.createClass({
@@ -21,62 +21,52 @@ var PatternsInterface = React.createClass({
   getInitialState: function() {
     return {
       error: null,
-      patterns: [],
+      patterns: {},
       activePatternName: null,
       newPatternName: ""
     };
   },
 
-  updatePatternsFromServer: function() {
-    this.setState(this.getInitialState());
+  updatePatterns: function() {
+    var error = PatternsStore.getError();
+    if(error) {
+      this.setState({
+        error: error,
+        patterns: {},
+        activePatternName: null
+      });
+    } else {
+      var newPatterns = PatternsStore.getPatterns();
 
-    var self = this;
-    var userEmail = AuthStore.getUserEmail();
+      // set active pattern name
+      var activePatternName = this.state.activePatternName;
+      if (activePatternName && !newPatterns.hasOwnProperty(activePatternName))
+        activePatternName = null;
 
-    // Get the patterns from the server
-    if(userEmail) {
-      xhr({
-        uri: '/api/patterns/' + encodeURIComponent(userEmail),
-        method: 'GET'
-      }, function(err, resp, body) {
-        if (self.isMounted()) {
-          if (resp.statusCode == 200) {
-            // set patterns
-            var patternsObjects = JSON.parse(body);
-            var patterns = {};
-            patternsObjects.forEach(function (patternObject) {
-              patterns[patternObject.name] = patternObject.pattern;
-            });
+      var patternNames = [];
+      for(var patternName in newPatterns) {
+        if(newPatterns.hasOwnProperty(patternName))
+          patternNames.push(patternName);
+      }
 
-            // set active pattern name
-            var activePatternName = self.state.activePatternName;
-            if (activePatternName && !patterns.hasOwnProperty(activePatternName))
-              activePatternName = null;
+      if (!activePatternName)
+        activePatternName = patternNames.length > 0 ? patternNames[0] : null;
 
-            if (!activePatternName)
-              activePatternName = patternsObjects.length > 0 ? patternsObjects[0].name : null;
-
-            self.setState({
-              patterns: patterns,
-              activePatternName: activePatternName,
-              error: null
-            });
-          } else {
-            self.setState({error: resp.body + " (" + resp.statusCode + ")"});
-            console.log(resp);
-          }
-        }
+      this.setState({
+        error: null,
+        patterns: newPatterns,
+        activePatternName: activePatternName
       });
     }
   },
 
   componentDidMount: function() {
-    AuthStore.addChangeListener(this.updatePatternsFromServer);
-    this.updatePatternsFromServer();
+    PatternsStore.addChangeListener(this.updatePatterns);
+    this.updatePatterns();
   },
 
   componentWillUnmount: function() {
-    AuthStore.removeChangeListener(this.updatePatternsFromServer);
+    PatternsStore.removeChangeListener(this.updatePatterns);
   },
 
   patternClicked: function(patternName) {
@@ -125,7 +115,7 @@ var PatternsInterface = React.createClass({
       }
 
       if(items.length === 0) {
-        if(AuthStore.getUserEmail())
+        if(AuthStore.authenticated())
           items = <Well>It looks like you have no patterns defined yet.</Well>;
         else
           items = <Well>You must be signed in to create named patterns.</Well>;
@@ -145,7 +135,7 @@ var PatternsInterface = React.createClass({
                  help='Enter a name for a new pattern and press enter.'
                  valueLink={this.linkState('newPatternName')}
                  bsStyle={this.newPatternNameValidationState()}
-                 disabled={!AuthStore.getUserEmail()}
+                 disabled={!AuthStore.authenticated()}
                  hasFeedback />
         </form>
         </div>;
