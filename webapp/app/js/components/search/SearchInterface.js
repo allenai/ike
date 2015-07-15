@@ -22,6 +22,7 @@ var SearchInterface = React.createClass({
     config: React.PropTypes.object.isRequired,
     target: React.PropTypes.object,
     showQueryViewer: React.PropTypes.bool,
+    showQuerySuggestions: React.PropTypes.bool,
     queryLink: React.PropTypes.object, // If present, is used to store the query. Otherwise,
                                        // SearchInterface uses its own state to store the query.
     buttonAfterQuery: React.PropTypes.element
@@ -215,7 +216,8 @@ var SearchInterface = React.createClass({
         makeUri={makeUri}
         query={query}
         target={target}
-        buttonAfterQuery={this.props.buttonAfterQuery} />;
+        buttonAfterQuery={this.props.buttonAfterQuery}
+        showQuerySuggestions={this.props.showQuerySuggestions} />;
     // Keep a ref to this component so we can reset the page number when a search completes
     var searchResults =
       <SearchResults

@@ -43,6 +43,7 @@ var PatternEditor = React.createClass({
       target={null}
       queryLink={this.linkState('query')}
       showQueryViewer={false}
+      showQuerySuggestions={false}
       buttonAfterQuery={saveButton} />;
   }
 });

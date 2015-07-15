@@ -17,24 +17,32 @@ var SearchForm = React.createClass({
     makeUri: React.PropTypes.func.isRequired,
     query: React.PropTypes.object.isRequired,
     target: React.PropTypes.object,
-    buttonAfterQuery: React.PropTypes.element
+    buttonAfterQuery: React.PropTypes.element,
+    showQuerySuggestions: React.PropTypes.bool
+  },
+
+  showQuerySuggestions: function() {
+    if(this.props.showQuerySuggestions === undefined)
+      return !this.props.config.value.ml.disable;
+    else
+      return this.props.showQuerySuggestions;
   },
 
   render: function() {
     var self = this;
     var config = this.props.config;
-    var queryWidth = (config.value.ml.disable) ? 10 : 7;
+    var queryWidth = (this.showQuerySuggestions()) ? 7 : 10;
     queryWidth = (this.props.target) ? queryWidth : queryWidth + 2;
-    var queryForm =
-          <Col xs={3}>
-            <SuggestQueryButton
-              config={config}
-              target={this.props.target}
-              query={this.props.query}
-              makeUri={this.props.makeUri}
-              disabled={this.props.selectedCorpusNames.value.length == 0}
-            ></SuggestQueryButton>
-          </Col>;
+    var querySuggestions = this.showQuerySuggestions() ?
+      <Col xs={3}>
+        <SuggestQueryButton
+          config={config}
+          target={this.props.target}
+          query={this.props.query}
+          makeUri={this.props.makeUri}
+          disabled={this.props.selectedCorpusNames.value.length == 0} />
+      </Col> :
+      null;
 
     var toggleCorpora = function(corpusIndex) {
       var toggledCorpusName = self.props.corpora[corpusIndex].name;
@@ -57,18 +65,18 @@ var SearchForm = React.createClass({
             {(this.props.target) ? <Col xs={2}><TargetSelector target={this.props.target}/></Col> : null}
             <Col xs={queryWidth}>
             <CorpusSelector
-              corpora={this.props.corpora}
-              selectedCorpusNames={this.props.selectedCorpusNames.value}
-              toggleCorpora={toggleCorpora} />
-             <Input
-               type="text"
-               placeholder="Enter Query"
-               label="Query"
-               valueLink={this.props.query}
-               disabled={this.props.selectedCorpusNames.value.length == 0}
-               buttonAfter={this.props.buttonAfterQuery} />
-           </Col>
-            {(config.value.ml.disable) ? null : queryForm}
+               corpora={this.props.corpora}
+               selectedCorpusNames={this.props.selectedCorpusNames.value}
+               toggleCorpora={toggleCorpora} />
+            <Input
+              type="text"
+              placeholder="Enter Query"
+              label="Query"
+              valueLink={this.props.query}
+              disabled={this.props.selectedCorpusNames.value.length == 0}
+              buttonAfter={this.props.buttonAfterQuery} />
+            </Col>
+            {querySuggestions}
           </Row>
         </form>
       </div>
