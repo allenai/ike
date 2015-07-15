@@ -5,7 +5,7 @@ var Col = bs.Col;
 var Input = bs.Input;
 var CorpusSelector = require('../corpora/CorpusSelector.js');
 var TargetSelector = require('./TargetSelector.js');
-var SuggestQueryButton = require('./SuggestQueryButton.js');
+var SuggestQueryButtonGroup = require('./SuggestQueryButtonGroup.js');
 const AuthStore = require('../../stores/AuthStore.js');
 
 var SearchForm = React.createClass({
@@ -31,18 +31,19 @@ var SearchForm = React.createClass({
   render: function() {
     var self = this;
     var config = this.props.config;
-    var queryWidth = (this.showQuerySuggestions()) ? 7 : 10;
+    var queryWidth = (this.showQuerySuggestions()) ? 8 : 10;
     queryWidth = (this.props.target) ? queryWidth : queryWidth + 2;
     var querySuggestions = this.showQuerySuggestions() ?
-      <Col xs={3}>
-        <SuggestQueryButton
+      <Col xs={2}>
+        <SuggestQueryButtonGroup
           config={config}
           target={this.props.target}
           query={this.props.query}
           makeUri={this.props.makeUri}
-          disabled={this.props.selectedCorpusNames.value.length == 0} />
-      </Col> :
-      null;
+          disabled={this.props.selectedCorpusNames.value.length == 0}
+          submitQuery={this.props.handleSubmit} />
+       </Col> :
+       null;
 
     var toggleCorpora = function(corpusIndex) {
       var toggledCorpusName = self.props.corpora[corpusIndex].name;

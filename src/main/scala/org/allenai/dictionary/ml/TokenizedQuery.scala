@@ -173,7 +173,7 @@ object TokenizedQuery {
     // generalizations here will make the POS matches dominate our sample and thus reduce our
     // ability to select good phrase generalizations.
     val phraseOnlyGeneralizations = generalizations match {
-      case Seq(GeneralizeToDisj(pos, phrase, fullyGeneralizes)) =>
+      case Seq(GeneralizeToDisj(pos, phrase, fullyGeneralizes)) if phrase.nonEmpty =>
         Seq(GeneralizeToDisj(Seq(), phrase, fullyGeneralizes))
       case _ => generalizations
     }

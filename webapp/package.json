@@ -22,6 +22,7 @@
     "react": "0.13.2",
     "react-bootstrap": "0.13.3",
     "react-router": "0.13.3",
+    "react-loader": "1.4.0",
     "syrup": "0.1.4",
     "xhr": "2.0.1"
   }
