@@ -62,7 +62,22 @@ const NamedPatternsStore = assign({}, EventEmitter.prototype, {
         body: pattern
       }, function(err, response, body) {
         if(response.statusCode !== 200) {
-          console.log("Unexpected response writing a table: " + JSON.stringify(response));
+          console.log("Unexpected response saving a pattern: " + JSON.stringify(response));
+        }
+      });
+      this.emitChange();
+    }
+  },
+
+  deletePattern(name) {
+    if(userEmail) {
+      delete patterns[name];
+      xhr({
+        uri: '/api/patterns/' + encodeURIComponent(userEmail) + '/' + name,
+        method: 'DELETE'
+      }, function(err, response, body) {
+        if(response.statusCode !== 200) {
+          console.log("Unexpected response deleting a pattern: " + JSON.stringify(response));
         }
       });
       this.emitChange();

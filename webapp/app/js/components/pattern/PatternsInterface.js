@@ -10,6 +10,7 @@ var Well = bs.Well;
 var PatternEditor = require('./PatternEditor.js');
 const PatternsStore = require('../../stores/NamedPatternsStore.js');
 const AuthStore = require('../../stores/AuthStore.js');
+const DeleteButton = require('../misc/DeleteButton');
 
 var PatternsInterface = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
@@ -110,6 +111,9 @@ var PatternsInterface = React.createClass({
           items.push(
             <NavItem key={patternName} eventKey={patternName}>
               {patternName}
+              <DeleteButton bsStyle="link" callback={function() {
+                PatternsStore.deletePattern(patternName);
+              }}/>
             </NavItem>);
         }
       }
