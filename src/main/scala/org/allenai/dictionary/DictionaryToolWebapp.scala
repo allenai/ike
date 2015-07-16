@@ -80,7 +80,10 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
             complete {
               val query = SearchApp.parse(req).get
               val interpolatedQuery = QueryLanguage.interpolateQuery(
-                query, req.tables, similarPhrasesSearcher
+                query,
+                Tablestore.tables(req.userEmail),
+                Tablestore.namedPatterns(req.userEmail),
+                similarPhrasesSearcher
               ).get
               val resultsFuture = searchersFuture.map { searchers =>
                 val parResult = searchers.par.flatMap { searcher =>

@@ -65,6 +65,8 @@ object BlackLabSemantics {
       case QChunk(p) => new TextPatternProperty("chunk", chunkPatternTerm(p))
       case QDict(_) =>
         throw new IllegalArgumentException("Can not convert QDict to TextPattern")
+      case QNamedPattern(_) =>
+        throw new IllegalArgumentException("Can not convert QNamedPattern to TextPattern")
       case QGeneralizePhrase(_, _) =>
         throw new IllegalArgumentException("Can not convert QGeneralizePhrase to TextPattern")
       case QWildcard() => new TextPatternAnyToken(1, 1)

@@ -3,6 +3,7 @@ package org.allenai.dictionary.ml.subsample
 import nl.inl.blacklab.search.{ Hits, Searcher }
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml._
+import org.allenai.dictionary.patterns.NamedPattern
 
 object MatchesSampler {
 
@@ -63,14 +64,18 @@ object MatchesSampler {
 /** Samples hits that the given query already matches
   */
 case class MatchesSampler() extends Sampler() {
-
   override def getSample(
     qexpr: TokenizedQuery,
     searcher: Searcher,
     targetTable: Table,
-    tables: Map[String, Table]
+    tables: Map[String, Table],
+    patterns: Map[String, NamedPattern]
   ): Hits = {
-    val query = QueryLanguage.interpolateTables(MatchesSampler.getNamedQuery(qexpr), tables).get
+    val query = QueryLanguage.interpolateTables(
+      MatchesSampler.getNamedQuery(qexpr),
+      tables,
+      patterns
+    ).get
     searcher.find(BlackLabSemantics.blackLabQuery(query))
   }
 
@@ -79,16 +84,19 @@ case class MatchesSampler() extends Sampler() {
     searcher: Searcher,
     targetTable: Table,
     tables: Map[String, Table],
+    patterns: Map[String, NamedPattern],
     startFromDoc: Int,
     startFromToken: Int
   ): Hits = {
     val spanQuery = if (targetTable.cols.size == 1) {
       val oneColQexpr = MatchesSampler.getNamedColumnMatchingQuery(qexpr, targetTable)
-      val interQuery = QueryLanguage.interpolateTables(oneColQexpr, tables).get
+      val interQuery = QueryLanguage.interpolateTables(oneColQexpr, tables, patterns).get
       val spanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(interQuery))
       new SpanQueryStartAt(spanQuery, startFromDoc, startFromToken)
     } else {
-      val query = QueryLanguage.interpolateTables(MatchesSampler.getNamedQuery(qexpr), tables).get
+      val query = QueryLanguage.interpolateTables(
+        MatchesSampler.getNamedQuery(qexpr), tables, patterns
+      ).get
       val spanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(query))
       val tableQuery = Sampler.buildLabelledQuery(qexpr, targetTable)
       val tableSpanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(tableQuery))

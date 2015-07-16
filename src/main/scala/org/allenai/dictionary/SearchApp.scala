@@ -5,13 +5,19 @@ import nl.inl.blacklab.search.{ HitsWindow, Searcher, TextPattern }
 import org.allenai.common.Config.EnhancedConfig
 import org.allenai.common.Logging
 import org.allenai.dictionary.ml.{ Suggestions, QuerySuggester }
+import org.allenai.dictionary.persistence.Tablestore
 
 import scala.util.{ Success, Try }
 
 import java.util.concurrent.{ TimeoutException, TimeUnit, Executors, Callable }
 
-case class SuggestQueryRequest(query: String, tables: Map[String, Table],
-  target: String, narrow: Boolean, config: SuggestQueryConfig)
+case class SuggestQueryRequest(
+  query: String,
+  userEmail: String,
+  target: String,
+  narrow: Boolean,
+  config: SuggestQueryConfig
+)
 case class SuggestQueryConfig(beamSize: Int, depth: Int, maxSampleSize: Int, pWeight: Double,
   nWeight: Double, uWeight: Double)
 case class ScoredStringQuery(query: String, score: Double, positiveScore: Double,
@@ -25,7 +31,7 @@ case class WordInfoRequest(word: String, config: SearchConfig)
 case class WordInfoResponse(word: String, posTags: Map[String, Int])
 case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1)
 case class SearchRequest(query: Either[String, QExpr], target: Option[String],
-  tables: Map[String, Table], config: SearchConfig)
+  userEmail: String, config: SearchConfig)
 case class SearchResponse(qexpr: QExpr, groups: Seq[GroupedBlackLabResult])
 case class CorpusDescription(name: String, description: Option[String])
 case class SimilarPhrasesResponse(phrases: Seq[SimilarPhrase])
@@ -80,7 +86,6 @@ case class SearchApp(config: Config) extends Logging {
 }
 
 object SearchApp extends Logging {
-
   def parse(r: SearchRequest): Try[QExpr] = r.query match {
     case Left(queryString) => QueryLanguage.parse(queryString)
     case Right(qexpr) => Success(qexpr)
@@ -96,9 +101,16 @@ object SearchApp extends Logging {
     suggestion <- Try {
       val callableSuggestsion = new Callable[Suggestions] {
         override def call(): Suggestions = {
-          QuerySuggester.suggestQuery(searchApps.map(_.searcher), query,
-            request.tables, similarPhrasesSearcher, request.target,
-            request.narrow, request.config)
+          QuerySuggester.suggestQuery(
+            searchApps.map(_.searcher),
+            query,
+            Tablestore.tables(request.userEmail),
+            Tablestore.namedPatterns(request.userEmail),
+            similarPhrasesSearcher,
+            request.target,
+            request.narrow,
+            request.config
+          )
         }
       }
       val exService = Executors.newSingleThreadExecutor()

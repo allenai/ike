@@ -14,6 +14,7 @@ var Row = bs.Row;
 var Col = bs.Col;
 var Glyphicon = bs.Glyphicon;
 const CorporaStore = require('../../stores/CorporaStore.js');
+const AuthStore = require('../../stores/AuthStore.js');
 
 var SearchInterface = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
@@ -91,7 +92,7 @@ var SearchInterface = React.createClass({
         limit: config.limit,
         evidenceLimit: config.evidenceLimit
       },
-      tables: TableManager.getTables(),
+      userEmail: AuthStore.getUserEmail(),
       target: this.target()
     };
   },

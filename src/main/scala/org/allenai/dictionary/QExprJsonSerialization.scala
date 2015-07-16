@@ -10,6 +10,7 @@ object QExprJsonSerialization {
       case q: QPos => q.toJson
       case q: QChunk => q.toJson
       case q: QDict => q.toJson
+      case q: QNamedPattern => q.toJson
       case q: QWildcard => q.toJson
       case q: QNamed => q.toJson
       case q: QUnnamed => q.toJson
@@ -30,6 +31,7 @@ object QExprJsonSerialization {
   implicit val qposFormat = jsonFormat1(QPos.apply).pack("type" -> "QPos")
   implicit val qchunkFormat = jsonFormat1(QChunk.apply).pack("type" -> "QChunk")
   implicit val qdictFormat = jsonFormat1(QDict.apply).pack("type" -> "QDict")
+  implicit val qnamedPatternFormat = jsonFormat1(QNamedPattern.apply).pack("type" -> "QNamedPattern")
   implicit val qandFormat = jsonFormat2(QAnd.apply).pack("type" -> "QAnd")
   implicit val qwildcardFormat = new RootJsonFormat[QWildcard] {
     def write(wc: QWildcard): JsValue = JsObject()

@@ -1,11 +1,12 @@
 package org.allenai.dictionary
 
 import org.allenai.common.{ Timing, Logging }
+import org.allenai.dictionary.persistence.Tablestore
 
 object SearchResultGrouper extends Logging {
   def targetTable(req: SearchRequest): Option[Table] = for {
     target <- req.target
-    table <- req.tables.get(target)
+    table <- Tablestore.tables(req.userEmail).get(target)
   } yield table
 
   /** Attempts to map the capture group names in the result to the target table's column names

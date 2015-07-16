@@ -3,6 +3,9 @@ package org.allenai.dictionary
 import java.text.ParseException
 import java.util.regex.Pattern
 
+import org.allenai.dictionary.patterns.NamedPattern
+import org.allenai.dictionary.persistence.Tablestore
+
 import scala.util.parsing.combinator.RegexParsers
 import scala.util.{ Failure, Success, Try }
 
@@ -17,6 +20,7 @@ case class QWord(value: String) extends QLeaf
 case class QPos(value: String) extends QLeaf
 case class QChunk(value: String) extends QLeaf
 case class QDict(value: String) extends QLeaf
+case class QNamedPattern(value: String) extends QLeaf
 case class QPosFromWord(value: Option[String], wordValue: String, posTags: Map[String, Int])
   extends QLeaf
 // Generalize a phrase to the nearest `pos` similar phrases
@@ -71,7 +75,6 @@ object QExprParser extends RegexParsers {
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
   def integer = """-?[0-9]+""".r ^^ { _.toInt }
-  def positiveInteger = "[1-9][0-9]*".r ^^ { _.toInt }
   def wordRegex = """[^|\]\[\^$(){}\s*+,"~]+""".r
   def word = wordRegex ^^ QWord
   def generalizedWord = (word <~ "~") ~ integer ^^ { x =>
@@ -83,8 +86,9 @@ object QExprParser extends RegexParsers {
   def pos = posTagRegex ^^ QPos
   def chunk = chunkTagRegex ^^ QChunk
   def dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
+  def namedPattern = "#[a-zA-Z_]+".r ^^ { s => QNamedPattern(s.tail) }
   def wildcard = "\\.".r ^^^ QWildcard()
-  def atom = wildcard | pos | chunk | dict | generalizedWord | generalizedPhrase | word
+  def atom = wildcard | pos | chunk | dict | namedPattern | generalizedWord | generalizedPhrase | word
   def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
   def named = "(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) }
   def unnamed = "(" ~> expr <~ ")" ^^ QUnnamed
@@ -114,8 +118,12 @@ object QueryLanguage {
       Failure(exception)
   }
 
-  def interpolateTables(expr: QExpr, tables: Map[String, Table]): Try[QExpr] = {
-    def interp(value: String): QDisj = tables.get(value) match {
+  def interpolateTables(
+    expr: QExpr,
+    tables: Map[String, Table],
+    patterns: Map[String, NamedPattern]
+  ): Try[QExpr] = {
+    def expandDict(value: String): QDisj = tables.get(value) match {
       case Some(table) if table.cols.size == 1 =>
         val rowExprs = for {
           row <- table.positive
@@ -128,10 +136,18 @@ object QueryLanguage {
         val ncol = table.cols.size
         throw new IllegalArgumentException(s"1-col table required: Table '$name' has $ncol columns")
       case None =>
-        throw new IllegalArgumentException(s"Could not find dictionary '$value'")
+        throw new IllegalArgumentException(s"Could not find table '$value'")
     }
+
+    def expandNamedPattern(value: String): QExpr = patterns.get(value) match {
+      // TODO: if two patterns reference each other, this will result in infinite recursion
+      case Some(pattern) => recurse(parse(pattern.pattern).get)
+      case None => throw new IllegalArgumentException(s"Could not find pattern '$value'")
+    }
+
     def recurse(expr: QExpr): QExpr = expr match {
-      case QDict(value) => interp(value)
+      case QDict(value) => expandDict(value)
+      case QNamedPattern(value) => expandNamedPattern(value)
       case l: QLeaf => l
       case QSeq(children) => QSeq(children.map(recurse))
       case QDisj(children) => QDisj(children.map(recurse))
@@ -173,13 +189,18 @@ object QueryLanguage {
     * QDisj and QSimilarPhrase
     *
     * @param expr QExpr to interpolate
-    * @param tables tables to use when replacing QDict expressions
+    * @param userEmail email of the user, used to find tables for dictionary expansions and named
+    *                  patterns
     * @param similarPhrasesSearcher searcher to use when replacing QGeneralizePhrase expressions
     * @return the attempt to interpolated the query
     */
-  def interpolateQuery(expr: QExpr, tables: Map[String, Table],
-    similarPhrasesSearcher: SimilarPhrasesSearcher): Try[QExpr] = {
-    interpolateSimilarPhrases(interpolateTables(expr, tables).get, similarPhrasesSearcher)
+  def interpolateQuery(
+    expr: QExpr,
+    tables: Map[String, Table],
+    patterns: Map[String, NamedPattern],
+    similarPhrasesSearcher: SimilarPhrasesSearcher
+  ): Try[QExpr] = {
+    interpolateSimilarPhrases(interpolateTables(expr, tables, patterns).get, similarPhrasesSearcher)
   }
 
   /** Converts a query to its string format
@@ -195,6 +216,7 @@ object QueryLanguage {
       case QPos(value) => value
       case QChunk(value) => value
       case QDict(value) => "$" + value
+      case QNamedPattern(value) => "#" + value
       case QWildcard() => "."
       case QSeq(children) => children.map(getQueryString).mkString(" ")
       case QDisj(children) => "{" + children.map(getQueryString).mkString(",") + "}"
@@ -247,6 +269,7 @@ object QueryLanguage {
     */
   def getQueryLength(qexpr: QExpr): (Int, Int) = qexpr match {
     case QDict(_) => (1, -1)
+    case QNamedPattern(_) => (1, -1)
     case QGeneralizePhrase(_, _) => (1, -1)
     case QSimilarPhrases(qwords, pos, phrases) =>
       val lengths = qwords.size +: phrases.slice(0, pos).map(_.qwords.size)
