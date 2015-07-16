@@ -5,6 +5,7 @@ var Button = bs.Button;
 var Row = bs.Row;
 var Col = bs.Col;
 var SearchInterface = require("../search/SearchInterface");
+var PatternStore = require("../../stores/NamedPatternsStore");
 
 var PatternEditor = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
@@ -30,12 +31,16 @@ var PatternEditor = React.createClass({
     });
   },
 
+  saveButtonClicked: function() {
+    PatternStore.savePattern(this.props.patternName, this.state.query);
+  },
+
   render: function() {
     var saveAllowed =
       (this.state.query.trim() !== this.props.initialQuery.trim()) &&
       (this.state.query.trim() !== "");
     var saveText = "Save as " + this.props.patternName;
-    var saveButton = <Button disabled={!saveAllowed}>{saveText}</Button>;
+    var saveButton = <Button disabled={!saveAllowed} onClick={this.saveButtonClicked}>{saveText}</Button>;
 
     return <SearchInterface
       config={this.props.config}

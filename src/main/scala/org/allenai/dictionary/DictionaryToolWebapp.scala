@@ -11,7 +11,6 @@ import org.allenai.dictionary.persistence.Tablestore
 import spray.can.Http
 import spray.http.{ CacheDirectives, HttpHeaders, StatusCodes }
 import spray.httpx.SprayJsonSupport
-import spray.json.CollectionFormats
 import spray.routing.{ ExceptionHandler, HttpService }
 import spray.util.LoggingContext
 import org.allenai.common.Config._
@@ -185,11 +184,34 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
 
   val patternsRoute = pathPrefix("api" / "patterns") {
     pathPrefix(Segment) { userEmail =>
-      pathEndOrSingleSlash {
-        get {
-          complete(Tablestore.namedPatterns(userEmail).values)
+      path(Segment) { patternName =>
+        pathEnd {
+          get {
+            complete {
+              Tablestore.namedPatterns(userEmail).get(patternName) match {
+                case None => StatusCodes.NotFound
+                case Some(pattern) => pattern.pattern
+              }
+            }
+          } ~ put {
+            entity(as[String]) { pattern =>
+              complete {
+                Tablestore.putNamedPattern(userEmail, NamedPattern(patternName, pattern))
+              }
+            }
+          } ~ delete {
+            complete {
+              Tablestore.deleteNamedPattern(userEmail, patternName)
+              StatusCodes.OK
+            }
+          }
         }
-      }
+      } ~
+        pathEndOrSingleSlash {
+          get {
+            complete(Tablestore.namedPatterns(userEmail).values)
+          }
+        }
     }
   }
 
@@ -214,9 +236,9 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
   def receive: Actor.Receive = runRoute(
     mainPageRoute ~
-    serviceRoute ~
-    tablesRoute ~
-    patternsRoute ~
-    corporaRoute
+      serviceRoute ~
+      tablesRoute ~
+      patternsRoute ~
+      corporaRoute
   )
 }

@@ -53,6 +53,22 @@ const NamedPatternsStore = assign({}, EventEmitter.prototype, {
     this.emitChange();
   },
 
+  savePattern(name, pattern) {
+    if(userEmail) {
+      patterns[name] = pattern;
+      xhr({
+        uri: '/api/patterns/' + encodeURIComponent(userEmail) + '/' + name,
+        method: 'PUT',
+        body: pattern
+      }, function(err, response, body) {
+        if(response.statusCode !== 200) {
+          console.log("Unexpected response writing a table: " + JSON.stringify(response));
+        }
+      });
+      this.emitChange();
+    }
+  },
+
   getPatterns() {
     return patterns;
   },

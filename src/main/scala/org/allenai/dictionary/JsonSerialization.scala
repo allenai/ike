@@ -27,5 +27,5 @@ object JsonSerialization {
   implicit val corpusDescription = jsonFormat2(CorpusDescription.apply)
   implicit val similarPhrasesResponse = jsonFormat1(SimilarPhrasesResponse.apply)
 
-  implicit val pattern = jsonFormat2(NamedPattern.apply)
+  implicit val namedPattern = jsonFormat2(NamedPattern.apply)
 }
