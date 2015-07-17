@@ -66,6 +66,7 @@ libraryDependencies ++= Seq(
     //"com.medallia.word2vec" % "Word2VecJava" % "0.9.0",
     "com.google.guava" % "guava" % "18.0",
     "org.apache.thrift" % "libthrift" % "0.9.1",
+    sprayModule("caching"),
     scopt)
 
 javaOptions in Revolver.reStart += "-Xmx14G"

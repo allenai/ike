@@ -6,14 +6,27 @@ import org.allenai.common.Logging
 import org.allenai.dictionary.patterns.NamedPattern
 import org.allenai.dictionary.{ TableRow, QWord, TableValue, Table }
 import play.api.libs.json.{ JsValue => PlayJsValue, Json => PlayJson }
+import spray.caching.LruCache
 import spray.json.{ JsValue => SprayJsValue }
 import spray.json.pimpString
-
+import spray.util._
+import scala.concurrent.duration._
+import language.postfixOps
 import scala.slick.jdbc.meta.MTable
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import OkcPostgresDriver.simple.{ Table => SqlTable, _ }
 
-object Tablestore extends Logging {
+trait Tablestore {
+  def tables(userEmail: String): Map[String, Table]
+  def putTable(userEmail: String, table: Table): Table
+  def deleteTable(userEmail: String, tableName: String): Unit
+  def namedPatterns(userEmail: String): Map[String, NamedPattern]
+  def putNamedPattern(userEmail: String, pattern: NamedPattern): NamedPattern
+  def deleteNamedPattern(userEmail: String, patternName: String): Unit
+}
+
+object UncachedTablestore extends Tablestore with Logging {
   private val config: Config = ConfigFactory.load()[Config]("Tablestore")
 
   private val db = {
@@ -198,5 +211,44 @@ object Tablestore extends Logging {
       val q = namedPatternsTable.filter { t => t.user === userEmail && t.name === patternName }
       q.delete
     }
+  }
+}
+
+object Tablestore extends Tablestore {
+  private val tablesCache = LruCache[Map[String, Table]](timeToLive = 5 minutes)
+  private val patternsCache = LruCache[Map[String, NamedPattern]](timeToLive = 5 minutes)
+
+  override def tables(userEmail: String): Map[String, Table] = {
+    tablesCache(userEmail) {
+      UncachedTablestore.tables(userEmail)
+    }.await
+  }
+
+  override def putTable(userEmail: String, table: Table): Table = {
+    val result = UncachedTablestore.putTable(userEmail, table)
+    tablesCache.remove(userEmail)
+    result
+  }
+
+  override def deleteTable(userEmail: String, tableName: String): Unit = {
+    UncachedTablestore.deleteTable(userEmail, tableName)
+    tablesCache.remove(userEmail)
+  }
+
+  override def namedPatterns(userEmail: String): Map[String, NamedPattern] = {
+    patternsCache(userEmail) {
+      UncachedTablestore.namedPatterns(userEmail)
+    }.await
+  }
+
+  override def putNamedPattern(userEmail: String, pattern: NamedPattern): NamedPattern = {
+    val result = UncachedTablestore.putNamedPattern(userEmail, pattern)
+    patternsCache.remove(userEmail)
+    result
+  }
+
+  override def deleteNamedPattern(userEmail: String, patternName: String): Unit = {
+    UncachedTablestore.deleteNamedPattern(userEmail, patternName)
+    patternsCache.remove(userEmail)
   }
 }
