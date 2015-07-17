@@ -80,7 +80,8 @@ scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 conflictManager := ConflictManager.default
 
 dependencyOverrides ++= Set(
-  allenAiCommon,
+  "org.allenai.common" %% "common-core" % "1.0.13",
+  sprayJson,
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.2",
   "commons-codec" % "commons-codec" % "1.6",
