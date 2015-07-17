@@ -6,6 +6,7 @@ import java.util.regex.Pattern
 import org.allenai.dictionary.patterns.NamedPattern
 import org.allenai.dictionary.persistence.Tablestore
 
+import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
 import scala.util.{ Failure, Success, Try }
 
@@ -156,7 +157,12 @@ object QueryLanguage {
 
     def expandNamedPattern(value: String): QExpr = patterns.get(value) match {
       // TODO: if two patterns reference each other, this will result in infinite recursion
-      case Some(pattern) => recurse(parse(pattern.pattern, false).get)
+      case Some(pattern) => try {
+        recurse(parse(pattern.pattern, false).get)
+      } catch {
+        case e if NonFatal(e) =>
+          throw new IllegalArgumentException(s"${e.getMessage} while expanding pattern ${pattern.name}", e)
+      }
       case None => throw new IllegalArgumentException(s"Could not find pattern '$value'")
     }
 
