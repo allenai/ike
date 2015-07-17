@@ -50,7 +50,7 @@ object QExprJsonSerialization {
   implicit val qGeneralizePhrase = jsonFormat2(QGeneralizePhrase.apply).
     pack("type" -> "QGeneralizePhrase")
   implicit val qspFormat = jsonFormat3(QSimilarPhrases.apply).pack("type" -> "QSimilarPhrases")
-  implicit val unpackers = Seq(qwordFormat, qposFormat, qchunkFormat, qdictFormat,
+  implicit val unpackers = Seq(qwordFormat, qposFormat, qchunkFormat, qdictFormat, qnamedPatternFormat,
     qwildcardFormat, qnamedFormat, qunnamedFormat, qnonCapFormat, qstarFormat,
     qplusFormat, qseqFormat, qdisjFormat, qpfwFormat, qspFormat)
 }
