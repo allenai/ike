@@ -111,11 +111,26 @@ object QExprParser extends RegexParsers {
 // Use this so parser combinator objects are not in scope
 object QueryLanguage {
   val parser = QExprParser
-  def parse(s: String): Try[QExpr] = parser.parse(s) match {
-    case parser.Success(result, _) => Success(result)
+  def parse(s: String, allowCaptureGroups: Boolean = true): Try[QExpr] = parser.parse(s) match {
+    case parser.Success(result, _) =>
+      Success(if (allowCaptureGroups) result else removeCaptureGroups(result))
     case parser.NoSuccess(message, next) =>
       val exception = new ParseException(message, next.pos.column)
       Failure(exception)
+  }
+
+  def removeCaptureGroups(expr: QExpr): QExpr = {
+    expr match {
+      case l: QLeaf => l
+      case QSeq(children) => QSeq(children.map(removeCaptureGroups))
+      case QDisj(children) => QDisj(children.map(removeCaptureGroups))
+      case c: QCapture => QNonCap(c.qexpr)
+      case QPlus(qexpr) => QPlus(removeCaptureGroups(qexpr))
+      case QStar(qexpr) => QStar(removeCaptureGroups(qexpr))
+      case QRepetition(qexpr, min, max) => QRepetition(removeCaptureGroups(qexpr), min, max)
+      case QAnd(expr1, expr2) => QAnd(removeCaptureGroups(expr1), removeCaptureGroups(expr2))
+      case QNonCap(qexpr) => QNonCap(removeCaptureGroups(qexpr))
+    }
   }
 
   def interpolateTables(
@@ -141,7 +156,7 @@ object QueryLanguage {
 
     def expandNamedPattern(value: String): QExpr = patterns.get(value) match {
       // TODO: if two patterns reference each other, this will result in infinite recursion
-      case Some(pattern) => recurse(parse(pattern.pattern).get)
+      case Some(pattern) => recurse(parse(pattern.pattern, false).get)
       case None => throw new IllegalArgumentException(s"Could not find pattern '$value'")
     }
 

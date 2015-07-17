@@ -87,7 +87,7 @@ case class SearchApp(config: Config) extends Logging {
 
 object SearchApp extends Logging {
   def parse(r: SearchRequest): Try[QExpr] = r.query match {
-    case Left(queryString) => QueryLanguage.parse(queryString)
+    case Left(queryString) => QueryLanguage.parse(queryString, r.target.isDefined)
     case Right(qexpr) => Success(qexpr)
   }
 
