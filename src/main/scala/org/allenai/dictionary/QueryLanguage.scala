@@ -112,7 +112,10 @@ object QExprParser extends RegexParsers {
 // Use this so parser combinator objects are not in scope
 object QueryLanguage {
   val parser = QExprParser
-  def parse(s: String, allowCaptureGroups: Boolean = true): Try[QExpr] = parser.parse(s) match {
+  def parse(
+    s: String,
+    allowCaptureGroups: Boolean = true
+  ): Try[QExpr] = parser.parse(s) match {
     case parser.Success(result, _) =>
       Success(if (allowCaptureGroups) result else removeCaptureGroups(result))
     case parser.NoSuccess(message, next) =>
@@ -155,30 +158,39 @@ object QueryLanguage {
         throw new IllegalArgumentException(s"Could not find table '$value'")
     }
 
-    def expandNamedPattern(value: String): QExpr = patterns.get(value) match {
-      // TODO: if two patterns reference each other, this will result in infinite recursion
-      case Some(pattern) => try {
-        recurse(parse(pattern.pattern, false).get)
-      } catch {
-        case e if NonFatal(e) =>
-          throw new IllegalArgumentException(s"${e.getMessage} while expanding pattern ${pattern.name}", e)
+    def expandNamedPattern(
+      patternName: String,
+      forbiddenPatternNames: Set[String] = Set.empty
+    ): QExpr = {
+      if (forbiddenPatternNames.contains(patternName))
+        throw new IllegalArgumentException(s"Pattern $patternName recursively invokes itself.")
+
+      patterns.get(patternName) match {
+        case Some(pattern) => try {
+          recurse(parse(pattern.pattern, false).get, forbiddenPatternNames + patternName)
+        } catch {
+          case e if NonFatal(e) =>
+            throw new IllegalArgumentException(s"While expanding pattern $patternName: ${e.getMessage}", e)
+        }
+        case None => throw new IllegalArgumentException(s"Could not find pattern '$patternName'")
       }
-      case None => throw new IllegalArgumentException(s"Could not find pattern '$value'")
     }
 
-    def recurse(expr: QExpr): QExpr = expr match {
+    def recurse(expr: QExpr, forbiddenPatternNames: Set[String] = Set.empty): QExpr = expr match {
       case QDict(value) => expandDict(value)
-      case QNamedPattern(value) => expandNamedPattern(value)
+      case QNamedPattern(value) => expandNamedPattern(value, forbiddenPatternNames)
       case l: QLeaf => l
-      case QSeq(children) => QSeq(children.map(recurse))
-      case QDisj(children) => QDisj(children.map(recurse))
-      case QNamed(expr, name) => QNamed(recurse(expr), name)
-      case QNonCap(expr) => QNonCap(recurse(expr))
-      case QPlus(expr) => QPlus(recurse(expr))
-      case QStar(expr) => QStar(recurse(expr))
-      case QUnnamed(expr) => QUnnamed(recurse(expr))
-      case QAnd(expr1, expr2) => QAnd(recurse(expr1), recurse(expr2))
-      case QRepetition(expr, min, max) => QRepetition(recurse(expr), min, max)
+      case QSeq(children) => QSeq(children.map(recurse(_, forbiddenPatternNames)))
+      case QDisj(children) => QDisj(children.map(recurse(_, forbiddenPatternNames)))
+      case QNamed(expr, name) => QNamed(recurse(expr, forbiddenPatternNames), name)
+      case QNonCap(expr) => QNonCap(recurse(expr, forbiddenPatternNames))
+      case QPlus(expr) => QPlus(recurse(expr, forbiddenPatternNames))
+      case QStar(expr) => QStar(recurse(expr, forbiddenPatternNames))
+      case QUnnamed(expr) => QUnnamed(recurse(expr, forbiddenPatternNames))
+      case QAnd(expr1, expr2) =>
+        QAnd(recurse(expr1, forbiddenPatternNames), recurse(expr2, forbiddenPatternNames))
+      case QRepetition(expr, min, max) =>
+        QRepetition(recurse(expr, forbiddenPatternNames), min, max)
     }
     Try(recurse(expr))
   }
