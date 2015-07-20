@@ -1,17 +1,17 @@
 var React = require('react');
 var bs = require('react-bootstrap');
 var TableManager = require('../../managers/TableManager.js');
-var DropdownButton = bs.DropdownButton
-var Button = bs.Button
-var MenuItem = bs.MenuItem
-var Input = bs.Input
-var Label = bs.Label
-var Badge = bs.Badge
-var ButtonGroup = bs.ButtonGroup
-var Table = bs.Table
+var DropdownButton = bs.DropdownButton;
+var Button = bs.Button;
+var MenuItem = bs.MenuItem;
+var Input = bs.Input;
+var Label = bs.Label;
+var Badge = bs.Badge;
+var ButtonGroup = bs.ButtonGroup;
+var Table = bs.Table;
 var Loader = require('react-loader');
 var xhr = require('xhr');
-
+const AuthStore = require('../../stores/AuthStore');
 
 var SuggestQueryButton = React.createClass({
   getInitialState: function() {
@@ -39,17 +39,17 @@ var SuggestQueryButton = React.createClass({
   },
 
   suggestQueryCallBack: function(err, resp, body) {
-    this.setState({waiting: false})
+    this.setState({waiting: false});
     if (resp.statusCode == 200) {
-      var suggestions = JSON.parse(body)
-      suggestions.suggestions.unshift(suggestions.original)
+      var suggestions = JSON.parse(body);
+      suggestions.suggestions.unshift(suggestions.original);
       this.setState({
         suggestions: suggestions.suggestions,
         sampleSize: suggestions.samplePercent
       })
     } else {
-      console.log("Suggest query server error: " + resp.body)
-      this.setState({error: 'Server Error'});
+      console.log("Suggest query server error: " + resp.body);
+      this.setState({error: 'Server Error' + resp.body});
     }
   },
 
@@ -70,18 +70,18 @@ var SuggestQueryButton = React.createClass({
       return;
     }
 
-    var config = this.props.config.value.ml
+    var config = this.props.config.value.ml;
     if (this.props.narrow) {
       var scoring = {
         p: config.pWeightNarrow,
         n: config.nWeightNarrow,
-        u: config.uWeightNarrow,
+        u: config.uWeightNarrow
       }
     } else {
       var scoring = {
         p: config.pWeight,
         n: config.nWeight,
-        u: config.uWeight,
+        u: config.uWeight
       }
     }
     var requestConfig = {
@@ -92,7 +92,7 @@ var SuggestQueryButton = React.createClass({
       pWeight: scoring.p,
       nWeight: scoring.n,
       uWeight: scoring.u
-    }
+    };
 
     // We store the URI so we refresh if new corpra are added
     var uri = this.props.makeUri('suggestQuery');
@@ -101,11 +101,11 @@ var SuggestQueryButton = React.createClass({
       return;
     }
 
-    var tables = TableManager.getTables()
+    var tables = TableManager.getTables();
     var requestData = {
       body: JSON.stringify({
         query: queryValue,
-        tables: tables,
+        userEmail: AuthStore.getUserEmail(),
         target: targetValue,
         narrow: this.props.narrow,
         config: requestConfig
@@ -161,7 +161,7 @@ var SuggestQueryButton = React.createClass({
       instanceToShow = (<div style={{textAlign: 'center', fontStyle: 'italic'}}>
         {"(" + this.state.error + ")"}</div>)
     } else {
-      var rows = []
+      var rows = [];
       for (var i = 0; i < this.state.suggestions.length; i++) {
           rows.push(this.buildTableRow(this.state.suggestions[i], i))
       }
