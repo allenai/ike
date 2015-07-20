@@ -48,7 +48,7 @@ var TableManager = {
   removeChangeListener: function(listener) {
     var index = listeners.indexOf(listener);
     if (index !== -1) {
-      listeners.splice(listener, 1);
+      listeners.splice(index, 1);
     }
   },
   updateListeners: function() {
