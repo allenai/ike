@@ -70,14 +70,14 @@ var SearchInterface = React.createClass({
       this.search();
   },
 
-  componentWillUnmount() {
+  componentWillUnmount: function() {
     CorporaStore.removeChangeListener(this.corporaChanged);
 
     if (this.hasPendingRequest())
       this.cancelRequest();
   },
 
-  corporaChanged() {
+  corporaChanged: function() {
     this.setState({
       corpora: CorporaStore.getCorpora(),
       selectedCorpusNames: CorporaStore.getCorpusNames()
@@ -168,9 +168,8 @@ var SearchInterface = React.createClass({
   },
 
   search: function() {
-    if (this.hasPendingRequest()) {
+    if (this.hasPendingRequest())
       this.cancelRequest();
-    }
     this.clearGroups();
     var queryValue;
     if (this.state.qexpr == null) {
