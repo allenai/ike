@@ -26,7 +26,9 @@ var SearchInterface = React.createClass({
     showQuerySuggestions: React.PropTypes.bool,
     queryLink: React.PropTypes.object, // If present, is used to store the query. Otherwise,
                                        // SearchInterface uses its own state to store the query.
-    buttonAfterQuery: React.PropTypes.element
+    buttonAfterQuery: React.PropTypes.element,
+    tag: React.PropTypes.string // This is a weird property. Whenever it changes, the search form
+                                // triggers the search without anyone having to hit enter.
   },
 
   queryLink: function() {
@@ -63,7 +65,16 @@ var SearchInterface = React.createClass({
     };
   },
 
-  componentDidMount() {
+  componentDidUpdate: function(prevProps, prevState) {
+    if(prevProps.tag !== this.props.tag) {
+      var self = this;
+      this.setState({qexpr: null}, function() {
+        self.search();
+      });
+    }
+  },
+
+  componentDidMount: function() {
     CorporaStore.addChangeListener(this.corporaChanged);
 
     if(this.queryLink().value)
