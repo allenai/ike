@@ -1,4 +1,5 @@
 var xhr = require('xhr');
+const AuthStore = require('../stores/AuthStore')
 
 var tables = {};
 var listeners = [];
@@ -227,4 +228,9 @@ var TableManager = {
     });
   }
 };
+
+AuthStore.addChangeListener(function() {
+  TableManager.setUserEmail(AuthStore.getUserEmail());
+});
+
 module.exports = TableManager;

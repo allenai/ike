@@ -173,12 +173,12 @@ var SearchResults = React.createClass({
   renderTable: function() {
     var self = this;
     var nextPage = this.hasNextPage() ? (
-      <PageItem next href="#" onClick={this.nextPage}>
+      <PageItem next onClick={this.nextPage}>
         Next Page &rarr;
       </PageItem>
     ) : null;
     var prevPage = this.hasPrevPage() ? (
-      <PageItem previous href="#" onClick={this.prevPage}>
+      <PageItem previous onClick={this.prevPage}>
         &larr; Previous Page
       </PageItem>
     ) : null;
