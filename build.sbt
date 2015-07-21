@@ -66,6 +66,7 @@ libraryDependencies ++= Seq(
     //"com.medallia.word2vec" % "Word2VecJava" % "0.9.0",
     "com.google.guava" % "guava" % "18.0",
     "org.apache.thrift" % "libthrift" % "0.9.1",
+    sprayModule("caching"),
     scopt)
 
 javaOptions in Revolver.reStart += "-Xmx14G"
@@ -79,7 +80,8 @@ scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 conflictManager := ConflictManager.default
 
 dependencyOverrides ++= Set(
-  allenAiCommon,
+  "org.allenai.common" %% "common-core" % "1.0.13",
+  sprayJson,
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.2",
   "commons-codec" % "commons-codec" % "1.6",

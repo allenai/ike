@@ -271,6 +271,15 @@ var QDict = React.createClass({
     return menu;
   }
 });
+var QNamedPattern = React.createClass({
+  mixins: [QExprMixin],
+  render: function() {
+    var value = this.props.qexpr.value;
+    var hashed = '#' + value;
+    var menu = <DropdownButton bsStyle="link" title={hashed}></DropdownButton>;
+    return menu;
+  }
+});
 var QWildcard = React.createClass({
   mixins: [QExprMixin],
   render: function() {
@@ -445,6 +454,7 @@ var QExpr = React.createClass({
     QChunk: QChunk,
     QSeq: QSeq,
     QDict: QDict,
+    QNamedPattern: QNamedPattern,
     QWildcard: QWildcard,
     QNamed: QNamed,
     QUnnamed: QUnnamed,

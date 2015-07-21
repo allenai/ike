@@ -11,48 +11,70 @@ var DropdownButton = bs.DropdownButton;
 var MenuItem = bs.MenuItem;
 var ResultGroup = require('./ResultGroup.js');
 var SearchResults = React.createClass({
+  propTypes: {
+    target: React.PropTypes.object,
+    results: React.PropTypes.object.isRequired
+  },
+
+  target: function() {
+    if(this.props.target)
+      return this.props.target.value;
+    else
+      return null;
+  },
+
   getInitialState: function() {
     return {
       currentPage: 0,
       orderBy: "count"
     };
   },
+
   startGroup: function() {
     return this.state.currentPage * this.groupsPerPage();
   },
+
   pageTo: function(i) {
     if (0 <= i && i < this.numPages()) {
       this.setState({currentPage: i});
     }
   },
+
   hasNextPage: function() {
     return this.state.currentPage < this.numPages() - 1;
   },
+
   hasPrevPage: function() {
     return this.state.currentPage > 0;
   },
+
   nextPage: function() {
     this.pageTo(this.state.currentPage + 1);
   },
+
   prevPage: function() {
     this.pageTo(this.state.currentPage - 1);
   },
+
   groupsPerPage: function() {
     return this.props.config.value.groupsPerPage;
   },
+
   numPages: function() {
     var groupsPerPage = 1.0 * this.groupsPerPage();
     var groups = this.displayedGroups();
     var numGroups = groups.length;
     return Math.ceil(numGroups / groupsPerPage);
   },
+
   displayGroup: function(group) {
     var config = this.props.config.value;
     return !(config.hideAdded && this.targetHasRow(group));
   },
+
   targetHasRow: function(group) {
     var row = TableManager.stringsRow(group.keys);
-    var target = this.props.target.value;
+    var target = this.target();
     if (target == null) {
       return false;
     } else {
@@ -63,7 +85,7 @@ var SearchResults = React.createClass({
   },
 
   displayedGroups: function() {
-    var results = this.props.results.value;
+    var results = this.props.results;
     var groups = results.groups;
 
     var orderByRelevance = function(group1, group2) {
@@ -97,7 +119,7 @@ var SearchResults = React.createClass({
   },
 
   cols: function() {
-    var target = this.props.target.value;
+    var target = this.target();
     var tables = TableManager.getTables();
     if (target in tables) {
       var table = tables[target];
@@ -125,7 +147,7 @@ var SearchResults = React.createClass({
   },
 
   addHead: function() {
-    var target = this.props.target.value;
+    var target = this.target();
     if (target == null) {
       return null;
     } else {
@@ -134,7 +156,7 @@ var SearchResults = React.createClass({
   },
 
   colHeads: function() {
-    var target = this.props.target.value;
+    var target = this.target();
     var tables = TableManager.getTables();
     if (target in tables) {
       var table = tables[target];
@@ -150,16 +172,13 @@ var SearchResults = React.createClass({
 
   renderTable: function() {
     var self = this;
-    var results = this.props.results;
-    var config = this.props.config;
-    var target = this.props.target;
     var nextPage = this.hasNextPage() ? (
-      <PageItem next href="#" onClick={this.nextPage}>
+      <PageItem next onClick={this.nextPage}>
         Next Page &rarr;
       </PageItem>
     ) : null;
     var prevPage = this.hasPrevPage() ? (
-      <PageItem previous href="#" onClick={this.prevPage}>
+      <PageItem previous onClick={this.prevPage}>
         &larr; Previous Page
       </PageItem>
     ) : null;
@@ -215,13 +234,13 @@ var SearchResults = React.createClass({
   renderErrorMessage: function() {
     return (
       <Panel header="Error" bsStyle="danger">
-        {this.props.results.value.errorMessage}
+        {this.props.results.errorMessage}
       </Panel>
     );
   },
 
   renderNoGroups: function() {
-    var numGroups = this.props.results.value.groups.length;
+    var numGroups = this.props.results.groups.length;
     var numDisplayed = this.displayedGroups().length;
     var numHidden = numGroups - numDisplayed;
     return (
@@ -236,7 +255,7 @@ var SearchResults = React.createClass({
   },
 
   render: function() {
-    var results = this.props.results.value;
+    var results = this.props.results;
     if (results.request == null) {
       return this.renderBlank();
     } else if (results.pending) {

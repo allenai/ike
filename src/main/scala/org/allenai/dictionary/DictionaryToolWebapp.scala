@@ -6,6 +6,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import org.allenai.common.Logging
+import org.allenai.dictionary.patterns.NamedPattern
 import org.allenai.dictionary.persistence.Tablestore
 import spray.can.Http
 import spray.http.{ CacheDirectives, HttpHeaders, StatusCodes }
@@ -78,8 +79,20 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
           entity(as[SearchRequest]) { req =>
             complete {
               val query = SearchApp.parse(req).get
+
+              val (tables, patterns) = req.userEmail match {
+                case Some(userEmail) => (
+                  Tablestore.tables(userEmail),
+                  Tablestore.namedPatterns(userEmail)
+                )
+                case None => (Map.empty[String, Table], Map.empty[String, NamedPattern])
+              }
+
               val interpolatedQuery = QueryLanguage.interpolateQuery(
-                query, req.tables, similarPhrasesSearcher
+                query,
+                tables,
+                patterns,
+                similarPhrasesSearcher
               ).get
               val resultsFuture = searchersFuture.map { searchers =>
                 val parResult = searchers.par.flatMap { searcher =>
@@ -91,7 +104,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
                 results <- resultsFuture
               } yield {
                 req.target match {
-                  case Some(target) => SearchResultGrouper.groupResults(req, results)
+                  case Some(target) => SearchResultGrouper.groupResults(req, tables, results)
                   case None => SearchResultGrouper.identityGroupResults(req, results)
                 }
               }
@@ -158,7 +171,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
             entity(as[Table]) { table =>
               complete {
                 if (table.name == tableName) {
-                  Tablestore.put(userEmail, table)
+                  Tablestore.putTable(userEmail, table)
                 } else {
                   StatusCodes.BadRequest
                 }
@@ -166,7 +179,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
             }
           } ~ delete {
             complete {
-              Tablestore.delete(userEmail, tableName)
+              Tablestore.deleteTable(userEmail, tableName)
               StatusCodes.OK
             }
           }
@@ -181,13 +194,46 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     }
   }
 
+  val patternsRoute = pathPrefix("api" / "patterns") {
+    pathPrefix(Segment) { userEmail =>
+      path(Segment) { patternName =>
+        pathEnd {
+          get {
+            complete {
+              Tablestore.namedPatterns(userEmail).get(patternName) match {
+                case None => StatusCodes.NotFound
+                case Some(pattern) => pattern.pattern
+              }
+            }
+          } ~ put {
+            entity(as[String]) { pattern =>
+              complete {
+                Tablestore.putNamedPattern(userEmail, NamedPattern(patternName, pattern))
+              }
+            }
+          } ~ delete {
+            complete {
+              Tablestore.deleteNamedPattern(userEmail, patternName)
+              StatusCodes.OK
+            }
+          }
+        }
+      } ~
+        pathEndOrSingleSlash {
+          get {
+            complete(Tablestore.namedPatterns(userEmail).values)
+          }
+        }
+    }
+  }
+
   val corporaRoute = path("api" / "corpora") {
     pathEnd {
       complete {
         val readySearchApps = searchApps.filter(_._2.isCompleted)
-        JsArray(readySearchApps.map {
-          case (corpusName, app) => CorpusDescription(corpusName, app.get.description).toJson
-        }.toSeq: _*)
+        readySearchApps.map {
+          case (corpusName, app) => CorpusDescription(corpusName, app.get.description)
+        }
       }
     }
   }
@@ -200,5 +246,11 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
 
   def actorRefFactory: ActorContext = context
   val cacheControlMaxAge = HttpHeaders.`Cache-Control`(CacheDirectives.`max-age`(0))
-  def receive: Actor.Receive = runRoute(mainPageRoute ~ serviceRoute ~ tablesRoute ~ corporaRoute)
+  def receive: Actor.Receive = runRoute(
+    mainPageRoute ~
+      serviceRoute ~
+      tablesRoute ~
+      patternsRoute ~
+      corporaRoute
+  )
 }

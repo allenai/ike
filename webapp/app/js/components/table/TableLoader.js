@@ -8,10 +8,13 @@ var TableManager = require('../../managers/TableManager.js');
 var TableLoader = React.createClass({
   componentDidMount: function() {
     var callback = function() {
-      if(TableManager.userEmail()) {
-        this.setState({error: ''});
-      } else {
-        this.setState({error: "You must be logged in to create tables."});
+      // Since this is a callback, the component could have been unmounted in the meantime.
+      if(this.isMounted()) {
+        if(TableManager.userEmail()) {
+          this.setState({error: ''});
+        } else {
+          this.setState({error: "You must be logged in to create tables."});
+        }
       }
     }.bind(this)
 
@@ -166,9 +169,9 @@ var TableLoader = React.createClass({
     var alert = <Alert bsStyle="danger">{this.state.error}</Alert>
     var submitButton = this.submitButton();
     if(this.state.error.length == 0)
-      return <div>{nameInput}{fileUpload}{submitButton}</div>
+      return <div>{nameInput} {fileUpload} {submitButton}</div>
     else
-      return <div>{nameInput}{fileUpload}{alert}{submitButton}</div>
+      return <div>{nameInput} {fileUpload} {alert} {submitButton}</div>
   }
 });
 module.exports = TableLoader;

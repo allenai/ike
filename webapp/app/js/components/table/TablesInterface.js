@@ -9,7 +9,13 @@ var TableLoader = require('./TableLoader.js');
 var Table = require('./Table.js');
 var TableManager = require('../../managers/TableManager.js');
 var TableButtonToolbar = require('./TableButtonToolbar.js');
+const AuthStore = require('../../stores/AuthStore.js');
+
 var TablesInterface = React.createClass({
+
+  // This mixin makes this interface require authentication
+  mixins: [ AuthStore.Mixin ],
+
   tables: function() {
     var tables = TableManager.getTables();
     var components = Object.keys(tables).map(function(name, i) {

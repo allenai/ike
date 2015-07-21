@@ -3,16 +3,30 @@ package org.allenai.dictionary.persistence
 import com.typesafe.config.{ Config, ConfigFactory }
 import org.allenai.common.Config._
 import org.allenai.common.Logging
+import org.allenai.dictionary.patterns.NamedPattern
 import org.allenai.dictionary.{ TableRow, QWord, TableValue, Table }
 import play.api.libs.json.{ JsValue => PlayJsValue, Json => PlayJson }
+import spray.caching.LruCache
 import spray.json.{ JsValue => SprayJsValue }
 import spray.json.pimpString
-
+import spray.util._
+import scala.concurrent.duration._
+import language.postfixOps
 import scala.slick.jdbc.meta.MTable
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import OkcPostgresDriver.simple.{ Table => SqlTable, _ }
 
-object Tablestore extends Logging {
+trait Tablestore {
+  def tables(userEmail: String): Map[String, Table]
+  def putTable(userEmail: String, table: Table): Table
+  def deleteTable(userEmail: String, tableName: String): Unit
+  def namedPatterns(userEmail: String): Map[String, NamedPattern]
+  def putNamedPattern(userEmail: String, pattern: NamedPattern): NamedPattern
+  def deleteNamedPattern(userEmail: String, patternName: String): Unit
+}
+
+object UncachedTablestore extends Tablestore with Logging {
   private val config: Config = ConfigFactory.load()[Config]("Tablestore")
 
   private val db = {
@@ -58,28 +72,48 @@ object Tablestore extends Logging {
   }
   private val entriesTable = TableQuery[EntriesTable]
 
+  private class NamedPatternsTable(tag: Tag)
+      extends SqlTable[(String, String, String)](tag, "namedPatterns") {
+    def user = column[String]("user")
+    def name = column[String]("name")
+    def pattern = column[String]("pattern")
+    def * = (user, name, pattern)
+    def idx = index("idx_NamedPatternsUserName", (user, name), unique = true)
+  }
+  private val namedPatternsTable = TableQuery[NamedPatternsTable]
+
   // set up the database just the way we want it
   db.withTransaction { implicit session =>
     if (MTable.getTables("settings").list.isEmpty) settingsTable.ddl.create
 
     // find out the update to the version we need
-    val EXPECTED_VERSION = 1
+    val EXPECTED_VERSION = 2
     def currentVersion =
       settingsTable.filter(_.key === "version").firstOption.map(_._2.toInt).getOrElse(0)
     val upgradeFunctions = Map[Int, Function0[Unit]](
       0 -> {
         case () =>
-          settingsTable.insertOrUpdate(("version", 1.toString))
           tablesTable.ddl.create
           entriesTable.ddl.create
+          settingsTable.insertOrUpdate(("version", 1.toString))
+      },
+      1 -> {
+        case () =>
+          namedPatternsTable.ddl.create
+          settingsTable.insertOrUpdate(("version", 2.toString))
       }
     )
 
     while (currentVersion < EXPECTED_VERSION) {
+      logger.info(s"Upgrading database from version $currentVersion to ${currentVersion + 1}")
       upgradeFunctions(currentVersion)()
     }
     require(currentVersion == EXPECTED_VERSION)
   }
+
+  /*
+   * Table stuff
+   */
 
   def tables(userEmail: String): Map[String, Table] = {
     val tableSpec2rows = db.withTransaction { implicit session =>
@@ -88,7 +122,7 @@ object Tablestore extends Logging {
           case (t, e) =>
             (t.name, t.columns, e.values.?, e.isPositiveExample.?, e.provenance)
         }
-      q.list.groupBy { case (tname, tcolumns, _, _, _) => (tname, tcolumns) }
+      q.run.groupBy { case (tname, tcolumns, _, _, _) => (tname, tcolumns) }
     }
 
     tableSpec2rows.map {
@@ -110,7 +144,7 @@ object Tablestore extends Logging {
     }
   }
 
-  def put(userEmail: String, table: Table): Table = {
+  def putTable(userEmail: String, table: Table): Table = {
     logger.info(s"Writing table ${table.name}")
 
     db.withTransaction { implicit session =>
@@ -136,7 +170,7 @@ object Tablestore extends Logging {
     tables(userEmail)(table.name)
   }
 
-  def delete(userEmail: String, tableName: String): Unit = {
+  def deleteTable(userEmail: String, tableName: String): Unit = {
     logger.info(s"Deleting table $tableName")
 
     db.withTransaction { implicit session =>
@@ -144,5 +178,77 @@ object Tablestore extends Logging {
       q.delete
       // foreign key constraints auto-delete the entries as well
     }
+  }
+
+  /*
+   * Pattern stuff
+   */
+
+  def namedPatterns(userEmail: String): Map[String, NamedPattern] = {
+    db.withTransaction { implicit session =>
+      val q = namedPatternsTable.filter(_.user === userEmail).map { case t => (t.name, t.pattern) }
+      q.run.map { case (name, pattern) => name -> NamedPattern(name, pattern) }.toMap
+    }
+  }
+
+  def putNamedPattern(userEmail: String, pattern: NamedPattern): NamedPattern = {
+    logger.info(s"Writing named pattern ${pattern.name}")
+
+    db.withTransaction { implicit session =>
+      val q = namedPatternsTable.filter { t => t.user === userEmail && t.name === pattern.name }
+      q.delete
+
+      namedPatternsTable += ((userEmail, pattern.name, pattern.pattern))
+    }
+
+    namedPatterns(userEmail)(pattern.name)
+  }
+
+  def deleteNamedPattern(userEmail: String, patternName: String): Unit = {
+    logger.info(s"Deleting named pattern $patternName")
+
+    db.withTransaction { implicit session =>
+      val q = namedPatternsTable.filter { t => t.user === userEmail && t.name === patternName }
+      q.delete
+    }
+  }
+}
+
+object Tablestore extends Tablestore {
+  private val tablesCache = LruCache[Map[String, Table]](timeToLive = 5 minutes)
+  private val patternsCache = LruCache[Map[String, NamedPattern]](timeToLive = 5 minutes)
+
+  override def tables(userEmail: String): Map[String, Table] = {
+    tablesCache(userEmail) {
+      UncachedTablestore.tables(userEmail)
+    }.await
+  }
+
+  override def putTable(userEmail: String, table: Table): Table = {
+    val result = UncachedTablestore.putTable(userEmail, table)
+    tablesCache.remove(userEmail)
+    result
+  }
+
+  override def deleteTable(userEmail: String, tableName: String): Unit = {
+    UncachedTablestore.deleteTable(userEmail, tableName)
+    tablesCache.remove(userEmail)
+  }
+
+  override def namedPatterns(userEmail: String): Map[String, NamedPattern] = {
+    patternsCache(userEmail) {
+      UncachedTablestore.namedPatterns(userEmail)
+    }.await
+  }
+
+  override def putNamedPattern(userEmail: String, pattern: NamedPattern): NamedPattern = {
+    val result = UncachedTablestore.putNamedPattern(userEmail, pattern)
+    patternsCache.remove(userEmail)
+    result
+  }
+
+  override def deleteNamedPattern(userEmail: String, patternName: String): Unit = {
+    UncachedTablestore.deleteNamedPattern(userEmail, patternName)
+    patternsCache.remove(userEmail)
   }
 }

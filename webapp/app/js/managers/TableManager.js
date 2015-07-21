@@ -1,4 +1,5 @@
 var xhr = require('xhr');
+const AuthStore = require('../stores/AuthStore')
 
 var tables = {};
 var listeners = [];
@@ -48,7 +49,7 @@ var TableManager = {
   removeChangeListener: function(listener) {
     var index = listeners.indexOf(listener);
     if (index !== -1) {
-      listeners.splice(listener, 1);
+      listeners.splice(index, 1);
     }
   },
   updateListeners: function() {
@@ -77,8 +78,6 @@ var TableManager = {
   },
   deleteTable: function(tableName) {
     if(!userEmail) throw "You have to sign in before deleting tables.";
-    var posRows = this.getRows(tableName, "positive");
-    var negRows = this.getRows(tableName, "negative");
     if (this.hasTable(tableName)) {
       delete tables[tableName];
       this.updateListeners();
@@ -213,9 +212,6 @@ var TableManager = {
   loadTablesFromServer: function() {
     if(!userEmail) throw "You have to sign in before retrieving tables.";
 
-    // delete old table storage from the browser
-    localStorage.removeItem('tables')
-
     // load tables from server
     var self = this;
     xhr({
@@ -230,6 +226,11 @@ var TableManager = {
         console.log("Unexpected response requesting tables: " + response)
       }
     });
-  },
+  }
 };
+
+AuthStore.addChangeListener(function() {
+  TableManager.setUserEmail(AuthStore.getUserEmail());
+});
+
 module.exports = TableManager;

@@ -1,5 +1,6 @@
 package org.allenai.dictionary.ml.subsample
 
+import org.allenai.dictionary.patterns.NamedPattern
 import org.apache.lucene.search.spans.SpanQuery
 import nl.inl.blacklab.search.sequences.TextPatternSequence
 import nl.inl.blacklab.search._
@@ -16,11 +17,12 @@ object GeneralizedQuerySampler {
     tokenizedQuery: TokenizedQuery,
     searcher: Searcher,
     tables: Map[String, Table],
+    patterns: Map[String, NamedPattern],
     posSampleSize: Int,
     limitTo: Option[(Table, Int, Int)]
   ): SpanQuery = {
     def toTextPattern(qexpr: QExpr): TextPattern = {
-      BlackLabSemantics.blackLabQuery(QueryLanguage.interpolateTables(qexpr, tables).get)
+      BlackLabSemantics.blackLabQuery(QueryLanguage.interpolateTables(qexpr, tables, patterns).get)
     }
     def phrase2QExpr(phrase: Seq[QWord]): QExpr = {
       if (phrase.size == 1) phrase.head else QSeq(phrase)
@@ -103,11 +105,20 @@ case class GeneralizedQuerySampler(maxEdits: Int, posSampleSize: Int)
   require(maxEdits >= 0)
   require(posSampleSize > 0)
 
-  def buildGeneralizingQuery(tokenizedQuery: TokenizedQuery, searcher: Searcher,
-    tables: Map[String, Table], limitTo: Option[(Table, Int, Int)]): SpanQuery = {
+  def buildGeneralizingQuery(
+    tokenizedQuery: TokenizedQuery,
+    searcher: Searcher,
+    tables: Map[String, Table],
+    patterns: Map[String, NamedPattern],
+    limitTo: Option[(Table, Int, Int)]
+  ): SpanQuery = {
     val gs = GeneralizedQuerySampler.buildGeneralizedSpanQuery(
       tokenizedQuery,
-      searcher, tables, posSampleSize, limitTo
+      searcher,
+      tables,
+      patterns,
+      posSampleSize,
+      limitTo
     )
     if (tokenizedQuery.size < maxEdits) {
       new SpanQueryMinimumValidCaptures(gs, maxEdits, tokenizedQuery.getNames)
@@ -116,9 +127,14 @@ case class GeneralizedQuerySampler(maxEdits: Int, posSampleSize: Int)
     }
   }
 
-  override def getSample(qexpr: TokenizedQuery, searcher: Searcher,
-    targetTable: Table, tables: Map[String, Table]): Hits = {
-    searcher.find(buildGeneralizingQuery(qexpr, searcher, tables, None))
+  override def getSample(
+    qexpr: TokenizedQuery,
+    searcher: Searcher,
+    targetTable: Table,
+    tables: Map[String, Table],
+    patterns: Map[String, NamedPattern]
+  ): Hits = {
+    searcher.find(buildGeneralizingQuery(qexpr, searcher, tables, patterns, None))
   }
 
   override def getLabelledSample(
@@ -126,11 +142,12 @@ case class GeneralizedQuerySampler(maxEdits: Int, posSampleSize: Int)
     searcher: Searcher,
     targetTable: Table,
     tables: Map[String, Table],
+    patterns: Map[String, NamedPattern],
     startFromDoc: Int,
     startFromToken: Int
   ): Hits = {
     val spanQuery = buildGeneralizingQuery(
-      qexpr, searcher, tables, Some((targetTable, startFromDoc, startFromToken))
+      qexpr, searcher, tables, patterns, Some((targetTable, startFromDoc, startFromToken))
     )
     searcher.find(spanQuery)
   }

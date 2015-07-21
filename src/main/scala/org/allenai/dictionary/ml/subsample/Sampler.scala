@@ -5,6 +5,7 @@ import org.allenai.dictionary.ml.{ CapturedTokenSequence, TokenizedQuery }
 
 import nl.inl.blacklab.search.{ Hits, Searcher }
 import org.allenai.dictionary._
+import org.allenai.dictionary.patterns.NamedPattern
 
 object Sampler extends Logging {
 
@@ -98,13 +99,15 @@ abstract class Sampler {
     * @param searcher Searcher to get samples from
     * @param targetTable Table the query is targeting
     * @param tables map of string->Table, used for interpolating queries
+    * @param patterns map of string->NamedPattern, used for interpolating queries
     * @return Hits object containing the samples
     */
   def getSample(
     qexpr: TokenizedQuery,
     searcher: Searcher,
     targetTable: Table,
-    tables: Map[String, Table]
+    tables: Map[String, Table],
+    patterns: Map[String, NamedPattern]
   ): Hits
 
   /** Gets a sample of hits from a corpus that are 'close' to a given query, and that are
@@ -114,6 +117,7 @@ abstract class Sampler {
     * @param searcher Searcher to get samples from
     * @param targetTable Table to limit queries to
     * @param tables map of string->Table, used for interpolating queries
+    * @param patterns map of string->NamedPattern, used for interpolating queries
     * @param startFromDoc document to start collecting hits from, returned hits will not have doc
     *                smaller than startFromDoc
     * @return Hits object containing the samples
@@ -123,6 +127,7 @@ abstract class Sampler {
     searcher: Searcher,
     targetTable: Table,
     tables: Map[String, Table],
+    patterns: Map[String, NamedPattern],
     startFromDoc: Int,
     startFromToken: Int
   ): Hits

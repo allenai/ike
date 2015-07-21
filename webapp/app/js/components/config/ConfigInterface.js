@@ -4,7 +4,6 @@ var Input = bs.Input;
 var Panel = bs.Panel;
 var PanelGroup = bs.PanelGroup;
 var Well = bs.Well;
-var Corpora = require('../corpora/Corpora.js');
 var ConfigInterface = React.createClass({
   toggleCheckbox: function(configName, subconfig) {
     var config = this.props.config;
@@ -47,11 +46,6 @@ var ConfigInterface = React.createClass({
     var disable = this.toggleCheckbox('disable', 'ml')
     return (
       <div>
-        <PanelGroup>
-          <Panel header='Corpora to Query'>
-            <Corpora corpora={this.props.corpora} toggleCorpora={this.props.toggleCorpora} />
-          </Panel>
-        </PanelGroup>
         <Input
           type='checkbox'
           label='Hide rows that are in table'

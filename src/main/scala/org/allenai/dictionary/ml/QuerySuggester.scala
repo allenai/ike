@@ -10,6 +10,7 @@ import org.allenai.common.{ Logging, Timing }
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml.subsample._
 import com.typesafe.config.ConfigFactory
+import org.allenai.dictionary.patterns.NamedPattern
 
 import scala.collection.immutable.IntMap
 
@@ -273,11 +274,17 @@ object QuerySuggester extends Logging {
     docsSearchedForUnlabelled: Int, totalDocsSearched: Int)
 
   // Get samples Hits for the given query from a given searcher
-  private def getExamples(query: TokenizedQuery, searcher: Searcher, targetTable: Table,
-    tables: Map[String, Table], sampler: Sampler,
-    maxUnlabelled: Int, maxLabelled: Int): SearcherExamples = {
+  private def getExamples(
+    query: TokenizedQuery,
+    searcher: Searcher,
+    targetTable: Table,
+    tables: Map[String, Table],
+    patterns: Map[String, NamedPattern],
+    sampler: Sampler,
+    maxUnlabelled: Int, maxLabelled: Int
+  ): SearcherExamples = {
     val unlabelledHits =
-      sampler.getSample(query, searcher, targetTable, tables).window(0, maxUnlabelled)
+      sampler.getSample(query, searcher, targetTable, tables, patterns).window(0, maxUnlabelled)
 
     if (Thread.interrupted()) throw new InterruptedException()
 
@@ -299,8 +306,15 @@ object QuerySuggester extends Logging {
         unlabelledHits.get(unlabelledHits.last()).doc
       }
 
-      val labelledHits = sampler.getLabelledSample(query, searcher, targetTable,
-        tables, lastDoc, lastToken + 1).window(0, maxLabelled)
+      val labelledHits = sampler.getLabelledSample(
+        query,
+        searcher,
+        targetTable,
+        tables,
+        patterns,
+        lastDoc,
+        lastToken + 1
+      ).window(0, maxLabelled)
 
       val totalDocsSearched = if (labelledHits.size() < maxLabelled) {
         searcher.getIndexReader.numDocs()
@@ -329,6 +343,7 @@ object QuerySuggester extends Logging {
     searchers: Seq[Searcher],
     startingQuery: QExpr,
     tables: Map[String, Table],
+    patterns: Map[String, NamedPattern],
     similarPhrasesSearcher: SimilarPhrasesSearcher,
     target: String,
     narrow: Boolean,
@@ -375,7 +390,7 @@ object QuerySuggester extends Logging {
     logger.debug("Fetching examples...")
     val (allExamples, allExampleTime) = Timing.time {
       val allExamples = searchers.map { searcher =>
-        getExamples(tokenizedQuery, searcher, targetTable, tables,
+        getExamples(tokenizedQuery, searcher, targetTable, tables, patterns,
           hitGatherer, maxUnlabelledPerSearcher, maxLabelledPerSearcher)
       }.seq
       allExamples
