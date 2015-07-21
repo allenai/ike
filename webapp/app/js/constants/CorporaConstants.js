@@ -1,6 +1,4 @@
 
-var keyMirror = require('keymirror');
-
-module.exports = keyMirror({
-  REFRESH: null,
-});
+module.exports = {
+  REFRESH: 'REFRESH'
+};

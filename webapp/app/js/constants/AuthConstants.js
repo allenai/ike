@@ -1,7 +1,5 @@
 
-var keyMirror = require('keymirror');
-
-module.exports = keyMirror({
-  SIGN_IN: null,
-  SIGN_OUT: null
-});
+module.exports = {
+  SIGN_IN: 'SIGN_IN',
+  SIGN_OUT: 'SIGN_OUT'
+};

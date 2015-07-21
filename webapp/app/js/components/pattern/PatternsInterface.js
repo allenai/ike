@@ -79,7 +79,7 @@ var PatternsInterface = React.createClass({
     var newPatternName = this.state.newPatternName;
     if(!newPatternName)
       result = null;
-    else if(newPatternName.includes(" ") || this.state.patterns.hasOwnProperty(newPatternName))
+    else if(newPatternName.indexOf(" ") >= 0 || this.state.patterns.hasOwnProperty(newPatternName))
       result = "error";
 
     return result;

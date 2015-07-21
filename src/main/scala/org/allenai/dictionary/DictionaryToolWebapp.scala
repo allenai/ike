@@ -232,7 +232,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
       complete {
         val readySearchApps = searchApps.filter(_._2.isCompleted)
         readySearchApps.map {
-          case (corpusName, app) => CorpusDescription(corpusName, app.get.description).toJson
+          case (corpusName, app) => CorpusDescription(corpusName, app.get.description)
         }
       }
     }

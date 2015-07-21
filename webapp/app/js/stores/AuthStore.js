@@ -95,26 +95,13 @@ const AuthStore = assign({}, EventEmitter.prototype, {
   }
 });
 
-AuthStore.Mixin = {
-  statics: {
-    willTransitionTo: function (transition) {
-      if (!AuthStore.authenticated()) {
-        transition.redirect('/search');
-      }
-    }
-  }
-}
-
 // Register callback to handle all updates
 AppDispatcher.register(function(action) {
-
   if (action.actionType === AuthConstants.SIGN_IN) {
     AuthStore.signIn();
-  } else {
+  } else if (action.actionType === AuthConstants.SIGN_OUT) {
     AuthStore.signOut();
   }
-
 });
 
 module.exports = AuthStore;
-
