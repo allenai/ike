@@ -79,10 +79,19 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
           entity(as[SearchRequest]) { req =>
             complete {
               val query = SearchApp.parse(req).get
+
+              val (tables, patterns) = req.userEmail match {
+                case Some(userEmail) => (
+                  Tablestore.tables(userEmail),
+                  Tablestore.namedPatterns(userEmail)
+                )
+                case None => (Map.empty[String, Table], Map.empty[String, NamedPattern])
+              }
+
               val interpolatedQuery = QueryLanguage.interpolateQuery(
                 query,
-                Tablestore.tables(req.userEmail),
-                Tablestore.namedPatterns(req.userEmail),
+                tables,
+                patterns,
                 similarPhrasesSearcher
               ).get
               val resultsFuture = searchersFuture.map { searchers =>
@@ -95,7 +104,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
                 results <- resultsFuture
               } yield {
                 req.target match {
-                  case Some(target) => SearchResultGrouper.groupResults(req, results)
+                  case Some(target) => SearchResultGrouper.groupResults(req, tables, results)
                   case None => SearchResultGrouper.identityGroupResults(req, results)
                 }
               }

@@ -31,7 +31,7 @@ case class WordInfoRequest(word: String, config: SearchConfig)
 case class WordInfoResponse(word: String, posTags: Map[String, Int])
 case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1)
 case class SearchRequest(query: Either[String, QExpr], target: Option[String],
-  userEmail: String, config: SearchConfig)
+  userEmail: Option[String], config: SearchConfig)
 case class SearchResponse(qexpr: QExpr, groups: Seq[GroupedBlackLabResult])
 case class CorpusDescription(name: String, description: Option[String])
 case class SimilarPhrasesResponse(phrases: Seq[SimilarPhrase])

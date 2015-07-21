@@ -4,15 +4,19 @@ import org.allenai.common.{ Timing, Logging }
 import org.allenai.dictionary.persistence.Tablestore
 
 object SearchResultGrouper extends Logging {
-  def targetTable(req: SearchRequest): Option[Table] = for {
+  def targetTable(req: SearchRequest, tables: Map[String, Table]): Option[Table] = for {
     target <- req.target
-    table <- Tablestore.tables(req.userEmail).get(target)
+    table <- tables.get(target)
   } yield table
 
   /** Attempts to map the capture group names in the result to the target table's column names
     * in the request. If unable to do so, returns the result unchanged.
     */
-  def inferCaptureGroupNames(req: SearchRequest, result: BlackLabResult): BlackLabResult = {
+  def inferCaptureGroupNames(
+    req: SearchRequest,
+    tables: Map[String, Table],
+    result: BlackLabResult
+  ): BlackLabResult = {
     // If there are no capture groups, use the entire match string as a capture group
     val groups = result.captureGroups match {
       case groups if groups.isEmpty => Map("match" -> result.matchOffset)
@@ -20,7 +24,7 @@ object SearchResultGrouper extends Logging {
     }
     val groupNames = groups.keys.toList.sortBy(groups)
     val updatedGroups = for {
-      table <- targetTable(req)
+      table <- targetTable(req, tables)
       cols = table.cols
       if cols.size == groupNames.size
       if cols.toSet != groupNames.toSet
@@ -35,9 +39,13 @@ object SearchResultGrouper extends Logging {
     */
   type Phrase = Seq[String]
 
-  def keyResult(req: SearchRequest, result: BlackLabResult): KeyedBlackLabResult = {
+  def keyResult(
+    req: SearchRequest,
+    tables: Map[String, Table],
+    result: BlackLabResult
+  ): KeyedBlackLabResult = {
     val groups = result.captureGroups
-    val columns = targetTable(req) match {
+    val columns = targetTable(req, tables) match {
       case Some(table) => table.cols
       case None => throw new IllegalArgumentException(s"No target table found")
     }
@@ -100,9 +108,13 @@ object SearchResultGrouper extends Logging {
   /** Groups the given results. The groups are keyed using the match groups corresponding to the
     * target table's columns.
     */
-  def groupResults(req: SearchRequest, results: Iterable[BlackLabResult]): Seq[GroupedBlackLabResult] = {
-    val withColumnNames = results.map(inferCaptureGroupNames(req, _))
-    val keyed = withColumnNames.map(keyResult(req, _))
+  def groupResults(
+    req: SearchRequest,
+    tables: Map[String, Table],
+    results: Iterable[BlackLabResult]
+  ): Seq[GroupedBlackLabResult] = {
+    val withColumnNames = results.map(inferCaptureGroupNames(req, tables, _))
+    val keyed = withColumnNames.map(keyResult(req, tables, _))
     createGroups(req, keyed)
   }
 
