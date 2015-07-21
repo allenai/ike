@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.queryop
 
 import org.allenai.dictionary._
-import org.allenai.dictionary.ml.{ WeightedExample, QueryMatches }
+import org.allenai.dictionary.ml.{ QueryMatches, WeightedExample }
 
 import scala.collection.immutable.IntMap
 

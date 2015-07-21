@@ -1,6 +1,6 @@
 package org.allenai.dictionary.ml.compoundop
 
-import org.allenai.dictionary.ml.queryop.{ TokenQueryOp, QueryOp }
+import org.allenai.dictionary.ml.queryop.{ QueryOp, TokenQueryOp }
 
 import scala.collection.immutable.IntMap
 

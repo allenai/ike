@@ -2,7 +2,6 @@ package org.allenai.dictionary
 
 import org.allenai.dictionary.patterns.NamedPattern
 import spray.json.DefaultJsonProtocol._
-import spray.json._
 
 object JsonSerialization {
   import QExprJsonSerialization._

@@ -1,11 +1,10 @@
 package org.allenai.dictionary.ml.subsample
 
-import org.allenai.dictionary.ml.TokenizedQuery
-
 import nl.inl.blacklab.search.Hits
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary._
 import org.allenai.dictionary.index.TestData
+import org.allenai.dictionary.ml.TokenizedQuery
 
 import scala.collection.JavaConverters._
 

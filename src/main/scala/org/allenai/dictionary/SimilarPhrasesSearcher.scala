@@ -5,6 +5,7 @@ import com.medallia.word2vec.Word2VecModel
 import com.typesafe.config.Config
 import org.allenai.common.Config._
 import org.allenai.common.Logging
+
 import scala.collection.JavaConverters._
 
 trait SimilarPhrasesSearcher {

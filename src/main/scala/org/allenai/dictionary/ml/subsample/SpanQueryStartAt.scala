@@ -3,8 +3,8 @@ package org.allenai.dictionary.ml.subsample
 import java.util
 
 import nl.inl.blacklab.search.lucene.{ BLSpansWrapper, SpanQueryBase }
-import org.apache.lucene.index.{ TermContext, Term, AtomicReaderContext }
-import org.apache.lucene.search.spans.{ Spans, SpanQuery }
+import org.apache.lucene.index.{ AtomicReaderContext, Term, TermContext }
+import org.apache.lucene.search.spans.{ SpanQuery, Spans }
 import org.apache.lucene.util.Bits
 
 /** Modifies a SpanQuery so that the returned Spans only occur after the given document and token

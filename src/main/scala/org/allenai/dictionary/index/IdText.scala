@@ -1,18 +1,19 @@
 package org.allenai.dictionary.index
 
-import java.io.{ FileInputStream, InputStream, InputStreamReader, File }
+import java.io.{ File, FileInputStream, InputStream, InputStreamReader }
 import java.net.URL
 import java.nio.charset.MalformedInputException
 import java.util.zip.GZIPInputStream
-import org.allenai.common.{ StreamClosingIterator, Resource, Logging }
+
+import com.typesafe.config.Config
 import org.allenai.common.ParIterator._
+import org.allenai.common.{ Logging, Resource, StreamClosingIterator }
+import org.allenai.dictionary.DataFile
 import org.allenai.dictionary.index.WikipediaCorpus.DocumentIterator
 import org.apache.commons.io.LineIterator
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.Source
-import com.typesafe.config.Config
-import org.allenai.dictionary.DataFile
 
 case class IdText(id: String, text: String)
 
@@ -119,8 +120,7 @@ object WikipediaCorpus {
         }
       }
 
-      if (!lines.hasNext)
-        lines.close()
+      if (!lines.hasNext) lines.close()
     }
     advanceToNextDoc()
 

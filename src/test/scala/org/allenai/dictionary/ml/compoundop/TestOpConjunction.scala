@@ -1,9 +1,9 @@
 package org.allenai.dictionary.ml.compoundop
 
 import org.allenai.common.testkit.UnitSpec
-import org.allenai.dictionary.{ QPos, QWord }
-import org.allenai.dictionary.ml.{ QueryToken, Prefix }
 import org.allenai.dictionary.ml.queryop._
+import org.allenai.dictionary.ml.{ Prefix, QueryToken }
+import org.allenai.dictionary.{ QPos, QWord }
 
 class TestOpConjunction extends UnitSpec {
 

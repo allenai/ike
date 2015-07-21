@@ -5,9 +5,7 @@ import org.allenai.dictionary._
 import org.allenai.dictionary.index.TestData
 import org.allenai.dictionary.ml.Label._
 import org.allenai.dictionary.ml.queryop._
-import org.allenai.dictionary.ml.subsample.GeneralizedQuerySampler
 
-import scala.collection.immutable.IntMap
 import scala.collection.JavaConverters._
 
 class TestHitAnalyzer extends UnitSpec with ScratchDirectory {

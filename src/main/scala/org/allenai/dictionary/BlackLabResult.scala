@@ -29,7 +29,9 @@ case object BlackLabResult {
       data = WordData(word, attrGroup - "word")
     } yield data
   }
+
   def toInterval(span: Span): Interval = Interval.open(span.start, span.end)
+
   def captureGroups(hits: Hits, hit: Hit, shift: Int): Map[String, Option[Interval]] = {
     val names = hits.getCapturedGroupNames.asScala
     // For some reason BlackLab will sometimes return null values here, so wrap in Options
@@ -41,10 +43,16 @@ case object BlackLabResult {
     } yield (name, shifted)
     result.toMap
   }
+
   /** Converts a hit to a BlackLabResult. Returns None if the dreaded BlackLab NPE is returned
     * when computing the capture groups.
     */
-  def fromHit(hits: Hits, hit: Hit, corpusName: String, kwicSize: Int = 20): Option[BlackLabResult] = {
+  def fromHit(
+    hits: Hits,
+    hit: Hit,
+    corpusName: String,
+    kwicSize: Int = 20
+  ): Option[BlackLabResult] = {
     val kwic = hits.getKwic(hit, kwicSize)
     val data = wordData(hits, kwic)
     val offset = Interval.open(kwic.getHitStart, kwic.getHitEnd)
@@ -65,15 +73,21 @@ case object BlackLabResult {
       Some(BlackLabResult(data, offset, Map.empty[String, Interval], corpusName))
     }
   }
+
   /** Converts the hits into BlackLabResult objects. If ignoreNpe is true, then it will skip over
     * any hits that throw the weird NPE. If ignoreNpe is false, will throw an IllegalStateException.
     */
-  def fromHits(hits: Hits, corpusName: String, ignoreNpe: Boolean = true): Iterator[BlackLabResult] = for {
+  def fromHits(
+    hits: Hits,
+    corpusName: String,
+    ignoreNpe: Boolean = true
+  ): Iterator[BlackLabResult] = for {
     hit <- hits.iterator.asScala
     result <- fromHit(hits, hit, corpusName) match {
       case x if (x.isDefined || ignoreNpe) => x
       case _ => throw new IllegalStateException(s"Could not compute capture groups for $hit")
     }
   } yield result
+
   def wrapNull[A](a: A): Option[A] = if (a == null) None else Some(a)
 }

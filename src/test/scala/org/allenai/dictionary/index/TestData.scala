@@ -1,8 +1,8 @@
 package org.allenai.dictionary.index
 
 import java.io.File
+
 import nl.inl.blacklab.index.Indexer
-import java.io.StringReader
 import nl.inl.blacklab.search.Searcher
 
 object TestData {

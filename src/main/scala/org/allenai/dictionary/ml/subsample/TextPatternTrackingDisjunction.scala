@@ -1,6 +1,6 @@
 package org.allenai.dictionary.ml.subsample
 
-import nl.inl.blacklab.search.{ QueryExecutionContext, TextPatternTranslator, TextPattern }
+import nl.inl.blacklab.search.{ QueryExecutionContext, TextPattern, TextPatternTranslator }
 import org.apache.lucene.search.spans.SpanQuery
 
 /** TextPattern for SpanQueryTrackingDisjunction. Note this only works when being translated into

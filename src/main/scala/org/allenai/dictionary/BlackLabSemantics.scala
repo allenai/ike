@@ -1,7 +1,18 @@
 package org.allenai.dictionary
 
-import nl.inl.blacklab.search.sequences.{ TextPatternAnyToken, TextPatternRepetition, TextPatternSequence }
-import nl.inl.blacklab.search.{ TextPattern, TextPatternAnd, TextPatternCaptureGroup, TextPatternOr, TextPatternProperty, TextPatternTerm }
+import nl.inl.blacklab.search.sequences.{
+  TextPatternAnyToken,
+  TextPatternRepetition,
+  TextPatternSequence
+}
+import nl.inl.blacklab.search.{
+  TextPattern,
+  TextPatternAnd,
+  TextPatternCaptureGroup,
+  TextPatternOr,
+  TextPatternProperty,
+  TextPatternTerm
+}
 
 object BlackLabSemantics {
   var maxRepetition = 128

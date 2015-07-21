@@ -1,10 +1,10 @@
 package org.allenai.dictionary.ml.subsample
 
+import nl.inl.blacklab.search.{ Hits, Span }
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary._
 import org.allenai.dictionary.index.TestData
 import org.allenai.dictionary.ml.{ SimilarPhrasesSearcherStub, TokenizedQuery }
-import nl.inl.blacklab.search.{ Span, Hits }
 
 import scala.collection.JavaConverters._
 

@@ -1,13 +1,11 @@
 package org.allenai.dictionary.ml
 
-import org.allenai.dictionary.ml.compoundop.{ OpConjunctionOfDisjunctions, OpConjunction, EvaluatedOp }
-
-import org.allenai.dictionary.ml.queryop.{ QueryOp, SetToken }
-
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
-import org.allenai.dictionary.index.TestData
 import org.allenai.dictionary._
+import org.allenai.dictionary.index.TestData
 import org.allenai.dictionary.ml.Label._
+import org.allenai.dictionary.ml.compoundop.{ EvaluatedOp, OpConjunction, OpConjunctionOfDisjunctions }
+import org.allenai.dictionary.ml.queryop.{ QueryOp, SetToken }
 
 import scala.collection.immutable.IntMap
 

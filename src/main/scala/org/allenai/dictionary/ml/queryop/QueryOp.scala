@@ -15,7 +15,7 @@ object TokenCombination extends Enumeration {
   type TokenCombination = Value
   val NONE, AND, OR = Value
 }
-import TokenCombination._
+import org.allenai.dictionary.ml.queryop.TokenCombination._
 
 /** Operation that changes a single query-token within a TokenizedQuery
   */

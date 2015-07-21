@@ -3,7 +3,7 @@ package org.allenai.dictionary.ml.subsample
 import java.util
 
 import nl.inl.blacklab.search.Span
-import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
+import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
 
 /** Returns spans that have a minimum number of valid capture groups, where a valid capture
   * group is one that is non-null and whose end is non-negative

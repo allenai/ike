@@ -1,8 +1,8 @@
 package org.allenai.dictionary.ml.queryop
 
 import org.allenai.dictionary._
-import org.allenai.dictionary.ml._
 import org.allenai.dictionary.ml.Label._
+import org.allenai.dictionary.ml._
 
 import scala.collection.immutable.IntMap
 

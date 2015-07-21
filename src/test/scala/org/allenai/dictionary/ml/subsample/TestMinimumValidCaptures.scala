@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.subsample
 
 import nl.inl.blacklab.search.Span
-import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
+import nl.inl.blacklab.search.lucene.HitQueryContext
 import org.allenai.common.testkit.UnitSpec
 
 class TestMinimumValidCaptures extends UnitSpec {
