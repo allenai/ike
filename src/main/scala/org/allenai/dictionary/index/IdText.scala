@@ -1,10 +1,5 @@
 package org.allenai.dictionary.index
 
-import java.io.{ File, FileInputStream, InputStream, InputStreamReader }
-import java.net.URL
-import java.nio.charset.MalformedInputException
-import java.util.zip.GZIPInputStream
-
 import com.typesafe.config.Config
 import org.allenai.common.ParIterator._
 import org.allenai.common.{ Logging, Resource, StreamClosingIterator }
@@ -14,6 +9,11 @@ import org.apache.commons.io.LineIterator
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.Source
+
+import java.io.{ File, FileInputStream, InputStream, InputStreamReader }
+import java.net.URL
+import java.nio.charset.MalformedInputException
+import java.util.zip.GZIPInputStream
 
 case class IdText(id: String, text: String)
 

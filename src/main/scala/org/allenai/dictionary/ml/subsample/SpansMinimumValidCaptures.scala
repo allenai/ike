@@ -1,9 +1,9 @@
 package org.allenai.dictionary.ml.subsample
 
-import java.util
-
 import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
+
+import java.util
 
 /** Returns spans that have a minimum number of valid capture groups, where a valid capture
   * group is one that is non-null and whose end is non-negative

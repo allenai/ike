@@ -1,7 +1,5 @@
 package org.allenai.dictionary
 
-import java.util.concurrent.TimeUnit
-
 import akka.actor.{ Actor, ActorContext, ActorSystem, Props }
 import akka.io.IO
 import akka.pattern.ask
@@ -23,6 +21,8 @@ import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 import scala.util.control.NonFatal
 
+import java.util.concurrent.TimeUnit
+
 object DictionaryToolWebapp {
   lazy val config = ConfigFactory.load().getConfig("DictionaryToolWebapp")
   val name = "dictionary-tool"
@@ -43,11 +43,10 @@ object DictionaryToolWebapp {
 }
 
 class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport with Logging {
-  import DictionaryToolWebapp.FutureWithGet
-  import JsonSerialization._
   import context.dispatcher
+  import org.allenai.dictionary.DictionaryToolWebapp.FutureWithGet
+  import org.allenai.dictionary.JsonSerialization._
   import spray.json.DefaultJsonProtocol._
-  import spray.json._
 
   logger.debug("Starting DictionaryToolActor") // this is just here to force logger initialization
 

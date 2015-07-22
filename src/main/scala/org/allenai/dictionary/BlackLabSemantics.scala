@@ -1,10 +1,5 @@
 package org.allenai.dictionary
 
-import nl.inl.blacklab.search.sequences.{
-  TextPatternAnyToken,
-  TextPatternRepetition,
-  TextPatternSequence
-}
 import nl.inl.blacklab.search.{
   TextPattern,
   TextPatternAnd,
@@ -12,6 +7,11 @@ import nl.inl.blacklab.search.{
   TextPatternOr,
   TextPatternProperty,
   TextPatternTerm
+}
+import nl.inl.blacklab.search.sequences.{
+  TextPatternAnyToken,
+  TextPatternRepetition,
+  TextPatternSequence
 }
 
 object BlackLabSemantics {

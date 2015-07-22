@@ -1,12 +1,12 @@
 package org.allenai.dictionary.index
 
-import java.io.{ File, StringReader }
-import java.net.URI
-import java.nio.file.{ Files, Paths }
-
 import nl.inl.blacklab.index.Indexer
 import org.allenai.datastore.Datastore
 import org.allenai.nlpstack.core.{ ChunkedToken, Lemmatized }
+
+import java.io.{ File, StringReader }
+import java.net.URI
+import java.nio.file.{ Files, Paths }
 
 object CreateIndex extends App {
   def addTo(indexer: Indexer)(text: IndexableText): Unit = {

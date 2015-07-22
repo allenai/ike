@@ -1,9 +1,9 @@
 package org.allenai.dictionary
 
-import java.io.File
-
 import com.typesafe.config.Config
 import org.allenai.datastore.Datastore
+
+import java.io.File
 
 object DataFile {
   def fromConfig(config: Config): File = config.getString("location") match {

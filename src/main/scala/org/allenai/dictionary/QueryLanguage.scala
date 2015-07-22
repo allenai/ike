@@ -1,13 +1,13 @@
 package org.allenai.dictionary
 
-import java.text.ParseException
-import java.util.regex.Pattern
-
 import org.allenai.dictionary.patterns.NamedPattern
 
 import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
 import scala.util.{ Failure, Success, Try }
+
+import java.text.ParseException
+import java.util.regex.Pattern
 
 sealed trait QExpr
 sealed trait QLeaf extends QExpr

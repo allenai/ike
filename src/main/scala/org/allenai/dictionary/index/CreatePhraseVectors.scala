@@ -1,12 +1,5 @@
 package org.allenai.dictionary.index
 
-import java.io._
-import java.net.URI
-import java.nio.file.Files
-import java.util
-import java.util.concurrent.atomic.AtomicLong
-import java.util.zip.{ GZIPInputStream, GZIPOutputStream }
-
 import com.medallia.word2vec.Word2VecModel
 import com.medallia.word2vec.Word2VecTrainerBuilder.TrainingProgressListener
 import com.medallia.word2vec.neuralnetwork.NeuralNetworkType
@@ -23,6 +16,13 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.Source
 import scala.util.Sorting
+
+import java.io._
+import java.net.URI
+import java.nio.file.Files
+import java.util
+import java.util.concurrent.atomic.AtomicLong
+import java.util.zip.{ GZIPInputStream, GZIPOutputStream }
 
 object CreatePhraseVectors extends App with Logging {
   // phrase2vec parameters
