@@ -42,6 +42,9 @@ var SubTable = React.createClass({
     var tableName = this.props.table.name;
     var rowType = this.props.rowType;
     var add = function(valueStrings) {
+      valueStrings = valueStrings.map(function(string) {
+        return string.toLowerCase();
+      });
       if (this.invalidRow(valueStrings)) { return; }
       var row = TableManager.stringsRow(valueStrings);
       TableManager.addRow(tableName, rowType, row);
