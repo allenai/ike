@@ -32,16 +32,16 @@ var ConfigInterface = React.createClass({
     var hideAddedChange = this.toggleCheckbox('hideAdded');
     var limitChange = this.onChange('limit', parseInt);
     var eLimitChange = this.onChange('evidenceLimit', parseInt);
-    var depthChange = this.onChange('depth', parseInt, 'ml')
-    var beamSizeChange = this.onChange('beamSize', parseInt, 'ml')
-    var maxSampleSizeChange = this.onChange('maxSampleSize', parseInt, 'ml')
-    var pWeightChange = this.onChange('pWeight', parseFloat, 'ml')
-    var nWeightChange = this.onChange('nWeight', parseFloat, 'ml')
-    var uWeightChange = this.onChange('uWeight', parseFloat, 'ml')
-    var pWeightChangeNarrow = this.onChange('pWeightNarrow', parseFloat, 'ml')
-    var nWeightChangeNarrow = this.onChange('nWeightNarrow', parseFloat, 'ml')
-    var uWeightChangeNarrow = this.onChange('uWeightNarrow', parseFloat, 'ml')
-    var disable = this.toggleCheckbox('disable', 'ml')
+    var depthChange = this.onChange('depth', parseInt, 'ml');
+    var beamSizeChange = this.onChange('beamSize', parseInt, 'ml');
+    var maxSampleSizeChange = this.onChange('maxSampleSize', parseInt, 'ml');
+    var pWeightChange = this.onChange('pWeight', parseFloat, 'ml');
+    var nWeightChange = this.onChange('nWeight', parseFloat, 'ml');
+    var uWeightChange = this.onChange('uWeight', parseFloat, 'ml');
+    var pWeightChangeNarrow = this.onChange('pWeightNarrow', parseFloat, 'ml');
+    var nWeightChangeNarrow = this.onChange('nWeightNarrow', parseFloat, 'ml');
+    var uWeightChangeNarrow = this.onChange('uWeightNarrow', parseFloat, 'ml');
+    var disable = this.toggleCheckbox('disable', 'ml');
     return (
       <div>
         <Input
