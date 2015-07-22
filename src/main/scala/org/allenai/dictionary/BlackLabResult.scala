@@ -1,7 +1,8 @@
 package org.allenai.dictionary
 
-import nl.inl.blacklab.search.{ Hit, Hits, Kwic, Span }
 import org.allenai.common.immutable.Interval
+
+import nl.inl.blacklab.search.{ Hit, Hits, Kwic, Span }
 
 import scala.collection.JavaConverters._
 

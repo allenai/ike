@@ -3,6 +3,7 @@ package org.allenai.dictionary.ml.subsample
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary.index.TestData
 import org.allenai.dictionary.{ BlackLabSemantics, QueryLanguage }
+
 import org.apache.lucene.search.spans.SpanQuery
 
 import scala.collection.JavaConverters._

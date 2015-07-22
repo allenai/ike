@@ -1,10 +1,11 @@
 package org.allenai.dictionary
 
 import org.allenai.dictionary.patterns.NamedPattern
+
 import spray.json.DefaultJsonProtocol._
 
 object JsonSerialization {
-  import QExprJsonSerialization._
+  import org.allenai.dictionary.QExprJsonSerialization._
 
   implicit val wordDataFormat = jsonFormat2(WordData.apply)
   implicit val blackLabResultFormat = jsonFormat4(BlackLabResult.apply)

@@ -1,12 +1,11 @@
 package org.allenai.dictionary.ml.subsample
 
-import java.util
-
 import nl.inl.blacklab.search.lucene.{ BLSpansWrapper, SpanQueryBase }
 import org.apache.lucene.index.{ AtomicReaderContext, Term, TermContext }
 import org.apache.lucene.search.spans.{ SpanQuery, Spans }
 import org.apache.lucene.util.Bits
 
+import java.util
 import scala.collection.JavaConverters._
 
 /** Disjunction of SpanQueries that uses a capture group to mark whether 'firstSpan' created each

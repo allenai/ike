@@ -1,7 +1,5 @@
 package org.allenai.dictionary.ml
 
-import com.typesafe.config.ConfigFactory
-import nl.inl.blacklab.search._
 import org.allenai.common.{ Logging, Timing }
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml.HitAnalyzer._
@@ -10,6 +8,9 @@ import org.allenai.dictionary.ml.compoundop._
 import org.allenai.dictionary.ml.queryop._
 import org.allenai.dictionary.ml.subsample._
 import org.allenai.dictionary.patterns.NamedPattern
+
+import com.typesafe.config.ConfigFactory
+import nl.inl.blacklab.search._
 
 import scala.collection.immutable.IntMap
 

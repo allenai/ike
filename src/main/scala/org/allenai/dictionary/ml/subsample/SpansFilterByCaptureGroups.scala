@@ -1,9 +1,9 @@
 package org.allenai.dictionary.ml.subsample
 
-import java.util
-
 import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
+
+import java.util
 
 /** Filters hits from a BLSpans that do not return capture groups that would also be
   * returned by another BLSpans. In other words it is a AND operation between the capture groups

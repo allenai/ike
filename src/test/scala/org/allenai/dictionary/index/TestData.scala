@@ -1,9 +1,9 @@
 package org.allenai.dictionary.index
 
-import java.io.File
-
 import nl.inl.blacklab.index.Indexer
 import nl.inl.blacklab.search.Searcher
+
+import java.io.File
 
 object TestData {
 

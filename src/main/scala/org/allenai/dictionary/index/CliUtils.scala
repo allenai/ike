@@ -1,9 +1,9 @@
 package org.allenai.dictionary.index
 
+import org.allenai.datastore.Datastore
+
 import java.net.URI
 import java.nio.file.Paths
-
-import org.allenai.datastore.Datastore
 
 object CliUtils {
   def pathFromUri(uri: URI) = uri.getScheme match {

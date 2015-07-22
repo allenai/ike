@@ -1,10 +1,9 @@
 package org.allenai.dictionary
 
-import java.text.ParseException
-import java.util.regex.Pattern
-
 import org.allenai.dictionary.patterns.NamedPattern
 
+import java.text.ParseException
+import java.util.regex.Pattern
 import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
 import scala.util.{ Failure, Success, Try }

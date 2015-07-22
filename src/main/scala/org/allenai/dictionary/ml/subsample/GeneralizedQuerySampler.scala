@@ -1,10 +1,11 @@
 package org.allenai.dictionary.ml.subsample
 
-import nl.inl.blacklab.search._
-import nl.inl.blacklab.search.sequences.TextPatternSequence
 import org.allenai.dictionary._
 import org.allenai.dictionary.ml._
 import org.allenai.dictionary.patterns.NamedPattern
+
+import nl.inl.blacklab.search._
+import nl.inl.blacklab.search.sequences.TextPatternSequence
 import org.apache.lucene.search.spans.SpanQuery
 
 object GeneralizedQuerySampler {

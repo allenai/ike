@@ -1,9 +1,10 @@
 package org.allenai.dictionary.ml
 
-import nl.inl.blacklab.search.Hits
 import org.allenai.common.{ Logging, Timing }
 import org.allenai.dictionary.ml.queryop.{ OpGenerator, QueryOp }
 import org.allenai.dictionary.{ QueryLanguage, Table }
+
+import nl.inl.blacklab.search.Hits
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.IntMap

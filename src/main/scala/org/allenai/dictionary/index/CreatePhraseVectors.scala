@@ -1,21 +1,21 @@
 package org.allenai.dictionary.index
 
+import org.allenai.common.ParIterator._
+import org.allenai.common.{ Logging, Resource, StreamClosingIterator }
+import org.allenai.nlpstack.segment.{ StanfordSegmenter => segmenter }
+import org.allenai.nlpstack.tokenize.{ defaultTokenizer => tokenizer }
+
+import com.medallia.word2vec.Word2VecModel
+import com.medallia.word2vec.Word2VecTrainerBuilder.TrainingProgressListener
+import com.medallia.word2vec.neuralnetwork.NeuralNetworkType
+import com.medallia.word2vec.util.Format
+
 import java.io._
 import java.net.URI
 import java.nio.file.Files
 import java.util
 import java.util.concurrent.atomic.AtomicLong
 import java.util.zip.{ GZIPInputStream, GZIPOutputStream }
-
-import com.medallia.word2vec.Word2VecModel
-import com.medallia.word2vec.Word2VecTrainerBuilder.TrainingProgressListener
-import com.medallia.word2vec.neuralnetwork.NeuralNetworkType
-import com.medallia.word2vec.util.Format
-import org.allenai.common.ParIterator._
-import org.allenai.common.{ Logging, Resource, StreamClosingIterator }
-import org.allenai.nlpstack.segment.{ StanfordSegmenter => segmenter }
-import org.allenai.nlpstack.tokenize.{ defaultTokenizer => tokenizer }
-
 import scala.Ordering.Implicits._
 import scala.collection.JavaConverters._
 import scala.collection.immutable.TreeSet

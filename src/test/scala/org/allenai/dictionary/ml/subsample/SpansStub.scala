@@ -1,9 +1,9 @@
 package org.allenai.dictionary.ml.subsample
 
-import java.util
-
 import nl.inl.blacklab.search.Span
 import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
+
+import java.util
 
 object SpansStub {
   def apply(docs: Seq[Int], s: Seq[Int], e: Seq[Int]): SpansStub =

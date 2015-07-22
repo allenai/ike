@@ -1,17 +1,17 @@
 package org.allenai.dictionary.index
 
-import java.io.{ File, FileInputStream, InputStream, InputStreamReader }
-import java.net.URL
-import java.nio.charset.MalformedInputException
-import java.util.zip.GZIPInputStream
-
-import com.typesafe.config.Config
 import org.allenai.common.ParIterator._
 import org.allenai.common.{ Logging, Resource, StreamClosingIterator }
 import org.allenai.dictionary.DataFile
 import org.allenai.dictionary.index.WikipediaCorpus.DocumentIterator
+
+import com.typesafe.config.Config
 import org.apache.commons.io.LineIterator
 
+import java.io.{ File, FileInputStream, InputStream, InputStreamReader }
+import java.net.URL
+import java.nio.charset.MalformedInputException
+import java.util.zip.GZIPInputStream
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.Source
 
