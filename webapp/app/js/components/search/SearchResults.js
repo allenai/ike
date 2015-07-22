@@ -17,6 +17,14 @@ var SearchResults = React.createClass({
     results: React.PropTypes.object.isRequired
   },
 
+  shouldComponentUpdate: function(nextProps, nextState) {
+    return (
+      JSON.stringify(nextProps.target) !== JSON.stringify(this.props.target) ||
+      JSON.stringify(nextProps.results) !== JSON.stringify(this.props.results) ||
+      JSON.stringify(nextState) !== JSON.stringify(this.state)
+    );
+  },
+
   target: function() {
     if(this.props.target)
       return this.props.target.value;
@@ -133,7 +141,7 @@ var SearchResults = React.createClass({
   pageGroupComponents: function() {
     var target = this.props.target;
     var cols = this.cols();
-    var query = this.props.query;
+    var query = this.props.results.query;
     return this.pageGroups().map(function(group) {
       var key = group.keys.join(",");
       return (
@@ -257,12 +265,12 @@ var SearchResults = React.createClass({
 
   render: function() {
     var results = this.props.results;
-    if (results.request == null) {
-      return this.renderBlank();
-    } else if (results.pending) {
+    if (results.pending) {
       return this.renderPending();
     } else if (results.errorMessage != null) {
       return this.renderErrorMessage();
+    } else if (!results.query) {
+        return this.renderBlank();
     } else if (this.displayedGroups().length == 0) {
       return this.renderNoGroups();
     } else {

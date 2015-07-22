@@ -5,12 +5,36 @@ var ButtonGroup = bs.ButtonGroup;
 var Button = bs.Button;
 var TableManager = require('../../managers/TableManager.js');
 var AddResultButton = React.createClass({
+  getInitialState: function() {
+    return {
+      isPos: this.isPos(),
+      isNeg: this.isNeg()
+    };
+  },
+
+  tableDidUpdate: function() {
+    this.setState(this.getInitialState());
+  },
+
+  componentWillMount: function() {
+    TableManager.addChangeListener(this.tableDidUpdate);
+  },
+
+  componentWillUnmount: function() {
+    TableManager.removeChangeListener(this.tableDidUpdate);
+  },
+
+  componentDidUpdate: function(prevProps, prevState) {
+    if(prevProps.target.value !== this.props.target.value)
+      this.setState(this.getInitialState());
+  },
+
   row: function() {
     var group = this.props.group;
     var values = group.keys;
 
     var provenance = {
-      "query": this.props.query.value,
+      "query": this.props.query,
       "context": group.results.map(function(resultObject) {
         var words = resultObject.result.wordData;
         var fragment = words.map(function(word) { return word.word; }).join(" ");
@@ -27,34 +51,43 @@ var AddResultButton = React.createClass({
 
     var row = TableManager.stringsRow(values);
     row.provenance = provenance;
-    return row
+    return row;
   },
+
   isType: function(type) {
     var target = this.props.target.value;
     return TableManager.hasRow(target, type, this.row());
   },
+
   isPos: function() {
     return this.isType('positive');
   },
+
   isNeg: function() {
     return this.isType('negative');
   },
+
   toggleType: function(type) {
     var target = this.props.target.value;
     TableManager.toggleRow(target, type, this.row());
   },
+
   togglePos: function() {
     this.toggleType('positive');
   },
+
   toggleNeg: function() {
     this.toggleType('negative');
   },
+
   posStyle: function() {
-    return this.isPos() ? 'primary' : 'default';
+    return this.state.isPos ? 'primary' : 'default';
   },
+
   negStyle: function() {
-    return this.isNeg() ? 'warning' : 'default';
+    return this.state.isNeg ? 'warning' : 'default';
   },
+
   render: function() {
     var target = this.props.target.value;
     return (
@@ -71,4 +104,5 @@ var AddResultButton = React.createClass({
     );
   }
 });
+
 module.exports = AddResultButton;

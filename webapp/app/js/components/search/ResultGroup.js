@@ -6,9 +6,8 @@ var ResultGroup = React.createClass({
   addCol: function() {
     var target = this.props.target;
     var group = this.props.group;
-    var query = this.props.query;
     if (target && target.value) {
-      return <td><AddResultButton group={group} target={target} query={query}/></td>;
+      return <td><AddResultButton group={group} target={target} query={this.props.query}/></td>;
     } else {
       return null;
     }
