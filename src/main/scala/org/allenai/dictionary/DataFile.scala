@@ -1,7 +1,8 @@
 package org.allenai.dictionary
 
-import com.typesafe.config.Config
 import org.allenai.datastore.Datastore
+
+import com.typesafe.config.Config
 
 import java.io.File
 

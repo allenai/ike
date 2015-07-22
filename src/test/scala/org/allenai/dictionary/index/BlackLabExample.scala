@@ -1,11 +1,12 @@
 package org.allenai.dictionary.index
 
+import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
+import org.allenai.dictionary.BlackLabResult
+
 import nl.inl.blacklab.index.Indexer
 import nl.inl.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
 import nl.inl.blacklab.search.sequences.{ TextPatternRepetition, TextPatternSequence }
 import nl.inl.blacklab.search.{ Searcher, TextPatternCaptureGroup, TextPatternOr, TextPatternPrefix, TextPatternProperty, TextPatternTerm }
-import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
-import org.allenai.dictionary.BlackLabResult
 
 class BlackLabExample extends UnitSpec with ScratchDirectory {
 

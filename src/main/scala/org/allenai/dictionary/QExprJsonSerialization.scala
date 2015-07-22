@@ -1,5 +1,6 @@
 package org.allenai.dictionary
 import org.allenai.common.json._
+
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 

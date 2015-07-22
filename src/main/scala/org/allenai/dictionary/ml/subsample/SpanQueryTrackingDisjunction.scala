@@ -5,9 +5,8 @@ import org.apache.lucene.index.{ AtomicReaderContext, Term, TermContext }
 import org.apache.lucene.search.spans.{ SpanQuery, Spans }
 import org.apache.lucene.util.Bits
 
-import scala.collection.JavaConverters._
-
 import java.util
+import scala.collection.JavaConverters._
 
 /** Disjunction of SpanQueries that uses a capture group to mark whether 'firstSpan' created each
   * returned Span or if one of the 'alternatives' Spans did. See `SpansTrackingDisjunction`.

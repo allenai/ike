@@ -1,27 +1,27 @@
 package org.allenai.dictionary
 
+import org.allenai.common.Config._
+import org.allenai.common.Logging
+import org.allenai.dictionary.patterns.NamedPattern
+import org.allenai.dictionary.persistence.Tablestore
+
 import akka.actor.{ Actor, ActorContext, ActorSystem, Props }
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
-import org.allenai.common.Config._
-import org.allenai.common.Logging
-import org.allenai.dictionary.patterns.NamedPattern
-import org.allenai.dictionary.persistence.Tablestore
 import spray.can.Http
 import spray.http.{ CacheDirectives, HttpHeaders, StatusCodes }
 import spray.httpx.SprayJsonSupport
 import spray.routing.{ ExceptionHandler, HttpService }
 import spray.util.LoggingContext
 
+import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 import scala.util.control.NonFatal
-
-import java.util.concurrent.TimeUnit
 
 object DictionaryToolWebapp {
   lazy val config = ConfigFactory.load().getConfig("DictionaryToolWebapp")
@@ -43,9 +43,10 @@ object DictionaryToolWebapp {
 }
 
 class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport with Logging {
-  import context.dispatcher
   import org.allenai.dictionary.DictionaryToolWebapp.FutureWithGet
   import org.allenai.dictionary.JsonSerialization._
+
+  import context.dispatcher
   import spray.json.DefaultJsonProtocol._
 
   logger.debug("Starting DictionaryToolActor") // this is just here to force logger initialization

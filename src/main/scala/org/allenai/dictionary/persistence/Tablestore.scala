@@ -1,11 +1,12 @@
 package org.allenai.dictionary.persistence
 
-import com.typesafe.config.{ Config, ConfigFactory }
 import org.allenai.common.Config._
 import org.allenai.common.Logging
 import org.allenai.dictionary.patterns.NamedPattern
 import org.allenai.dictionary.persistence.OkcPostgresDriver.simple.{ Table => SqlTable, _ }
 import org.allenai.dictionary.{ QWord, Table, TableRow, TableValue }
+
+import com.typesafe.config.{ Config, ConfigFactory }
 import play.api.libs.json.{ JsValue => PlayJsValue, Json => PlayJson }
 import spray.caching.LruCache
 import spray.json.{ JsValue => SprayJsValue, pimpString }

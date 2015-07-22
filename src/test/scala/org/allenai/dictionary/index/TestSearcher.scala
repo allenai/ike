@@ -1,8 +1,9 @@
 package org.allenai.dictionary
 
-import nl.inl.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary.index.TestData
+
+import nl.inl.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
 
 class TestSearcher extends UnitSpec with ScratchDirectory {
   TestData.createTestIndex(scratchDir)
