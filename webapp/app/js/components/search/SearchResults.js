@@ -10,6 +10,7 @@ var ButtonToolbar = bs.ButtonToolbar;
 var DropdownButton = bs.DropdownButton;
 var MenuItem = bs.MenuItem;
 var ResultGroup = require('./ResultGroup.js');
+
 var SearchResults = React.createClass({
   propTypes: {
     target: React.PropTypes.object,

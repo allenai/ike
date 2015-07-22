@@ -1,5 +1,5 @@
 var xhr = require('xhr');
-const AuthStore = require('../stores/AuthStore')
+const AuthStore = require('../stores/AuthStore');
 
 var tables = {};
 var listeners = [];

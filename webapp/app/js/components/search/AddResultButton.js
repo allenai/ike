@@ -22,11 +22,11 @@ var AddResultButton = React.createClass({
           "matchOffset": matchOffset,
           "corpus": corpus
         };
-      }),
+      })
     };
 
     var row = TableManager.stringsRow(values);
-    row.provenance = provenance
+    row.provenance = provenance;
     return row
   },
   isType: function(type) {
