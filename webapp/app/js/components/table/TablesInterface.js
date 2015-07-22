@@ -4,6 +4,7 @@ var Row = bs.Row;
 var Col = bs.Col;
 var Accordion = bs.Accordion;
 var Panel = bs.Panel;
+var Badge = bs.Badge;
 var TableAdder = require('./TableAdder.js');
 var TableLoader = require('./TableLoader.js');
 var Table = require('./Table.js');
@@ -20,8 +21,9 @@ var TablesInterface = React.createClass({
     var tables = TableManager.getTables();
     var components = Object.keys(tables).map(function(name, i) {
       var table = tables[name];
+      var badge = <Badge>{table.positive.length + " / " + table.negative.length}</Badge>;
       var buttons = <TableButtonToolbar table={table}/>;
-      var header = <span>{name} {buttons}</span>;
+      var header = <span>{name}<div className="pull-right">{badge}&nbsp;&nbsp;&nbsp;{buttons}</div></span>;
       return (
         <Panel header={header} key={name} eventKey={i}>
           <Table key={name} table={table}/>
