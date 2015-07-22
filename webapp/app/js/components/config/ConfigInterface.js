@@ -13,7 +13,6 @@ var ConfigInterface = React.createClass({
       } else {
         config.value[subconfig][configName] = !config.value[subconfig][configName];
       }
-      console.log('toggling '+ configName + ' to ' + config.value[subconfig][configName]);
       config.requestChange(config.value);
     }
   },
@@ -25,7 +24,6 @@ var ConfigInterface = React.createClass({
       } else {
         config.value[subconfig][configName] = transform(e.target.value);
       }
-      console.log('setting ' + configName + ' to ' + transform(e.target.value));
       config.requestChange(config.value);
     };
   },
