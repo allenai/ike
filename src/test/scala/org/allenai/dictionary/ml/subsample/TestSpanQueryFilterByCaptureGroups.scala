@@ -1,9 +1,11 @@
 package org.allenai.dictionary.ml.subsample
 
-import org.allenai.common.testkit.{ UnitSpec, ScratchDirectory }
-import org.allenai.dictionary.{ BlackLabSemantics, QWord, QueryLanguage }
+import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.dictionary.index.TestData
+import org.allenai.dictionary.{ BlackLabSemantics, QueryLanguage }
+
 import org.apache.lucene.search.spans.SpanQuery
+
 import scala.collection.JavaConverters._
 
 class TestSpanQueryFilterByCaptureGroups extends UnitSpec with ScratchDirectory {

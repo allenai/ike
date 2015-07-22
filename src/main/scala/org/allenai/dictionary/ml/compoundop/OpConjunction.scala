@@ -1,7 +1,8 @@
 package org.allenai.dictionary.ml.compoundop
 
-import org.allenai.dictionary.ml.queryop._
 import org.allenai.dictionary.ml.queryop.TokenCombination._
+import org.allenai.dictionary.ml.queryop._
+
 import scala.collection.immutable.IntMap
 
 object OpConjunction {

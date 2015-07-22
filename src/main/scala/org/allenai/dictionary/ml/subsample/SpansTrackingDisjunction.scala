@@ -1,11 +1,11 @@
 package org.allenai.dictionary.ml.subsample
 
-import java.util
-
 import nl.inl.blacklab.search.Span
-import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
+import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
 import nl.inl.blacklab.search.sequences.PerDocumentSortedSpans
 import org.apache.lucene.util.PriorityQueue
+
+import java.util
 
 /** Disjunction of spans, ensures the returned Hits are unique. For each Hit, additionally puts that
   * Hit's span in a capture group. That capture group will be positive if `firstSpan`

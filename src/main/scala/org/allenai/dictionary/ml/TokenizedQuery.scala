@@ -1,7 +1,8 @@
 package org.allenai.dictionary.ml
 
-import nl.inl.blacklab.search.Searcher
 import org.allenai.dictionary._
+
+import nl.inl.blacklab.search.Searcher
 
 /** Indicates a 'slot' relative to a particular TokenizedQuery. A Slot indicates a token within
   * the existing query, or an 'empty space' that occurs before of after the existing query

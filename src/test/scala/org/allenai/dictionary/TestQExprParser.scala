@@ -1,7 +1,6 @@
 package org.allenai.dictionary
 
-import org.allenai.common.testkit.UnitSpec
-import org.allenai.common.testkit.ScratchDirectory
+import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 
 class TestQExprParser extends UnitSpec with ScratchDirectory {
 

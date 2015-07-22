@@ -1,7 +1,7 @@
 package org.allenai.dictionary.ml.queryop
 
 import org.allenai.common.testkit.UnitSpec
-import org.allenai.dictionary.{ SimilarPhrase, QWord, QSimilarPhrases }
+import org.allenai.dictionary.{ QSimilarPhrases, QWord, SimilarPhrase }
 
 class TestSimilarPhraseTracker extends UnitSpec {
 

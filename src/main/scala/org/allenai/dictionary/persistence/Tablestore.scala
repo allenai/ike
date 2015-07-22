@@ -1,21 +1,21 @@
 package org.allenai.dictionary.persistence
 
-import com.typesafe.config.{ Config, ConfigFactory }
 import org.allenai.common.Config._
 import org.allenai.common.Logging
 import org.allenai.dictionary.patterns.NamedPattern
-import org.allenai.dictionary.{ TableRow, QWord, TableValue, Table }
+import org.allenai.dictionary.persistence.OkcPostgresDriver.simple.{ Table => SqlTable, _ }
+import org.allenai.dictionary.{ QWord, Table, TableRow, TableValue }
+
+import com.typesafe.config.{ Config, ConfigFactory }
 import play.api.libs.json.{ JsValue => PlayJsValue, Json => PlayJson }
 import spray.caching.LruCache
-import spray.json.{ JsValue => SprayJsValue }
-import spray.json.pimpString
+import spray.json.{ JsValue => SprayJsValue, pimpString }
 import spray.util._
-import scala.concurrent.duration._
-import language.postfixOps
-import scala.slick.jdbc.meta.MTable
-import scala.concurrent.ExecutionContext.Implicits.global
 
-import OkcPostgresDriver.simple.{ Table => SqlTable, _ }
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.language.postfixOps
+import scala.slick.jdbc.meta.MTable
 
 trait Tablestore {
   def tables(userEmail: String): Map[String, Table]
@@ -46,7 +46,8 @@ object UncachedTablestore extends Tablestore with Logging {
   }
   private val settingsTable = TableQuery[SettingsTable]
 
-  private class TableTable(tag: Tag) extends SqlTable[(Int, String, String, List[String])](tag, "tables") {
+  private class TableTable(tag: Tag)
+      extends SqlTable[(Int, String, String, List[String])](tag, "tables") {
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def user = column[String]("user")
     def name = column[String]("name")

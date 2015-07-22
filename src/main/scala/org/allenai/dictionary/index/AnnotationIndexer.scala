@@ -1,11 +1,11 @@
 package org.allenai.dictionary.index
 
-import java.io.Reader
-
-import nl.inl.blacklab.index.{ DocIndexerXmlHandlers, Indexer }
 import nl.inl.blacklab.index.complex.ComplexFieldProperty
 import nl.inl.blacklab.index.complex.ComplexFieldProperty.SensitivitySetting
+import nl.inl.blacklab.index.{ DocIndexerXmlHandlers, Indexer }
 import org.xml.sax.Attributes
+
+import java.io.Reader
 
 class AnnotationIndexer(indexer: Indexer, fileName: String, reader: Reader)
     extends DocIndexerXmlHandlers(indexer, fileName, reader) {

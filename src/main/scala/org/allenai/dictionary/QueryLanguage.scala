@@ -1,11 +1,9 @@
 package org.allenai.dictionary
 
+import org.allenai.dictionary.patterns.NamedPattern
+
 import java.text.ParseException
 import java.util.regex.Pattern
-
-import org.allenai.dictionary.patterns.NamedPattern
-import org.allenai.dictionary.persistence.Tablestore
-
 import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
 import scala.util.{ Failure, Success, Try }
@@ -162,15 +160,19 @@ object QueryLanguage {
       patternName: String,
       forbiddenPatternNames: Set[String] = Set.empty
     ): QExpr = {
-      if (forbiddenPatternNames.contains(patternName))
+      if (forbiddenPatternNames.contains(patternName)) {
         throw new IllegalArgumentException(s"Pattern $patternName recursively invokes itself.")
+      }
 
       patterns.get(patternName) match {
         case Some(pattern) => try {
           recurse(parse(pattern.pattern, false).get, forbiddenPatternNames + patternName)
         } catch {
           case e if NonFatal(e) =>
-            throw new IllegalArgumentException(s"While expanding pattern $patternName: ${e.getMessage}", e)
+            throw new IllegalArgumentException(
+              s"While expanding pattern $patternName: ${e.getMessage}",
+              e
+            )
         }
         case None => throw new IllegalArgumentException(s"Could not find pattern '$patternName'")
       }

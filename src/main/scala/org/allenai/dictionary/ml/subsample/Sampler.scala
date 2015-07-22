@@ -1,11 +1,11 @@
 package org.allenai.dictionary.ml.subsample
 
 import org.allenai.common.Logging
+import org.allenai.dictionary._
 import org.allenai.dictionary.ml.{ CapturedTokenSequence, TokenizedQuery }
+import org.allenai.dictionary.patterns.NamedPattern
 
 import nl.inl.blacklab.search.{ Hits, Searcher }
-import org.allenai.dictionary._
-import org.allenai.dictionary.patterns.NamedPattern
 
 object Sampler extends Logging {
 

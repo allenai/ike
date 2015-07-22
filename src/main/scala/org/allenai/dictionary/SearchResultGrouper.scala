@@ -1,7 +1,6 @@
 package org.allenai.dictionary
 
-import org.allenai.common.{ Timing, Logging }
-import org.allenai.dictionary.persistence.Tablestore
+import org.allenai.common.{ Logging, Timing }
 
 object SearchResultGrouper extends Logging {
   def targetTable(req: SearchRequest, tables: Map[String, Table]): Option[Table] = for {

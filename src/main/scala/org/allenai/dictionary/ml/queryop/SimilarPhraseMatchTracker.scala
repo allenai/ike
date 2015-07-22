@@ -1,8 +1,8 @@
 package org.allenai.dictionary.ml.queryop
 
-import org.allenai.dictionary.{ SimilarPhrase, QSimilarPhrases }
 import org.allenai.dictionary.ml.Label._
 import org.allenai.dictionary.ml.WeightedExample
+import org.allenai.dictionary.{ QSimilarPhrases, SimilarPhrase }
 
 import scala.collection.immutable.IntMap
 

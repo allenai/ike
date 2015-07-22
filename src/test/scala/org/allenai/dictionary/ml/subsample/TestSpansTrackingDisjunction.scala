@@ -1,8 +1,9 @@
 package org.allenai.dictionary.ml.subsample
 
-import nl.inl.blacklab.search.Span
-import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
 import org.allenai.common.testkit.UnitSpec
+
+import nl.inl.blacklab.search.Span
+import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
 
 class TestSpansTrackingDisjunction extends UnitSpec {
 

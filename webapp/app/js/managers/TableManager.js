@@ -15,6 +15,7 @@ var TableManager = {
       if(userEmail) this.loadTablesFromServer();
     }
   },
+
   userEmail: function() {
     return userEmail;
   },
@@ -24,18 +25,22 @@ var TableManager = {
     var words = qwords.map(function(qw) { return qw.value; });
     return words.join(" ");
   },
+
   stringValue: function(string) {
     var words = string.split(" ");
     var qwords = words.map(function(w) { return {value: w}; });
     return {qwords: qwords};
   },
+
   stringsRow: function(strings) {
     var values = strings.map(this.stringValue);
     return {values: values};
   },
+
   getTables: function() {
     return tables;
   },
+
   getRows: function(tableName, rowType) {
     if (this.hasTable(tableName)) {
       return tables[tableName][rowType];
@@ -43,23 +48,28 @@ var TableManager = {
       return [];
     }
   },
+
   addChangeListener: function(listener) {
     listeners.push(listener);
   },
+
   removeChangeListener: function(listener) {
     var index = listeners.indexOf(listener);
     if (index !== -1) {
       listeners.splice(index, 1);
     }
   },
+
   updateListeners: function() {
     listeners.map(function(listener) {
       listener(tables);
     });
   },
+
   hasTable: function(tableName) {
     return tableName in tables;
   },
+
   createTable: function(table, dontWriteToServer) {
     if(!userEmail) throw "You have to sign in before creating tables.";
     if (!this.hasTable(table.name)) {
@@ -76,6 +86,7 @@ var TableManager = {
         this.writeTableToServer(table.name);
     }
   },
+
   deleteTable: function(tableName) {
     if(!userEmail) throw "You have to sign in before deleting tables.";
     if (this.hasTable(tableName)) {
@@ -84,6 +95,7 @@ var TableManager = {
       this.deleteTableFromServer(tableName);
     }
   },
+
   addRow: function(tableName, rowType, row) {
     var hasTable = this.hasTable(tableName);
     var hasRow = this.hasRow(tableName, rowType, row);
@@ -94,6 +106,7 @@ var TableManager = {
       this.writeTableToServer(tableName);
     }
   },
+
   deleteRow: function(tableName, rowType, row) {
     var rows = tables[tableName][rowType];
     var index = this.getRowIndex(tableName, rowType, row);
@@ -103,6 +116,7 @@ var TableManager = {
       this.writeTableToServer(tableName);
     }
   },
+
   getRowIndex: function(tableName, rowType, row) {
     var table = tables[tableName];
     if(!table)
@@ -125,15 +139,19 @@ var TableManager = {
 
     return rows.map(rowString).indexOf(rowString(row));
   },
+
   hasRow: function(tableName, rowType, row) {
     return this.getRowIndex(tableName, rowType, row) >= 0;
   },
+
   hasPositiveRow: function(tableName, row) {
     return this.hasRow(tableName, "positive", row);
   },
+
   hasNegativeRow: function(tableName, row) {
     return this.hasRow(tableName, "negative", row);
   },
+
   toggleRow: function(tableName, rowType, row) {
     if (this.hasRow(tableName, rowType, row)) {
       this.deleteRow(tableName, rowType, row);
@@ -152,6 +170,7 @@ var TableManager = {
     }.bind(this);
     return table[rowType].map(appendLabelToRow);
   },
+
   table2csv: function(table) {
     // Get string arrays representing the rows, with a label column added
     // to the end.

@@ -1,19 +1,19 @@
 package org.allenai.dictionary.ml
 
 import org.allenai.common.{ Logging, Timing }
-import org.allenai.dictionary.{ QueryLanguage, Table }
 import org.allenai.dictionary.ml.queryop.{ OpGenerator, QueryOp }
+import org.allenai.dictionary.{ QueryLanguage, Table }
 
 import nl.inl.blacklab.search.Hits
 
-import scala.collection.immutable.IntMap
 import scala.collection.JavaConverters._
+import scala.collection.immutable.IntMap
 
 object Label extends Enumeration {
   type Label = Value
   val Positive, Negative, Unlabelled = Value
 }
-import Label._
+import org.allenai.dictionary.ml.Label._
 
 /** A token within a sentence and some of its annotations */
 case class Token(word: String, pos: String)

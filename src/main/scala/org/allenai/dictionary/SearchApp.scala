@@ -1,15 +1,15 @@
 package org.allenai.dictionary
 
-import com.typesafe.config.Config
-import nl.inl.blacklab.search.{ HitsWindow, Searcher, TextPattern }
 import org.allenai.common.Config.EnhancedConfig
 import org.allenai.common.Logging
-import org.allenai.dictionary.ml.{ Suggestions, QuerySuggester }
+import org.allenai.dictionary.ml.{ QuerySuggester, Suggestions }
 import org.allenai.dictionary.persistence.Tablestore
 
-import scala.util.{ Success, Try }
+import com.typesafe.config.Config
+import nl.inl.blacklab.search.{ HitsWindow, Searcher, TextPattern }
 
-import java.util.concurrent.{ TimeoutException, TimeUnit, Executors, Callable }
+import java.util.concurrent.{ Callable, Executors, TimeUnit, TimeoutException }
+import scala.util.{ Success, Try }
 
 case class SuggestQueryRequest(
   query: String,

@@ -1,8 +1,8 @@
 package org.allenai.dictionary.ml.queryop
 
 import org.allenai.common.testkit.UnitSpec
-import org.allenai.dictionary.{ QPos, QWord }
 import org.allenai.dictionary.ml._
+import org.allenai.dictionary.{ QPos, QWord }
 
 import scala.collection.immutable.IntMap
 

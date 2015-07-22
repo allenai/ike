@@ -1,9 +1,9 @@
 package org.allenai.dictionary.ml.subsample
 
-import java.util
-
 import nl.inl.blacklab.search.Span
-import nl.inl.blacklab.search.lucene.{ HitQueryContext, BLSpans }
+import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
+
+import java.util
 
 /** Modifies `clause` so that it only matches Spans after the given document and token
   *
