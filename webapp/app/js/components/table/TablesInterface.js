@@ -30,10 +30,12 @@ var TablesInterface = React.createClass({
     }.bind(this));
     return <Accordion>{components}</Accordion>;
   },
+
   addTable: function(table) {
     TableManager.createTable(table);
     this.props.target.requestChange(table.name);
   },
+
   adder: function() {
     return (
       <div>
@@ -46,6 +48,7 @@ var TablesInterface = React.createClass({
       </div>
     );
   },
+
   render: function() {
     return (
        <Row>

@@ -15,6 +15,7 @@ var Table = React.createClass({
       </TabPane>
     );
   },
+
   render: function() {
     var posPane = this.pane('positive');
     var negPane = this.pane('negative');
