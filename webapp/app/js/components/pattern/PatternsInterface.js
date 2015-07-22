@@ -111,9 +111,9 @@ var PatternsInterface = React.createClass({
           items.push(
             <NavItem key={patternName} eventKey={patternName}>
               {patternName}
-              <DeleteButton bsStyle="link" callback={function() {
-                PatternsStore.deletePattern(patternName);
-              }}/>
+              <DeleteButton bsStyle="link" callback={function(pn) {
+                PatternsStore.deletePattern(pn);
+              }.bind(undefined, patternName) }/>
             </NavItem>);
         }
       }
