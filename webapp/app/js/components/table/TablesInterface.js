@@ -23,7 +23,7 @@ var TablesInterface = React.createClass({
       var table = tables[name];
       var badge = <Badge>{table.positive.length + " / " + table.negative.length}</Badge>;
       var buttons = <TableButtonToolbar table={table}/>;
-      var header = <span>{name}<div className="pull-right">{badge}&nbsp;&nbsp;&nbsp;{buttons}</div></span>;
+      var header = <span>{name}<span className="pull-right">{badge}&nbsp;&nbsp;&nbsp;{buttons}</span></span>;
       return (
         <Panel header={header} key={name} eventKey={i}>
           <Table key={name} table={table}/>
