@@ -71,7 +71,10 @@ var SearchInterface = React.createClass({
   },
 
   componentDidUpdate: function(prevProps, prevState) {
-    if(prevProps.tag !== this.props.tag) {
+    if(
+      prevProps.tag !== this.props.tag ||
+      JSON.stringify(prevProps.target) !== JSON.stringify(this.props.target)
+    ) {
       var self = this;
       this.setState({qexpr: null}, function() {
         self.search();
@@ -191,6 +194,8 @@ var SearchInterface = React.createClass({
     } else {
       queryValue = this.state.qexpr;
     }
+    if(!queryValue)
+      return;
     var requestData = this.makeRequestData(queryValue);
     var request = xhr(requestData, this.searchCallback);
     var results = this.getInitialResults();
