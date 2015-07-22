@@ -49,19 +49,24 @@ var SearchInterface = React.createClass({
     return this.props.showQueryViewer === undefined || this.props.showQueryViewer;
   },
 
+  getInitialResults: function() {
+    return {
+      groups: [],
+      query: null,
+      qexpr: null,  // do we need this?
+      pending: false,
+      request: null,
+      errorMessage: null
+    };
+  },
+
   getInitialState: function() {
     return {
       query: null,
       qexpr: null,
       corpora: CorporaStore.getCorpora(),
       selectedCorpusNames: CorporaStore.getCorpusNames(),
-      results: {
-        groups: [],
-        qexpr: null,
-        pending: false,
-        request: null,
-        errorMessage: null
-      }
+      results: this.getInitialResults()
     };
   },
 
@@ -134,10 +139,10 @@ var SearchInterface = React.createClass({
   },
 
   searchSuccess: function(response) {
-    var results = this.state.results;
-    results.pending = false;
+    var results = this.getInitialResults();
     results.groups = response.groups;
-    results.errorMessage = null;
+    results.query = this.state.results.query;
+    results.qexpr = response.qexpr;
     this.setState({
       results: results,
       qexpr: response.qexpr
@@ -146,8 +151,7 @@ var SearchInterface = React.createClass({
   },
 
   searchFailure: function(message) {
-    var results = this.state.results;
-    results.pending = false;
+    var results = this.getInitialResults();
     results.errorMessage = message;
     this.setState({results: results});
   },
@@ -157,16 +161,15 @@ var SearchInterface = React.createClass({
   },
 
   cancelRequest: function() {
-    var results = this.state.results;
-    results.request.abort();
-    results.request = null;
-    results.pending = false;
-    this.setState({results: results});
+    this.state.results.request.abort();
+    this.setState({results: this.getInitialResults()});
   },
 
   clearGroups: function() {
-    var results = this.state.results;
-    results.groups = [];
+    var results = this.getInitialResults();
+    results.pending = this.state.results.pending;
+    results.request = this.state.results.request;
+    results.errorMessage = this.state.results.errorMessage;
     this.setState({results: results});
   },
 
@@ -190,8 +193,9 @@ var SearchInterface = React.createClass({
     }
     var requestData = this.makeRequestData(queryValue);
     var request = xhr(requestData, this.searchCallback);
-    var results = this.state.results;
+    var results = this.getInitialResults();
     results.request = request;
+    results.query = queryValue;
     results.pending = true;
     this.setState({results: results});
   },
@@ -234,7 +238,6 @@ var SearchInterface = React.createClass({
       <SearchResults
         ref="searchResults"
         target={target}
-        query={query}
         results={this.state.results}
         config={config}/>;
 
