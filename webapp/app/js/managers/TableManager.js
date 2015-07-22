@@ -79,7 +79,10 @@ var TableManager = {
         name: table.name,
         cols: table.cols.slice(0),
         positive: positive,
-        negative: negative
+        negative: negative,
+        tag: Math.random()
+          // We change this tag every time a table is mutated, so that we can quickly determine
+          // whether a table has changed or not.
       };
       this.updateListeners();
       if(!dontWriteToServer)
@@ -100,18 +103,24 @@ var TableManager = {
     var hasTable = this.hasTable(tableName);
     var hasRow = this.hasRow(tableName, rowType, row);
     if (hasTable && !hasRow) {
-      var rows = tables[tableName][rowType];
+      var table = tables[tableName];
+      table.tag = Math.random();
+      var rows = table[rowType];
       rows.unshift(row);
+
       this.updateListeners();
       this.writeTableToServer(tableName);
     }
   },
 
   deleteRow: function(tableName, rowType, row) {
-    var rows = tables[tableName][rowType];
+    var table = tables[tableName];
+    var rows = table[rowType];
     var index = this.getRowIndex(tableName, rowType, row);
     if (index >= 0) {
       rows.splice(index, 1);
+      table.tag = Math.random();
+
       this.updateListeners();
       this.writeTableToServer(tableName);
     }
