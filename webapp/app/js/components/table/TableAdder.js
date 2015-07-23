@@ -1,13 +1,14 @@
-var React = require('react/addons');
-var bs = require('react-bootstrap');
-var Input = bs.Input;
-var Panel = bs.Panel;
-var Modal = bs.Modal;
-var Button = bs.Button;
-var Alert = bs.Alert;
-var EditableList = require('../misc/EditableList.js');
-var TableManager = require('../../managers/TableManager.js');
-var TableAdder = React.createClass({
+const React = require('react/addons');
+const bs = require('react-bootstrap');
+const Input = bs.Input;
+const Panel = bs.Panel;
+const Modal = bs.Modal;
+const Button = bs.Button;
+const Alert = bs.Alert;
+const EditableList = require('../misc/EditableList.js');
+const TableManager = require('../../managers/TableManager.js');
+
+const TableAdder = React.createClass({
   componentDidMount: function() {
     var callback = function() {
       // Since this is a callback, the component could have been unmounted in the meantime.
@@ -18,30 +19,36 @@ var TableAdder = React.createClass({
           this.setState({error: "You must be logged in to create tables."});
         }
       }
-    }.bind(this)
+    }.bind(this);
 
     TableManager.addChangeListener(callback);
     callback();
   },
+
   getInitialState: function() {
     return {name: '', cols: [], error: null};
   },
+
   validCol: function(col) {
     return col && col.trim() && this.state.cols.indexOf(col) < 0;
   },
+
   addCol: function(value) {
     if (this.validCol(value)) {
       this.state.cols.push(value);
       this.setState({cols: this.state.cols});
     }
   },
+
   removeCol: function(i) {
     this.state.cols.splice(i, 1);
     this.setState({cols: this.state.cols});
   },
+
   handleNameChange: function(e) {
     this.setState({name: e.target.value});
   },
+
   handleSubmit: function(e) {
     e.preventDefault();
     var table = {
@@ -57,11 +64,13 @@ var TableAdder = React.createClass({
     }
     this.setState({name: '', cols: []});
   },
+
   submitDisabled: function() {
     var name = this.state.name;
     var cols = this.state.cols;
     return name.trim() == '' || cols.length == 0 || this.state.error;
   },
+
   nameInput: function() {
     var label = "Table Name";
     var placeholder = "Enter Table Name";
@@ -75,6 +84,7 @@ var TableAdder = React.createClass({
       placeholder={placeholder}
       onChange={onChange}/>;
   },
+
   columnInput: function() {
     var name = "Table Columns";
     var label = <label className="control-label">{name}</label>;
@@ -85,6 +95,7 @@ var TableAdder = React.createClass({
       value={this.state.cols}/>;
     return <div key="columnList">{label} {list}</div>;
   },
+
   submitButton: function() {
     return <Input
       key="submitButton"
@@ -93,16 +104,19 @@ var TableAdder = React.createClass({
       disabled={this.submitDisabled()}
       onClick={this.handleSubmit}/>;
   },
+
   render: function() {
     var nameInput = this.nameInput();
     var columnInput = this.columnInput();
     var submitButton = this.submitButton();
 
     var content = [nameInput, columnInput];
-    if(this.state.error) content.push(<Alert key="error" bsStyle="danger">{this.state.error}</Alert>);
+    if(this.state.error)
+      content.push(<Alert key="error" bsStyle="danger">{this.state.error}</Alert>);
     content.push(submitButton);
 
     return <div>{content}</div>;
   }
 });
+
 module.exports = TableAdder;
