@@ -74,28 +74,27 @@ var SearchInterface = React.createClass({
     // if the tag changed, search again
     if(prevProps.tag !== this.props.tag) {
       var self = this;
-      this.setState({qexpr: null}, function() {
-        self.search();
-      });
+      this.setState({qexpr: null}, self.search);
       return;
     }
 
-    // if the target changed, wipe results if the columns don't match
+    // returns the number of columns for a given target (used below)
     const columnCountForTarget = function(target) {
       if(!target)
         return null;
 
-      var c = target.value;
-      if(!c)
+      const targetValue = target.value;
+      if(!targetValue)
         return null;
 
-      c = TableManager.getTables()[c];
-      if(!c)
+      const table = TableManager.getTables()[targetValue];
+      if(!table)
         return null;
 
-      return c.cols.length;
+      return table.cols.length;
     };
 
+    // if the target changed, wipe results if the columns don't match
     if(columnCountForTarget(this.props.target) !== columnCountForTarget(prevProps.target)) {
       this.clearGroups();
       this.clearQueryViewer();
