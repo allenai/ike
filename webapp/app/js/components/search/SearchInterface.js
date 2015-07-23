@@ -71,14 +71,34 @@ var SearchInterface = React.createClass({
   },
 
   componentDidUpdate: function(prevProps, prevState) {
-    if(
-      prevProps.tag !== this.props.tag ||
-      JSON.stringify(prevProps.target) !== JSON.stringify(this.props.target)
-    ) {
+    // if the tag changed, search again
+    if(prevProps.tag !== this.props.tag) {
       var self = this;
       this.setState({qexpr: null}, function() {
         self.search();
       });
+      return;
+    }
+
+    // if the target changed, wipe results if the columns don't match
+    const columnCountForTarget = function(target) {
+      if(!target)
+        return null;
+
+      var c = target.value;
+      if(!c)
+        return null;
+
+      c = TableManager.getTables()[c];
+      if(!c)
+        return null;
+
+      return c.cols.length;
+    };
+
+    if(columnCountForTarget(this.props.target) !== columnCountForTarget(prevProps.target)) {
+      this.clearGroups();
+      this.clearQueryViewer();
     }
   },
 
