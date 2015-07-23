@@ -222,21 +222,6 @@ var TableManager = {
     });
   },
 
-  requestTableFromServer: function(tableName) {
-    if(!userEmail) throw "You have to sign in before retrieving tables.";
-    var self = this;
-    xhr({
-      uri: '/api/tables/' + encodeURIComponent(userEmail) + "/" + encodeURIComponent(tableName),
-      method: 'GET'
-    }, function(err, response, body) {
-      if(response.statusCode === 200) {
-        self.createTable(JSON.parse(body), true);
-      } else {
-        console.log("Unexpected response requesting a table: " + JSON.stringify(response));
-      }
-    });
-  },
-
   loadTablesFromServer: function() {
     if(!userEmail) throw "You have to sign in before retrieving tables.";
 
@@ -248,7 +233,9 @@ var TableManager = {
     }, function(err, response, body) {
       if(response.statusCode === 200) {
         if(body) {
-          body.split("\n").forEach(self.requestTableFromServer.bind(self))
+          JSON.parse(body).map(function(table) {
+            self.createTable(table, true);
+          });
         }
       } else {
         console.log("Unexpected response requesting tables: " + response)
