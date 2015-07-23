@@ -26,7 +26,11 @@ const TableAdder = React.createClass({
   },
 
   getInitialState: function() {
-    return {name: '', cols: [], error: null};
+    return {
+      name: '',
+      cols: [],
+      error: null
+    };
   },
 
   validCol: function(col) {
