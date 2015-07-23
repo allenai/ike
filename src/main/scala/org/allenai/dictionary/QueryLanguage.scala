@@ -1,5 +1,6 @@
 package org.allenai.dictionary
 
+import org.allenai.dictionary.index.NlpAnnotate
 import org.allenai.dictionary.patterns.NamedPattern
 
 import java.text.ParseException
@@ -50,17 +51,11 @@ case class QPlus(qexpr: QExpr) extends QRepeating {
   def max: Int = -1
 }
 case object QSeq {
-  def fromSeq(seq: Seq[QExpr]): QExpr = seq match {
-    case expr :: Nil => expr
-    case _ => QSeq(seq)
-  }
+  def fromSeq(seq: Seq[QExpr]): QExpr = if (seq.lengthCompare(1) == 0) seq.head else QSeq(seq)
 }
 case class QDisj(qexprs: Seq[QExpr]) extends QExpr
 case object QDisj {
-  def fromSeq(seq: Seq[QExpr]): QExpr = seq match {
-    case expr :: Nil => expr
-    case _ => QDisj(seq)
-  }
+  def fromSeq(seq: Seq[QExpr]): QExpr = if (seq.lengthCompare(1) == 0) seq.head else QDisj(seq)
 }
 case class QAnd(qexpr1: QExpr, qexpr2: QExpr) extends QExpr
 
@@ -75,19 +70,23 @@ object QExprParser extends RegexParsers {
   // scalastyle:off
   def integer = """-?[0-9]+""".r ^^ { _.toInt }
   def wordRegex = """(\\.|[^|\]\[\^(){}\s*+,."~])+""".r
-  def word = wordRegex ^^ { x => QWord(x.replaceAll("""\\(.)""", """$1""")) }
+  def word = wordRegex ^^ { x =>
+    val string = x.replaceAll("""\\(.)""", """$1""")
+    NlpAnnotate.segment(string).flatMap(NlpAnnotate.tokenize).map(_.string).map(QWord)
+  }
+  def words = word ^^ QSeq.fromSeq
   def generalizedWord = (word <~ "~") ~ integer ^^ { x =>
-    QGeneralizePhrase(Seq(x._1), x._2)
+    QGeneralizePhrase(x._1, x._2)
   }
   def generalizedPhrase = ("\"" ~> rep1(word) <~ "\"") ~ ("~" ~> integer).? ^^ { x =>
-    QGeneralizePhrase(x._1, x._2.getOrElse(0))
+    QGeneralizePhrase(x._1.flatten, x._2.getOrElse(0))
   }
   def pos = posTagRegex ^^ QPos
   def chunk = chunkTagRegex ^^ QChunk
   def dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
   def namedPattern = "#[a-zA-Z_]+".r ^^ { s => QNamedPattern(s.tail) }
   def wildcard = "\\.".r ^^^ QWildcard()
-  def atom = wildcard | pos | chunk | dict | namedPattern | generalizedWord | generalizedPhrase | word
+  def atom = wildcard | pos | chunk | dict | namedPattern | generalizedWord | generalizedPhrase | words
   def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
   def named = "(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) }
   def unnamed = "(" ~> expr <~ ")" ^^ QUnnamed
