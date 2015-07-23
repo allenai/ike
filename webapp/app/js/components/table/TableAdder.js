@@ -86,7 +86,8 @@ const TableAdder = React.createClass({
       label={label}
       value={this.state.name}
       placeholder={placeholder}
-      onChange={onChange}/>;
+      onChange={onChange}
+      disabled={!TableManager.userEmail()} />;
   },
 
   columnInput: function() {
@@ -96,7 +97,8 @@ const TableAdder = React.createClass({
       name={name}
       onAdd={this.addCol}
       onRemove={this.removeCol}
-      value={this.state.cols}/>;
+      value={this.state.cols}
+      disabled={!TableManager.userEmail()} />;
     return <div key="columnList">{label} {list}</div>;
   },
 

@@ -152,7 +152,8 @@ var TableLoader = React.createClass({
       label={label}
       value={this.state.name}
       placeholder={placeholder}
-      onChange={onChange}/>;
+      onChange={onChange}
+      disabled={!TableManager.userEmail()} />;
   },
 
   submitButton: function() {
@@ -165,8 +166,12 @@ var TableLoader = React.createClass({
 
   render: function() {
     var nameInput = this.nameInput();
-    var fileUpload = <Input type="file" label="File" onChange={this.handleFile} />;
-    var alert = <Alert bsStyle="danger">{this.state.error}</Alert>
+    var fileUpload = <Input
+      type="file"
+      label="File"
+      onChange={this.handleFile}
+      disabled={!TableManager.userEmail()} />;
+    var alert = <Alert bsStyle="danger">{this.state.error}</Alert>;
     var submitButton = this.submitButton();
     if(this.state.error.length == 0)
       return <div>{nameInput} {fileUpload} {submitButton}</div>;
