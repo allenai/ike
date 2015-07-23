@@ -16,7 +16,7 @@ var TableLoader = React.createClass({
           this.setState({error: "You must be logged in to create tables."});
         }
       }
-    }.bind(this)
+    }.bind(this);
 
     TableManager.addChangeListener(callback);
     callback();
@@ -70,16 +70,16 @@ var TableLoader = React.createClass({
       if(lines.length == 0) {
         self.setState({error: "Input file is empty."});
         return;
-      };
-      var headers = lines[0]
+      }
+      var headers = lines[0];
       if(headers[headers.length - 2] != "label") {
         self.setState({error: "Input file has no label column."});
         return;
-      };
+      }
       if(headers[headers.length - 1] != "provenance") {
         self.setState({error: "Input file has no provenance column."});
         return;
-      };
+      }
       var newCols = headers.slice(0, headers.length - 2);
 
       // read the body
@@ -88,7 +88,7 @@ var TableLoader = React.createClass({
       if(errorLines.length != 0) {
         self.setState({error: "Input file has a line with an invalid number of columns: " + errorLines[0]});
         return;
-      };
+      }
 
       // make strings into rows
       var makeRow = function(line) {
@@ -105,8 +105,8 @@ var TableLoader = React.createClass({
               "json": provenanceJson,
               "inner": e
             };
-          };
-        };
+          }
+        }
         return result;
       };
 
@@ -125,7 +125,7 @@ var TableLoader = React.createClass({
         } else {
           throw e;
         }
-      };
+      }
 
       self.setState({
         cols: newCols,
@@ -133,7 +133,7 @@ var TableLoader = React.createClass({
         negative: newNegative,
         error: ''
       });
-    }
+    };
 
     reader.readAsDataURL(file);
   },
@@ -169,9 +169,9 @@ var TableLoader = React.createClass({
     var alert = <Alert bsStyle="danger">{this.state.error}</Alert>
     var submitButton = this.submitButton();
     if(this.state.error.length == 0)
-      return <div>{nameInput} {fileUpload} {submitButton}</div>
+      return <div>{nameInput} {fileUpload} {submitButton}</div>;
     else
-      return <div>{nameInput} {fileUpload} {alert} {submitButton}</div>
+      return <div>{nameInput} {fileUpload} {alert} {submitButton}</div>;
   }
 });
 module.exports = TableLoader;
