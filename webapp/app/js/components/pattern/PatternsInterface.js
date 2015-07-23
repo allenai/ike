@@ -122,7 +122,7 @@ var PatternsInterface = React.createClass({
         if(AuthStore.authenticated())
           items = <Well>It looks like you have no patterns defined yet.</Well>;
         else
-          items = <Well>You must be signed in to create named patterns.</Well>;
+          items = <Alert bsStyle="danger">You must be signed in to create named patterns.</Alert>
       }
 
       var patternChooser = <div>
