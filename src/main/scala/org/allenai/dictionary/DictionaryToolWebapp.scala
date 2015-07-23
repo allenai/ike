@@ -187,7 +187,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
       } ~ pathEndOrSingleSlash {
         get {
           complete {
-            Tablestore.tables(userEmail).keys.mkString("\n")
+            Tablestore.tables(userEmail).values
           }
         }
       }
