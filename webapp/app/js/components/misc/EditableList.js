@@ -4,6 +4,9 @@ const DeleteButton = require('./DeleteButton.js');
 const Input = bs.Input;
 const ListGroup = bs.ListGroup;
 const ListGroupItem = bs.ListGroupItem;
+const Glyphicon = bs.Glyphicon;
+const Button = bs.Button;
+const Well = bs.Well;
 
 var EditableList = React.createClass({
   getInitialState: function() {
@@ -43,18 +46,28 @@ var EditableList = React.createClass({
   },
 
   render: function() {
-    var name = this.props.name;
     var items = this.props.value;
     var input = this.state.input;
-    var placeholder = "Add to " + name;
-    var inputBox = <Input type="text" ref="inputBox" placeholder={placeholder}
-      onKeyPress={this.handleChange} onChange={this.handleChange} value={input}/>;
+    const plusIcon = <Button onClick={this.add} disabled={this.props.disabled}>
+      <Glyphicon glyph='plus'/>
+    </Button>;
+    var inputBox = <Input
+      type="text"
+      ref="inputBox"
+      placeholder={"Add column"}
+      onKeyPress={this.handleChange}
+      onChange={this.handleChange}
+      value={input}
+      buttonAfter={plusIcon}
+      disabled={this.props.disabled} />;
     var groupItems = items.map(this.makeRow);
-    var listGroup = <ListGroup>{groupItems}</ListGroup>;
-    var listGroupCond = items.length > 0 ? listGroup : null;
+    var listGroup = groupItems.length > 0 ?
+      <ListGroup>{groupItems}</ListGroup> :
+      <Well disabled={this.props.disabled} bsSize='small'>No columns defined yet.</Well>;
+
     return (
       <div>
-        {listGroupCond}
+        {listGroup}
         {inputBox}
       </div>
     );
