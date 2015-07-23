@@ -74,8 +74,8 @@ object QExprParser extends RegexParsers {
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
   def integer = """-?[0-9]+""".r ^^ { _.toInt }
-  def wordRegex = """[^|\]\[\^$(){}\s*+,"~]+""".r
-  def word = wordRegex ^^ QWord
+  def wordRegex = """(\\.|[^|\]\[\^(){}\s*+,"~])+""".r
+  def word = wordRegex ^^ { x => QWord(x.replaceAll("""\\(.)""", """$1""")) }
   def generalizedWord = (word <~ "~") ~ integer ^^ { x =>
     QGeneralizePhrase(Seq(x._1), x._2)
   }
