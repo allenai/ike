@@ -4,6 +4,8 @@ var ButtonToolbar = bs.ButtonToolbar;
 var ButtonGroup = bs.ButtonGroup;
 var Button = bs.Button;
 var TableManager = require('../../managers/TableManager.js');
+var Glyphicon = bs.Glyphicon;
+
 var AddResultButton = React.createClass({
   getInitialState: function() {
     return {
@@ -94,10 +96,10 @@ var AddResultButton = React.createClass({
       <ButtonToolbar>
         <ButtonGroup bsSize="small" style={{display: 'flex'}}>
           <Button onClick={this.togglePos} bsStyle={this.posStyle()}>
-            +
+            <Glyphicon glyph="plus" />
           </Button>
           <Button onClick={this.toggleNeg} bsStyle={this.negStyle()}>
-            -
+            <Glyphicon glyph="minus" />
           </Button>
         </ButtonGroup>
       </ButtonToolbar>
