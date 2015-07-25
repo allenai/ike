@@ -68,39 +68,39 @@ object QExprParser extends RegexParsers {
   val chunkTagRegex = chunkTagSet.map(Pattern.quote).mkString("|").r
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
-  def integer = """-?[0-9]+""".r ^^ { _.toInt }
-  def wordRegex = """(\\.|[^|\]\[\^(){}\s*+,."~])+""".r
-  def word = wordRegex ^^ { x =>
+  val integer = """-?[0-9]+""".r ^^ { _.toInt }
+  val wordRegex = """(\\.|[^|\]\[\^(){}\s*+,."~])+""".r
+  val word = wordRegex ^^ { x =>
     val string = x.replaceAll("""\\(.)""", """$1""")
     NlpAnnotate.segment(string).flatMap(NlpAnnotate.tokenize).map(_.string).map(QWord)
   }
-  def words = word ^^ QSeq.fromSeq
-  def generalizedWord = (word <~ "~") ~ integer ^^ { x =>
+  val words = word ^^ QSeq.fromSeq
+  val generalizedWord = (word <~ "~") ~ integer ^^ { x =>
     QGeneralizePhrase(x._1, x._2)
   }
-  def generalizedPhrase = ("\"" ~> rep1(word) <~ "\"") ~ ("~" ~> integer).? ^^ { x =>
+  val generalizedPhrase = ("\"" ~> rep1(word) <~ "\"") ~ ("~" ~> integer).? ^^ { x =>
     QGeneralizePhrase(x._1.flatten, x._2.getOrElse(0))
   }
-  def pos = posTagRegex ^^ QPos
-  def chunk = chunkTagRegex ^^ QChunk
-  def dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
-  def namedPattern = "#[a-zA-Z_]+".r ^^ { s => QNamedPattern(s.tail) }
-  def wildcard = "\\.".r ^^^ QWildcard()
-  def atom = wildcard | pos | chunk | dict | namedPattern | generalizedWord | generalizedPhrase | words
-  def captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
-  def named = "(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) }
-  def unnamed = "(" ~> expr <~ ")" ^^ QUnnamed
-  def nonCap = "(?:" ~> expr <~ ")" ^^ QNonCap
-  def curlyDisj = "{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq
-  def operand = named | nonCap | unnamed | curlyDisj | atom
-  def repetition = (operand <~ "[") ~ ((integer <~ ",") ~ (integer <~ "]")) ^^ { x =>
+  val pos = posTagRegex ^^ QPos
+  val chunk = chunkTagRegex ^^ QChunk
+  val dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
+  val namedPattern = "#[a-zA-Z_]+".r ^^ { s => QNamedPattern(s.tail) }
+  val wildcard = "\\.".r ^^^ QWildcard()
+  val atom = wildcard | pos | chunk | dict | namedPattern | generalizedWord | generalizedPhrase | words
+  val captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
+  val named = "(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) }
+  val unnamed = "(" ~> expr <~ ")" ^^ QUnnamed
+  val nonCap = "(?:" ~> expr <~ ")" ^^ QNonCap
+  val curlyDisj = "{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq
+  val operand = named | nonCap | unnamed | curlyDisj | atom
+  val repetition = (operand <~ "[") ~ ((integer <~ ",") ~ (integer <~ "]")) ^^ { x =>
     QRepetition(x._1, x._2._1, x._2._2)
   }
-  def starred = operand <~ "*" ^^ QStar
-  def plussed = operand <~ "+" ^^ QPlus
-  def modified = starred | plussed | repetition
-  def piece: Parser[QExpr] = modified | operand
-  def branch = rep1(piece) ^^ QSeq.fromSeq
+  val starred = operand <~ "*" ^^ QStar
+  val plussed = operand <~ "+" ^^ QPlus
+  val modified = starred | plussed | repetition
+  val piece: Parser[QExpr] = modified | operand
+  val branch = rep1(piece) ^^ QSeq.fromSeq
   def expr = repsep(branch, "|") ^^ QDisj.fromSeq
   def parse(s: String) = parseAll(expr, s)
   // scalastyle:on
