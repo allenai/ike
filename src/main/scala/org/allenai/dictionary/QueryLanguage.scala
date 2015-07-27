@@ -75,24 +75,38 @@ object QExprParser extends RegexParsers {
     NlpAnnotate.segment(string).flatMap(NlpAnnotate.tokenize).map(_.string).map(QWord)
   }
   val words = word ^^ QSeq.fromSeq
+
+  // Example: improve~10
   val generalizedWord = (word <~ "~") ~ integer ^^ { x =>
     QGeneralizePhrase(x._1, x._2)
   }
+
+  // Example: "better than"~10
   val generalizedPhrase = ("\"" ~> rep1(word) <~ "\"") ~ ("~" ~> integer).? ^^ { x =>
     QGeneralizePhrase(x._1.flatten, x._2.getOrElse(0))
   }
   val pos = posTagRegex ^^ QPos
   val chunk = chunkTagRegex ^^ QChunk
+
+  // Example: $tablename
   val dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
+
+  // Example: #patternname
   val namedPattern = "#[a-zA-Z_]+".r ^^ { s => QNamedPattern(s.tail) }
   val wildcard = "\\.".r ^^^ QWildcard()
   val atom = wildcard | pos | chunk | dict | namedPattern | generalizedWord | generalizedPhrase | words
+
+  // Example: ?<capturegroup>
   val captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
+
+  // Example: (?<capturegroup>.*), where the inner expression is .*
   val named = "(" ~> captureName ~ expr <~ ")" ^^ { x => QNamed(x._2, x._1) }
   val unnamed = "(" ~> expr <~ ")" ^^ QUnnamed
   val nonCap = "(?:" ~> expr <~ ")" ^^ QNonCap
   val curlyDisj = "{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq
   val operand = named | nonCap | unnamed | curlyDisj | atom
+
+  // Example: foo[1,10], where foo is the expression that can be repeated from 1 to 10 times
   val repetition = (operand <~ "[") ~ ((integer <~ ",") ~ (integer <~ "]")) ^^ { x =>
     QRepetition(x._1, x._2._1, x._2._2)
   }
