@@ -69,7 +69,7 @@ object QExprParser extends RegexParsers {
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
   val integer = """-?[0-9]+""".r ^^ { _.toInt }
-  val wordRegex = """(\\.|[^|\]\[\^(){}\s*+,."~])+""".r
+  val wordRegex = """(?:\\.|[^|\]\[\^(){}\s*+,."~])+""".r
   val word = wordRegex ^^ { x =>
     val string = x.replaceAll("""\\(.)""", """$1""")
     NlpAnnotate.segment(string).flatMap(NlpAnnotate.tokenize).map(_.string).map(QWord)
