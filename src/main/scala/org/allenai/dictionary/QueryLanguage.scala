@@ -69,7 +69,12 @@ object QExprParser extends RegexParsers {
   // Turn off style---these are all just Parser[QExpr] definitions
   // scalastyle:off
   val integer = """-?[0-9]+""".r ^^ { _.toInt }
+
+  // A word, with backslashes as the escape character.
+  // Examples: foo, Qu\'ran, \,
   val wordRegex = """(?:\\.|[^|\]\[\^(){}\s*+,."~])+""".r
+
+  // Uses the regex to find words, and tokenizes them before putting them into a QExpr
   val word = wordRegex ^^ { x =>
     val string = x.replaceAll("""\\(.)""", """$1""")
     NlpAnnotate.segment(string).flatMap(NlpAnnotate.tokenize).map(_.string).map(QWord)
