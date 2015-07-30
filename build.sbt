@@ -67,6 +67,7 @@ libraryDependencies ++= Seq(
     "com.google.guava" % "guava" % "18.0",
     "org.apache.thrift" % "libthrift" % "0.9.1",
     sprayModule("caching"),
+    "com.papertrailapp" % "logback-syslog4j" % "1.0.0",
     scopt)
 
 javaOptions in Revolver.reStart += "-Xmx14G"

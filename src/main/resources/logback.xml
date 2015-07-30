@@ -25,8 +25,22 @@
     </encoder>
   </appender>
 
+  <appender name="SYSLOG-TLS" class="com.papertrailapp.logback.Syslog4jAppender">
+    <layout class="ch.qos.logback.classic.PatternLayout">
+      <pattern>%-5level %logger{35}: %m%n%xEx</pattern>
+    </layout>
+
+    <syslogConfig class="org.productivity.java.syslog4j.impl.net.tcp.ssl.SSLTCPNetSyslogConfig">
+      <host>logs3.papertrailapp.com</host>
+      <port>38670</port>
+      <ident>OKCorpus</ident>
+      <maxMessageLength>128000</maxMessageLength>
+    </syslogConfig>
+  </appender>
+
   <root level="INFO">
     <appender-ref ref="FILE" />
     <appender-ref ref="STDOUT" />
+    <appender-ref ref="SYSLOG-TLS" />
   </root>
 </configuration>
