@@ -83,7 +83,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
           entity(as[SearchRequest]) { req =>
             complete {
               usageLogger.info((req.query match {
-                case Left(queryString: String) => s"Query $queryString"
+                case Left(queryString: String) => s"groupedSearch $queryString"
                 case Right(_) => "groupedSearch with QExpr"
               }) +
                 s" on (${corpusNames.mkString(", ")})" +
