@@ -50,4 +50,6 @@ OKCorpus logs to standard out and to a rotated logs file in `/local/deploy/okcor
 
 OKC logs usage information, such as who is using the tool, how much are they using it, and which features are most popular. All that information goes into the logs together with all other logging information, but it uses the special logger named "Usage". There is a preconfigured search in Papertrail that shows this information at https://papertrailapp.com/groups/1690753/events?q=Usage%3A.
 
+The key thing about the usage logger is that the first token in the log message is always the thing being used, i.e., `groupedSearch` or `similarPhrases` or some such. The rest of the message is extra information that's specific to the thing being used.
+
 So far we have no tools to analyze this information further. Maybe I'll get to it tomorrow.
