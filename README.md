@@ -41,3 +41,13 @@ The URLs for both clusters and corpora can be either file URLs or datastore URLs
 For clusters, I recommend using clusters from the private datastore, in any of the `org.allenai.brownclusters.*` groups. The most common one is `datastore://private/org.allenai.brownclusters.acl/c500-v1`.
 
 When you have created the index, you can use it by modifying [`application.conf`](src/main/resources/application.conf) and restarting.
+
+## Logging
+
+OKCorpus logs to standard out and to a rotated logs file in `/local/deploy/okcorpus/logs`, just like all other AI2 services. In addition to that, it logs to Papertrail at https://papertrailapp.com/groups/1690753. Papertrail is configured to write archives to a bucket in S3 named `ai2-papertrail-backup`. All archives go there, not only OKC, so to get the OKC logs you have to filter them out.
+
+### Usage logging
+
+OKC logs usage information, such as who is using the tool, how much are they using it, and which features are most popular. All that information goes into the logs together with all other logging information, but it uses the special logger named "Usage". There is a preconfigured search in Papertrail that shows this information at https://papertrailapp.com/groups/1690753/events?q=Usage%3A.
+
+So far we have no tools to analyze this information further. Maybe I'll get to it tomorrow.
