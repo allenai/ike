@@ -10,6 +10,7 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
+import org.slf4j.LoggerFactory
 import spray.can.Http
 import spray.http.{ CacheDirectives, HttpHeaders, StatusCodes }
 import spray.httpx.SprayJsonSupport
@@ -49,6 +50,8 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   import context.dispatcher
   import spray.json.DefaultJsonProtocol._
 
+  val usageLogger = LoggerFactory.getLogger("Usage")
+
   logger.debug("Starting DictionaryToolActor") // this is just here to force logger initialization
 
   val config = ConfigFactory.load
@@ -69,15 +72,26 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
 
   val serviceRoute = pathPrefix("api") {
     parameters('corpora.?) { corpora =>
-      val searchersFuture = Future.sequence(corpora match {
-        case None => searchApps.values
-        case Some(searcherKeys) => searcherKeys.split(' ').map(searchApps).toIterable
-      })
+      val corpusNames = corpora match {
+        case None => searchApps.keys
+        case Some(names) => names.split(' ').toSeq
+      }
+      val corpusNamesString = corpusNames.mkString(", ")
+      val searchersFuture = Future.sequence(corpusNames.map(searchApps))
 
       path("groupedSearch") {
         post {
           entity(as[SearchRequest]) { req =>
             complete {
+              usageLogger.info {
+                val query = req.query match {
+                  case Left(queryString: String) => queryString
+                  case Right(_) => "with QExpr"
+                }
+                val user = req.userEmail.map(u => s" by $u").getOrElse("")
+                s"groupedSearch $query on $corpusNamesString$user"
+              }
+
               val query = SearchApp.parse(req).get
 
               val (tables, patterns) = req.userEmail match {
@@ -118,6 +132,8 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
           post {
             entity(as[WordInfoRequest]) { req =>
               complete(searchersFuture.map { searchers =>
+                usageLogger.info(s"wordInfo for word ${req.word} on ($corpusNamesString)")
+
                 val results = searchers.par.map(_.wordInfo(req).get)
 
                 // find the word
@@ -140,6 +156,11 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
         path("suggestQuery") {
           post {
             entity(as[SuggestQueryRequest]) { req =>
+              usageLogger.info(
+                s"suggestQuery for query ${req.query} " +
+                  s"on ($corpusNamesString)" +
+                  s"by ${req.userEmail}"
+              )
               val timeout = config.getConfig("QuerySuggester").
                 getDuration("timeoutInSeconds", TimeUnit.SECONDS)
               complete(searchersFuture.map { searchers =>
@@ -150,7 +171,10 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
         }
     } ~ path("similarPhrases") {
       parameters('phrase) { phrase =>
-        complete(SimilarPhrasesResponse(similarPhrasesSearcher.getSimilarPhrases(phrase)))
+        complete {
+          usageLogger.info(s"similarPhrases for phrase $phrase")
+          SimilarPhrasesResponse(similarPhrasesSearcher.getSimilarPhrases(phrase))
+        }
       }
     }
   }
@@ -170,6 +194,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
           } ~ put {
             entity(as[Table]) { table =>
               complete {
+                usageLogger.info(s"tablePut for table $tableName by $userEmail")
                 if (table.name == tableName) {
                   Tablestore.putTable(userEmail, table)
                 } else {
@@ -179,6 +204,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
             }
           } ~ delete {
             complete {
+              usageLogger.info(s"tableDelete for table $tableName by $userEmail")
               Tablestore.deleteTable(userEmail, tableName)
               StatusCodes.OK
             }
@@ -208,11 +234,13 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
           } ~ put {
             entity(as[String]) { pattern =>
               complete {
+                usageLogger.info(s"patternPut for pattern $patternName by $userEmail")
                 Tablestore.putNamedPattern(userEmail, NamedPattern(patternName, pattern))
               }
             }
           } ~ delete {
             complete {
+              usageLogger.info(s"patternDelete for pattern $patternName by $userEmail")
               Tablestore.deleteNamedPattern(userEmail, patternName)
               StatusCodes.OK
             }
