@@ -76,18 +76,21 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
         case None => searchApps.keys
         case Some(names) => names.split(' ').toSeq
       }
+      val corpusNamesString = corpusNames.mkString(", ")
       val searchersFuture = Future.sequence(corpusNames.map(searchApps))
 
       path("groupedSearch") {
         post {
           entity(as[SearchRequest]) { req =>
             complete {
-              usageLogger.info((req.query match {
-                case Left(queryString: String) => s"groupedSearch $queryString"
-                case Right(_) => "groupedSearch with QExpr"
-              }) +
-                s" on (${corpusNames.mkString(", ")})" +
-                req.userEmail.map(u => s" by $u").getOrElse(""))
+              usageLogger.info {
+                val query = req.query match {
+                  case Left(queryString: String) => queryString
+                  case Right(_) => "with QExpr"
+                }
+                val user = req.userEmail.map(u => s" by $u").getOrElse("")
+                s"groupedSearch $query on $corpusNamesString$user"
+              }
 
               val query = SearchApp.parse(req).get
 
@@ -129,7 +132,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
           post {
             entity(as[WordInfoRequest]) { req =>
               complete(searchersFuture.map { searchers =>
-                usageLogger.info(s"wordInfo for word ${req.word} on (${corpusNames.mkString(", ")}")
+                usageLogger.info(s"wordInfo for word ${req.word} on ($corpusNamesString)")
 
                 val results = searchers.par.map(_.wordInfo(req).get)
 
@@ -155,7 +158,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
             entity(as[SuggestQueryRequest]) { req =>
               usageLogger.info(
                 s"suggestQuery for query ${req.query} " +
-                  s"on (${corpusNames.mkString(", ")}" +
+                  s"on ($corpusNamesString)" +
                   s"by ${req.userEmail}"
               )
               val timeout = config.getConfig("QuerySuggester").
