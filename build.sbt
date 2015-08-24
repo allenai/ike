@@ -63,7 +63,7 @@ libraryDependencies ++= Seq(
     "com.typesafe.play" %% "play-json" % "2.3.8",
     "org.postgresql" % "postgresql" % "9.4-1201-jdbc41",
     "nl.inl" %% "blacklab" % "1.0-ALLENAI-5",
-    //"com.medallia.word2vec" % "Word2VecJava" % "0.9.0",
+    "com.medallia.word2vec" % "Word2VecJava" % "0.10.3",
     "com.google.guava" % "guava" % "18.0",
     "org.apache.thrift" % "libthrift" % "0.9.1",
     sprayModule("caching"),
