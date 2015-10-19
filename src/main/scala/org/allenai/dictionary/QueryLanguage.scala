@@ -111,6 +111,10 @@ object QExprParser extends RegexParsers {
   val curlyDisj = "{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq
   val operand = named | nonCap | unnamed | curlyDisj | atom
 
+  // Prefix used to name capture groups created for text matching table columns
+  // tagged with integers for associating with a common row.
+  val tableCaptureGroupPrefix = "Table Capture Group"
+
   // Example: foo[1,10], where foo is the expression that can be repeated from 1 to 10 times
   val repetition = (operand <~ "[") ~ ((integer <~ ",") ~ (integer <~ "]")) ^^ { x =>
     QRepetition(x._1, x._2._1, x._2._2)
@@ -153,25 +157,103 @@ object QueryLanguage {
     }
   }
 
+  /** Tables can be referred to by their names. In the case of single-column tables,
+    * `$table` is qualifying enough. In the case of multi-column tables, the required
+    * column need to be specified as `$table.column`. If results from matching different
+    * columns in the same table need to be associated based on whether they appear in
+    * the same row in the table, they need to be tagged by integer ids, like:
+    * `$table.column1:0` and `$table.column2:0`.
+    * @param expr the expression to be interpolated if there are references to tables.
+    * @param tables tables currently loaded into OKCorpus.
+    * @param patterns patterns  pre-loaded into OKCorpus.
+    * @return attempted interpolated resulting expression.
+    */
   def interpolateTables(
     expr: QExpr,
     tables: Map[String, Table],
     patterns: Map[String, NamedPattern]
   ): Try[QExpr] = {
-    def expandDict(value: String): QDisj = tables.get(value) match {
-      case Some(table) if table.cols.size == 1 =>
-        val rowExprs = for {
-          row <- table.positive
-          value <- row.values
-          qseq = QSeq(value.qwords)
-        } yield qseq
-        QDisj(rowExprs)
-      case Some(table) =>
-        val name = table.name
-        val ncol = table.cols.size
-        throw new IllegalArgumentException(s"1-col table required: Table '$name' has $ncol columns")
-      case None =>
-        throw new IllegalArgumentException(s"Could not find table '$value'")
+    // Helper Method that splits a table query into its constituent parts: table name,
+    // column name and tag name. Latter too are optional.
+    // Take a value of the form `table.col:0` or `table` or `table.col`.
+    // Returns a 3-tuple with table name, (optional) column name and (optional) integer tag
+    // to associate different columns with the same row.
+    def getTableQueryParts(queryString: String): (String, Option[String], Option[Int]) = {
+      val tableColRegex = """([^\.]+)\.(.+)""".r
+      val tableColMatchOption = tableColRegex.findFirstMatchIn(queryString)
+      tableColMatchOption match {
+        case Some(tableColMatch) if (tableColMatch.groupCount == 2) =>
+          val table = tableColMatch.group(1)
+          val colTag = tableColMatch.group(2)
+          val colRegex = """([^:]+):(\d+)""".r
+          val colTagMatchOption = colRegex.findFirstMatchIn(colTag)
+          val (colOption, intTagOption) = colTagMatchOption match {
+            case Some(colTagMatch) if (colTagMatch.groupCount == 2) =>
+              (Some(colTagMatch.group(1)), Some(colTagMatch.group(2).toInt))
+            case _ =>
+              (Some(colTag), None)
+          }
+          (table, colOption, intTagOption)
+        case _ =>
+          (queryString, None, None)
+      }
+    }
+
+    // Helper method to get data from specified column in specified table
+    // and return a disjunction of the values from that column from all rows
+    // of the table.
+    def constructDisjunctiveQuery(table: Table, colIndex: Int): QDisj = {
+      val rowExprs = for {
+        row <- table.positive
+      } yield {
+        val value = row.values(colIndex)
+        QSeq(value.qwords)
+      }
+      QDisj(rowExprs)
+    }
+
+    // Gets a string of the form $table or $table.column or $table.column:0
+    // and creates either a disjunctive expression with all possible matches for that
+    // expression from the set of loaded tables or a named capture group containing a
+    // disjunctive expression, if tags were specified in the query to associate results
+    // matching different parts of the overall query.
+    def expandDict(value: String): QExpr = {
+      // Break the query into table name, column name and integer tag.
+      val (tableName, columnNameOption, tagOption) = getTableQueryParts(value)
+      tables.get(tableName) match {
+        case Some(table) =>
+          columnNameOption match {
+            case None =>
+              // No column name was specified. This only makes sense if the specified
+              // table has a single column.
+              val numCols = table.cols.length
+              if (numCols == 1) {
+                constructDisjunctiveQuery(table, 0)
+              } else {
+                throw new IllegalArgumentException(s"Table '$tableName' has $numCols columns. " +
+                  "Refine your query with a column name, using the format: `$tablename.columnname`.")
+              }
+            case Some(columnName) =>
+              // Get index of the required column in the table.
+              val colIndexOption = table.cols.zipWithIndex.find(p => (p._1.equalsIgnoreCase(columnName)))
+              colIndexOption match {
+                case Some((_, colIndex)) =>
+                  val qDisj = constructDisjunctiveQuery(table, colIndex)
+                  // If this expression is tagged to associate multiple such expressions in the query to
+                  // rows in a table, then enclose this in a Capture Group with appropriate name to use
+                  // for post-processing results. Otherwise simply return the disjunction.
+                  tagOption match {
+                    case Some(tag) => QNamed(qDisj, s"${QExprParser.tableCaptureGroupPrefix}" +
+                      s" ${tableName}_${columnName}_${tag}")
+                    case None => qDisj
+                  }
+                case None =>
+                  throw new IllegalArgumentException(s"Table '$tableName' does not have column $columnName.")
+              }
+          }
+        case None =>
+          throw new IllegalArgumentException(s"Could not find table '$tableName'")
+      }
     }
 
     def expandNamedPattern(
