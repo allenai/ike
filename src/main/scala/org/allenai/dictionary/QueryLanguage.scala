@@ -99,7 +99,8 @@ object QExprParser extends RegexParsers {
   // Example: #patternname
   val namedPattern = "#[a-zA-Z_]+".r ^^ { s => QNamedPattern(s.tail) }
   val wildcard = "\\.".r ^^^ QWildcard()
-  val atom = wildcard | pos | chunk | dict | namedPattern | generalizedWord | generalizedPhrase | words
+  val atom =
+    wildcard | pos | chunk | dict | namedPattern | generalizedWord | generalizedPhrase | words
 
   // Example: ?<capturegroup>
   val captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
@@ -230,25 +231,37 @@ object QueryLanguage {
               if (numCols == 1) {
                 constructDisjunctiveQuery(table, 0)
               } else {
-                throw new IllegalArgumentException(s"Table '$tableName' has $numCols columns. " +
-                  "Refine your query with a column name, using the format: `$tablename.columnname`.")
+                throw new IllegalArgumentException(
+                  s"Table '$tableName' has $numCols columns. Refine your query with a column name, "
+                    + "using the format: `$tablename.columnname`."
+                )
               }
             case Some(columnName) =>
               // Get index of the required column in the table.
-              val colIndexOption = table.cols.zipWithIndex.find(p => (p._1.equalsIgnoreCase(columnName)))
+              val colIndexOption = table.cols.zipWithIndex.find(
+                p => (p._1.equalsIgnoreCase(columnName))
+              )
               colIndexOption match {
                 case Some((_, colIndex)) =>
                   val qDisj = constructDisjunctiveQuery(table, colIndex)
-                  // If this expression is tagged to associate multiple such expressions in the query to
-                  // rows in a table, then enclose this in a Capture Group with appropriate name to use
-                  // for post-processing results. Otherwise simply return the disjunction.
+                  // If this expression is tagged to be associated with other parts of
+                  // the query so that they come from the same table row, then enclose this in a
+                  // special "Table Capture Group" with appropriate name to use for post-processing
+                  // results. We will name this as:
+                  // "Table Capture Group  <tableName> <columnName> <tag>"
+                  // NOTE: This means that we assume table and column names cannot have < or > in
+                  // them, which is fair because it could lead to some ambiguous patterns, given
+                  // that <groupName> is also used to construct named capture groups.
+                  // Otherwise simply return the disjunction.
                   tagOption match {
                     case Some(tag) => QNamed(qDisj, s"${QExprParser.tableCaptureGroupPrefix}" +
-                      s" ${tableName}_${columnName}_${tag}")
+                      s" <${tableName}> <${columnName}> <${tag}>")
                     case None => qDisj
                   }
                 case None =>
-                  throw new IllegalArgumentException(s"Table '$tableName' does not have column $columnName.")
+                  throw new IllegalArgumentException(
+                    s"Table '$tableName' does not have column $columnName."
+                  )
               }
           }
         case None =>
