@@ -112,8 +112,10 @@ object QExprParser extends RegexParsers {
   val curlyDisj = "{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq
   val operand = named | nonCap | unnamed | curlyDisj | atom
 
-  // Prefix used to name capture groups created for text matching table columns
-  // tagged with integers for associating with a common row.
+  // Prefix used to name capture groups that match table columns.
+  // Specifically these are for capture groups that are tagged with a common integer tag
+  // to specify that they are to be row-wise associated, i.e., their matching texts have to
+  // appear in the same table row.
   val tableCaptureGroupPrefix = "Table Capture Group"
 
   // Example: foo[1,10], where foo is the expression that can be repeated from 1 to 10 times
@@ -160,7 +162,7 @@ object QueryLanguage {
 
   /** Tables can be referred to by their names. In the case of single-column tables,
     * `$table` is qualifying enough. In the case of multi-column tables, the required
-    * column need to be specified as `$table.column`. If results from matching different
+    * column needs to be specified as `$table.column`. If results from matching different
     * columns in the same table need to be associated based on whether they appear in
     * the same row in the table, they need to be tagged by integer ids, like:
     * `$table.column1:0` and `$table.column2:0`.
@@ -176,9 +178,9 @@ object QueryLanguage {
   ): Try[QExpr] = {
     // Helper Method that splits a table query into its constituent parts: table name,
     // column name and tag name. Latter too are optional.
-    // Take a value of the form `table.col:0` or `table` or `table.col`.
-    // Returns a 3-tuple with table name, (optional) column name and (optional) integer tag
-    // to associate different columns with the same row.
+    // Takes a value of the form `table.col:0` or `table` or `table.col`.
+    // Returns a 3-tuple with table name, (optional) column name and (optional) integer tag to
+    // associate different columns with the same row.
     def getTableQueryParts(queryString: String): (String, Option[String], Option[Int]) = {
       val tableColRegex = """([^\.]+)\.(.+)""".r
       val tableColMatchOption = tableColRegex.findFirstMatchIn(queryString)
@@ -219,9 +221,14 @@ object QueryLanguage {
     // disjunctive expression, if tags were specified in the query to associate results
     // matching different parts of the overall query.
     def expandDict(value: String): QExpr = {
+      // For use in constructing a unique capture group name when a table-column-tag combination
+      // is repeated in user input query.
       def uuid = java.util.UUID.randomUUID.toString
-      // Break the query into table name, column name and integer tag.
+
+      // Get table name, column name and integer tag from query.
       val (tableName, columnNameOption, tagOption) = getTableQueryParts(value)
+
+      // Process table query.
       tables.get(tableName) match {
         case Some(table) =>
           columnNameOption match {
@@ -230,6 +237,7 @@ object QueryLanguage {
               // table has a single column.
               val numCols = table.cols.length
               if (numCols == 1) {
+                // Form disjunction of all possible values in the table.
                 constructDisjunctiveQuery(table, 0)
               } else {
                 throw new IllegalArgumentException(
@@ -244,17 +252,19 @@ object QueryLanguage {
               )
               colIndexOption match {
                 case Some((_, colIndex)) =>
+                  // Form disjunction of all possible values in specified column in table.
                   val qDisj = constructDisjunctiveQuery(table, colIndex)
+
                   // If this expression is tagged to be associated with other parts of
                   // the query so that they come from the same table row, then enclose this in a
                   // special "Table Capture Group" with appropriate name to use for post-processing
-                  // results. We will name this as:
+                  // results. Otherwise simply return the disjunction.
+                  // We will name the special "Table Capture Group" as follows:
                   // "Table Capture Group  <uniqueId> <tableName> <columnName> <tag>"
                   // NOTE:
                   // 1. This means that we assume table and column names cannot have < or > in
                   // them, which is fair because it could lead to some ambiguous patterns, given
                   // that <groupName> is also used to construct named capture groups.
-                  // Otherwise simply return the disjunction.
                   // 2. The uniqueId is a UUID. This is necessary because identical Table Capture
                   // Groups can be repeated in an expression and because Capture Groups are
                   // ultimately carried around as Maps with the name as key, we do not want any

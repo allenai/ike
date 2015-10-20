@@ -14,10 +14,10 @@ object SearchResultGrouper extends Logging {
   /** Attempts to map the capture group names in the result to the target table's column names
     * in the request.
     * If unable to map capture group names, returns the result unchanged.
-    * The result is an option because it returns None in cases where the BlackLabResult coming in
-    * has to be filtered because it didn't match certain query criteria, in particular, if differnt
-    * parts of the result matching a certain table's different columns have to match in the row they
-    * occur in but do not.
+    * The result is an Option because it returns None in cases where the BlackLabResult coming in
+    * has to be filtered because it didn't match certain query criteria, in particular, if
+    * parts of the result matching different columns from a table have to come from the same row but
+    * do not.
     */
   def inferCaptureGroupNames(
     req: SearchRequest,
@@ -38,19 +38,20 @@ object SearchResultGrouper extends Logging {
     }
 
     // Helper Function that takes a collection of tuples associated with the same table
-    // in the form: (Table Capture Group, tableName, groupName, tag) and checks to see if their
-    // matches come from the same table row.
+    // in the form:
+    // (Table Capture Group-- represented as a (String, Interval) tuple, tableName, groupName, tag)
+    // and checks to see if their matches come from the same table row.
     def containsMatchesFromDifferentRows(
       tableName: String,
       associatedTableCaptureGroups: Seq[((String, Interval), String, String, Int)]
     ): Boolean = {
       // Return true if a tuple is found that has a different than expected table name.
-      if (associatedTableCaptureGroups.find(x => !x._2.equals(tableName)).isDefined) {
+      if (associatedTableCaptureGroups.find(x => !x._2.equalsIgnoreCase(tableName)).isDefined) {
         true
       } else {
         tables.get(tableName) match {
           case Some(table) =>
-            // Construct tuples with column indexes and corresponding matched strings to
+            // Construct tuples with column indices and corresponding matched strings to
             // check if the specified table has these matched strings in the respective column
             // indices IN THE SAME ROW.
             val columnMatches = for {
@@ -86,7 +87,7 @@ object SearchResultGrouper extends Logging {
     // If the BlackLabResult contains matches from Table Capture Groups, verify that the matches
     // come from the same table row, if not reject the BlackLabResult right here.
     val tableGroups = groups.filter(
-      gp1 => gp1._1.startsWith(QExprParser.tableCaptureGroupPrefix)
+      gp => gp._1.startsWith(QExprParser.tableCaptureGroupPrefix)
     )
     // The groups in the regex capture the following fields in the Table Capture Group
     // respectively:
@@ -101,7 +102,6 @@ object SearchResultGrouper extends Logging {
       tableColTagMatch <- tableColTagCaptureGroupRegex.findFirstMatchIn(tableGroup._1)
       if (tableColTagMatch.groupCount == 4)
     } yield {
-      println(tableColTagMatch.groupCount)
       (
         tableGroup,
         tableColTagMatch.group(2),

@@ -138,7 +138,6 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
 
                 // find the word
                 val word = results.head.word
-
                 require(results.forall(_.word == word))
 
                 // combine the pos tags

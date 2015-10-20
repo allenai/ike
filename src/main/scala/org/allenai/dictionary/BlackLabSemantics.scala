@@ -19,7 +19,7 @@ object BlackLabSemantics {
   def notImplemented: Exception = new UnsupportedOperationException
 
   // Prefix for auto-generated names for unnamed Capture Groups.
-  val genericCaptureGroupNamePrefix = "Capture Group "
+  val genericCaptureGroupNamePrefix = "Capture Group"
 
   def chunkPatternTerm(p: String) = {
     p match {
