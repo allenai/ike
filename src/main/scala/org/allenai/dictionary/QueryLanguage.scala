@@ -219,6 +219,7 @@ object QueryLanguage {
     // disjunctive expression, if tags were specified in the query to associate results
     // matching different parts of the overall query.
     def expandDict(value: String): QExpr = {
+      def uuid = java.util.UUID.randomUUID.toString
       // Break the query into table name, column name and integer tag.
       val (tableName, columnNameOption, tagOption) = getTableQueryParts(value)
       tables.get(tableName) match {
@@ -248,14 +249,19 @@ object QueryLanguage {
                   // the query so that they come from the same table row, then enclose this in a
                   // special "Table Capture Group" with appropriate name to use for post-processing
                   // results. We will name this as:
-                  // "Table Capture Group  <tableName> <columnName> <tag>"
-                  // NOTE: This means that we assume table and column names cannot have < or > in
+                  // "Table Capture Group  <uniqueId> <tableName> <columnName> <tag>"
+                  // NOTE:
+                  // 1. This means that we assume table and column names cannot have < or > in
                   // them, which is fair because it could lead to some ambiguous patterns, given
                   // that <groupName> is also used to construct named capture groups.
                   // Otherwise simply return the disjunction.
+                  // 2. The uniqueId is a UUID. This is necessary because identical Table Capture
+                  // Groups can be repeated in an expression and because Capture Groups are
+                  // ultimately carried around as Maps with the name as key, we do not want any
+                  // group to be overwritten.
                   tagOption match {
                     case Some(tag) => QNamed(qDisj, s"${QExprParser.tableCaptureGroupPrefix}" +
-                      s" <${tableName}> <${columnName}> <${tag}>")
+                      s" <${uuid}> <${tableName}> <${columnName}> <${tag}>")
                     case None => qDisj
                   }
                 case None =>

@@ -88,21 +88,25 @@ object SearchResultGrouper extends Logging {
     val tableGroups = groups.filter(
       gp1 => gp1._1.startsWith(QExprParser.tableCaptureGroupPrefix)
     )
+    // The groups in the regex capture the following fields in the Table Capture Group
+    // respectively:
+    // UUID, tableName, columnName, tag.
+    // Sample capture group name: "Table Capture Group <fruit_colors> <fruit> <0>"
     val tableColTagCaptureGroupRegex =
-      s"""${QExprParser.tableCaptureGroupPrefix} <(.+)> <(.+)> <(\\d+)>""".r
+      s"""${QExprParser.tableCaptureGroupPrefix} <(.+)> <(.+)> <(.+)> <(\\d+)>""".r
 
     // Collect all the (tableName, groupName, tag) tuples for the Table Capture Groups.
     val groupInfos = (for {
       tableGroup <- tableGroups
       tableColTagMatch <- tableColTagCaptureGroupRegex.findFirstMatchIn(tableGroup._1)
-      if (tableColTagMatch.groupCount == 3)
+      if (tableColTagMatch.groupCount == 4)
     } yield {
       println(tableColTagMatch.groupCount)
       (
         tableGroup,
-        tableColTagMatch.group(1),
         tableColTagMatch.group(2),
-        tableColTagMatch.group(3).toInt
+        tableColTagMatch.group(3),
+        tableColTagMatch.group(4).toInt
       )
     }).toSeq
 
