@@ -1,6 +1,11 @@
 package org.allenai.dictionary
 
+import org.allenai.common.immutable.Interval
 import org.allenai.common.{ Logging, Timing }
+
+import org.apache.commons.lang.StringEscapeUtils
+
+import scala.collection.immutable
 
 object SearchResultGrouper extends Logging {
   def targetTable(req: SearchRequest, tables: Map[String, Table]): Option[Table] = for {
@@ -9,29 +14,143 @@ object SearchResultGrouper extends Logging {
   } yield table
 
   /** Attempts to map the capture group names in the result to the target table's column names
-    * in the request. If unable to do so, returns the result unchanged.
+    * in the request.
+    * If unable to map capture group names, returns the result unchanged.
+    * The result is an Option because it returns None in cases where the BlackLabResult coming in
+    * has to be filtered because it didn't match certain query criteria, in particular, if
+    * parts of the result matching different columns from a table have to come from the same row but
+    * do not.
     */
   def inferCaptureGroupNames(
     req: SearchRequest,
     tables: Map[String, Table],
     result: BlackLabResult
-  ): BlackLabResult = {
+  ): Option[BlackLabResult] = {
+
+    // Helper Function that takes a TableRow and a collection of tuples containing column indices
+    // and corresponding expected matches and checks to see if the TableRow has the expected matches
+    // in the specified columns.
+    def hasMatchesInColumns(
+      row: TableRow, expectedColumnMatches: Seq[(Int, Seq[WordData])]
+    ): Boolean = {
+
+      // Helper Method that returns true if a given table cell (determined by a TableRow and a
+      // column index within that row) contains the expected text, passed in as a collection of
+      // words (WordData).
+      def tableCellContainsExpectedText(
+        row: TableRow, columnIx: Int, expectedTextWords: Seq[WordData]
+      ): Boolean = {
+        val rowWords = row.values(columnIx).qwords.map(_.value)
+        val expectedWords = expectedTextWords.map(_.word)
+        rowWords.mkString(" ").equalsIgnoreCase(expectedWords.mkString(" "))
+      }
+
+      expectedColumnMatches.forall(m => tableCellContainsExpectedText(row, m._1, m._2))
+    }
+
+    // Case Class with all relevant information pertaining to a special "Table Capture Group".
+    // This includes the basic Capture Group info, viz., name of the Capture Group and the interval
+    // of words from the result text it matches, the table name, column name and integer tag
+    // coming from the relevant part of the user query.
+    case class TableCaptureGroup(
+      captureGroup: (String, Interval), tableName: String, columnName: String, tag: Int
+    )
+
+    // Helper Function that takes a table name and a collection of TableCaptureGroups
+    // and checks to see if their matches come from the same table row.
+    def containsMatchesFromTheSameRow(
+      tableName: String,
+      associatedTableCaptureGroups: Seq[TableCaptureGroup]
+    ): Boolean = {
+      // Return true if a tuple is found that has a different than expected table name.
+      if (associatedTableCaptureGroups.exists(x => !x.tableName.equalsIgnoreCase(tableName))) {
+        true
+      } else {
+        tables.get(tableName) match {
+          case Some(table) =>
+            // Construct tuples with column indices and corresponding matched strings to
+            // check if the specified table has these matched strings in the respective column
+            // indices IN THE SAME ROW.
+            val columnMatches = for {
+              g <- associatedTableCaptureGroups
+            } yield {
+              val interval = g.captureGroup._2
+              val matchedWords = result.wordData.slice(interval.start, interval.end)
+              val columnIndex = table.getIndexOfColumn(g.columnName)
+              (columnIndex, matchedWords)
+            }
+            // Get table rows to consider and check if there exists a row with the strings in
+            // corresponding columns.
+            val tableRows = table.positive
+            tableRows.exists(row => hasMatchesInColumns(row, columnMatches))
+          case None => throw new IllegalArgumentException(s"Could not find table $tableName")
+        }
+      }
+    }
+
     // If there are no capture groups, use the entire match string as a capture group
     val groups = result.captureGroups match {
       case groups if groups.isEmpty => Map("match" -> result.matchOffset)
       case groups => groups
     }
-    val groupNames = groups.keys.toList.sortBy(groups)
-    val updatedGroups = for {
-      table <- targetTable(req, tables)
-      cols = table.cols
-      if cols.size == groupNames.size
-      if cols.toSet != groupNames.toSet
-      nameMap = groupNames.zip(cols).toMap
-      updatedGroups = groups.map { case (name, interval) => (nameMap(name), interval) }
-    } yield updatedGroups
-    val newGroups = updatedGroups.getOrElse(groups)
-    result.copy(captureGroups = newGroups)
+
+    // If the BlackLabResult contains matches from Table Capture Groups, verify that the matches
+    // come from the same table row, if not reject the BlackLabResult right here.
+    val tableGroups = groups.filter(
+      gp => gp._1.startsWith(QExprParser.tableCaptureGroupPrefix)
+    )
+    // The groups in the regex capture the following fields in the Table Capture Group
+    // respectively:
+    // UUID, tableName, columnName, tag.
+    // Sample capture group name: "Table Capture Group <fruit_colors> <fruit> <0>"
+    val tableColTagCaptureGroupRegex =
+      s"""${QExprParser.tableCaptureGroupPrefix} <([^>]+)> <([^>]+)> <([^>]+)> <(\\d+)>""".r
+
+    // Collect all the (tableName, groupName, tag) tuples for the Table Capture Groups.
+    val groupInfos = (for {
+      tableGroup: (String, Interval) <- tableGroups
+      tableColTagMatch <- tableColTagCaptureGroupRegex.findFirstMatchIn(tableGroup._1)
+      if (tableColTagMatch.groupCount == 4)
+    } yield {
+      new TableCaptureGroup(
+        tableGroup,
+        StringEscapeUtils.unescapeXml(tableColTagMatch.group(2)),
+        StringEscapeUtils.unescapeXml(tableColTagMatch.group(3)),
+        tableColTagMatch.group(4).toInt
+      )
+    }).toSeq
+
+    // Group together Table Capture Groups to be row-wise associated with each other.
+    // These are the ones that have the same table name and the same integer tag.
+    val rowWiseAssociatedGroups = groupInfos.groupBy(i => (i.tableName, i.tag))
+
+    // For each set of Table Capture Groups, check that the matching text from different columns
+    // come from the same row in the table.
+    if (rowWiseAssociatedGroups.exists({
+      case (k, v) => !containsMatchesFromTheSameRow(k._1, v)
+    })) {
+      None
+    } else {
+      // Filter Capture Groups that wrap the special Table Capture Groups
+      // and basically match the same tokens.
+      val filteredGroups = groups.filter(
+        gp1 => !(gp1._1.startsWith(BlackLabSemantics.genericCaptureGroupNamePrefix) &&
+          groups.exists(gp2 => (gp2._1.startsWith(QExprParser.tableCaptureGroupPrefix))
+            && (gp2._2.equals(gp1._2))))
+      )
+      val groupNames = filteredGroups.keys.toList.sortBy(groups)
+
+      val updatedGroups = for {
+        table <- targetTable(req, tables)
+        cols = table.cols
+        if cols.size == groupNames.size
+        if cols.toSet != groupNames.toSet
+        nameMap = groupNames.zip(cols).toMap
+        updatedGroups = filteredGroups.map { case (name, interval) => (nameMap(name), interval) }
+      } yield updatedGroups
+      val newGroups = updatedGroups.getOrElse(groups)
+      Some(result.copy(captureGroups = newGroups))
+    }
   }
 
   /** Tokenized results for a single column, for example ["information", "extraction"]
@@ -112,7 +231,7 @@ object SearchResultGrouper extends Logging {
     tables: Map[String, Table],
     results: Iterable[BlackLabResult]
   ): Seq[GroupedBlackLabResult] = {
-    val withColumnNames = results.map(inferCaptureGroupNames(req, tables, _))
+    val withColumnNames = results.map(inferCaptureGroupNames(req, tables, _)).flatten
     val keyed = withColumnNames.map(keyResult(req, tables, _))
     createGroups(req, keyed)
   }

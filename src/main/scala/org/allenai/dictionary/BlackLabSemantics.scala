@@ -18,6 +18,9 @@ object BlackLabSemantics {
   var maxRepetition = 128
   def notImplemented: Exception = new UnsupportedOperationException
 
+  // Prefix for auto-generated names for unnamed Capture Groups.
+  val genericCaptureGroupNamePrefix = "Capture Group"
+
   def chunkPatternTerm(p: String) = {
     p match {
       //Covered ("NP", "VP", "PP", "ADJP" , "ADVP")
@@ -84,7 +87,7 @@ object BlackLabSemantics {
       case QNamed(e: QExpr, name: String) => new TextPatternCaptureGroup(blqHelper(e), name)
       case QUnnamed(e) =>
         unnamedCnt += 1
-        val result = blqHelper(QNamed(e, s"Capture Group $unnamedCnt"))
+        val result = blqHelper(QNamed(e, s"$genericCaptureGroupNamePrefix $unnamedCnt"))
         result
       case QNonCap(e: QExpr) => blqHelper(e)
       case QStar(e: QExpr) => new TextPatternRepetition(blqHelper(e), 0, maxRepetition)

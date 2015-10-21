@@ -3,8 +3,11 @@ package org.allenai.dictionary
 import org.allenai.dictionary.index.NlpAnnotate
 import org.allenai.dictionary.patterns.NamedPattern
 
+import org.apache.commons.lang.StringEscapeUtils
+
 import java.text.ParseException
 import java.util.regex.Pattern
+
 import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
 import scala.util.{ Failure, Success, Try }
@@ -99,7 +102,8 @@ object QExprParser extends RegexParsers {
   // Example: #patternname
   val namedPattern = "#[a-zA-Z_]+".r ^^ { s => QNamedPattern(s.tail) }
   val wildcard = "\\.".r ^^^ QWildcard()
-  val atom = wildcard | pos | chunk | dict | namedPattern | generalizedWord | generalizedPhrase | words
+  val atom =
+    wildcard | pos | chunk | dict | namedPattern | generalizedWord | generalizedPhrase | words
 
   // Example: ?<capturegroup>
   val captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
@@ -110,6 +114,12 @@ object QExprParser extends RegexParsers {
   val nonCap = "(?:" ~> expr <~ ")" ^^ QNonCap
   val curlyDisj = "{" ~> repsep(expr, ",") <~ "}" ^^ QDisj.fromSeq
   val operand = named | nonCap | unnamed | curlyDisj | atom
+
+  // Prefix used to name capture groups that match table columns.
+  // Specifically these are for capture groups that are tagged with a common integer tag
+  // to specify that they are to be row-wise associated, i.e., their matching texts have to
+  // appear in the same table row.
+  val tableCaptureGroupPrefix = "Table Capture Group"
 
   // Example: foo[1,10], where foo is the expression that can be repeated from 1 to 10 times
   val repetition = (operand <~ "[") ~ ((integer <~ ",") ~ (integer <~ "]")) ^^ { x =>
@@ -153,25 +163,112 @@ object QueryLanguage {
     }
   }
 
+  /** Tables can be referred to by their names. In the case of single-column tables,
+    * `$table` is qualifying enough. In the case of multi-column tables, the required
+    * column needs to be specified as `$table.column`. If results from matching different
+    * columns in the same table need to be associated based on whether they appear in
+    * the same row in the table, they need to be tagged by integer ids, like:
+    * `$table.column1:0` and `$table.column2:0`.
+    * @param expr the expression to be interpolated if there are references to tables.
+    * @param tables tables currently loaded into OKCorpus.
+    * @param patterns patterns  pre-loaded into OKCorpus.
+    * @return attempted interpolated resulting expression.
+    */
   def interpolateTables(
     expr: QExpr,
     tables: Map[String, Table],
     patterns: Map[String, NamedPattern]
   ): Try[QExpr] = {
-    def expandDict(value: String): QDisj = tables.get(value) match {
-      case Some(table) if table.cols.size == 1 =>
+    // Helper Method that splits a table query into its constituent parts: table name,
+    // column name and tag name. Latter two are optional.
+    // Takes a value of the form `table.col:0` or `table` or `table.col`.
+    // Returns a 3-tuple with table name, (optional) column name and (optional) integer tag to
+    // associate different columns with the same row.
+    def getTableQueryParts(queryString: String): (String, Option[String], Option[Int]) = {
+      val tableColTagRegex = """([^\.]+)\.([^:]+):(\d+)""".r
+      val tableColRegex = """([^\.]+)\.(.+)""".r
+      queryString match {
+        case tableColTagRegex(table, col, tag) =>
+          (table, Some(col), Some(tag.toInt))
+        case tableColRegex(table, col) =>
+          (table, Some(col), None)
+        case _ =>
+          (queryString, None, None)
+      }
+    }
+
+    // Gets a string of the form $table or $table.column or $table.column:0
+    // and creates either a disjunctive expression with all possible matches for that
+    // expression from the set of loaded tables or a named capture group containing a
+    // disjunctive expression, if tags were specified in the query to associate results
+    // matching different parts of the overall query.
+    def expandDict(value: String): QExpr = {
+
+      // Helper method to get data from specified column in specified table
+      // and return a disjunction of the values from that column from all rows
+      // of the table.
+      def constructDisjunctiveQuery(table: Table, colIndex: Int): QDisj = {
         val rowExprs = for {
           row <- table.positive
-          value <- row.values
-          qseq = QSeq(value.qwords)
-        } yield qseq
+        } yield {
+          val value = row.values(colIndex)
+          QSeq(value.qwords)
+        }
         QDisj(rowExprs)
-      case Some(table) =>
-        val name = table.name
-        val ncol = table.cols.size
-        throw new IllegalArgumentException(s"1-col table required: Table '$name' has $ncol columns")
-      case None =>
-        throw new IllegalArgumentException(s"Could not find table '$value'")
+      }
+
+      // For use in constructing a unique capture group name when a table-column-tag combination
+      // is repeated in user input query.
+      def uuid = java.util.UUID.randomUUID.toString
+
+      // Get table name, column name and integer tag from query.
+      val (tableName, columnNameOption, tagOption) = getTableQueryParts(value)
+
+      // Process table query.
+      tables.get(tableName) match {
+        case Some(table) =>
+          columnNameOption match {
+            case None =>
+              // No column name was specified. This only makes sense if the specified
+              // table has a single column.
+              val numCols = table.cols.length
+              if (numCols == 1) {
+                // Form disjunction of all possible values in the table.
+                constructDisjunctiveQuery(table, 0)
+              } else {
+                throw new IllegalArgumentException(
+                  s"Table '$tableName' has $numCols columns. Refine your query with a column name, "
+                    + "using the format: `$tablename.columnname`."
+                )
+              }
+            case Some(columnName) =>
+              // Get index of the required column in the table.
+              val colIndex = table.getIndexOfColumn(columnName)
+
+              // Form disjunction of all possible values in specified column in table.
+              val qDisj = constructDisjunctiveQuery(table, colIndex)
+
+              // If this expression is tagged to be associated with other parts of
+              // the query so that they come from the same table row, then enclose this in a
+              // special "Table Capture Group" with appropriate name to use for post-processing
+              // results. Otherwise simply return the disjunction.
+              // We will name the special "Table Capture Group" as follows:
+              // "Table Capture Group  <uniqueId> <tableName> <columnName> <tag>"
+              // NOTE:
+              // The uniqueId is a UUID. This is necessary because identical Table Capture
+              // Groups can be repeated in an expression and because Capture Groups are
+              // ultimately carried around as Maps with the name as key, we do not want any
+              // group to be overwritten.
+              tagOption match {
+                case Some(tag) => QNamed(qDisj, s"${QExprParser.tableCaptureGroupPrefix}" +
+                  s" <$uuid> <${StringEscapeUtils.escapeXml(tableName)}>" +
+                  s" <${StringEscapeUtils.escapeXml(columnName)}> <$tag>")
+                case None => qDisj
+              }
+          }
+        case None =>
+          throw new IllegalArgumentException(s"Could not find table '$tableName'")
+      }
     }
 
     def expandNamedPattern(
