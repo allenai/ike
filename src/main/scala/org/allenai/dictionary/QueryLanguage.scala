@@ -7,7 +7,6 @@ import org.apache.commons.lang.StringEscapeUtils
 
 import java.text.ParseException
 import java.util.regex.Pattern
-import org.apache.commons.lang.StringEscapeUtils
 
 import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
