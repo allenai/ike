@@ -3,6 +3,8 @@ package org.allenai.dictionary
 import org.allenai.common.immutable.Interval
 import org.allenai.common.{ Logging, Timing }
 
+import org.apache.commons.lang.StringEscapeUtils
+
 import scala.collection.immutable
 
 object SearchResultGrouper extends Logging {
@@ -31,22 +33,37 @@ object SearchResultGrouper extends Logging {
     def hasMatchesInColumns(
       row: TableRow, expectedColumnMatches: Seq[(Int, Seq[WordData])]
     ): Boolean = {
-      !expectedColumnMatches.find(m =>
-        !row.values(m._1).qwords.map(_.value).mkString(" ").equalsIgnoreCase(
-          m._2.map(_.word).mkString(" ")
-        )).isDefined
+
+      // Helper Method that returns true if a given table cell (determined by a TableRow and a
+      // column index within that row) contains the expected text, passed in as a collection of
+      // words (WordData).
+      def tableCellContainsExpectedText(
+        row: TableRow, columnIx: Int, expectedTextWords: Seq[WordData]
+      ): Boolean = {
+        val rowWords = row.values(columnIx).qwords.map(_.value)
+        val expectedWords = expectedTextWords.map(_.word)
+        rowWords.mkString(" ").equalsIgnoreCase(expectedWords.mkString(" "))
+      }
+
+      !expectedColumnMatches.exists(m => !tableCellContainsExpectedText(row, m._1, m._2))
     }
 
-    // Helper Function that takes a collection of tuples associated with the same table
-    // in the form:
-    // (Table Capture Group-- represented as a (String, Interval) tuple, tableName, groupName, tag)
+    // Case Class with all relevant information pertaining to a special "Table Capture Group".
+    // This includes the basic Capture Group info, viz., name of the Capture Group and the interval
+    // of words from the result text it matches, the table name, column name and integer tag
+    // coming from the relevant part of the user query.
+    case class TableCaptureGroup(
+      captureGroup: (String, Interval), tableName: String, columnName: String, tag: Int
+    )
+
+    // Helper Function that takes a table name and a collection of TableCaptureGroups
     // and checks to see if their matches come from the same table row.
-    def containsMatchesFromDifferentRows(
+    def containsMatchesFromTheSameRow(
       tableName: String,
-      associatedTableCaptureGroups: Seq[((String, Interval), String, String, Int)]
+      associatedTableCaptureGroups: Seq[TableCaptureGroup]
     ): Boolean = {
       // Return true if a tuple is found that has a different than expected table name.
-      if (associatedTableCaptureGroups.find(x => !x._2.equalsIgnoreCase(tableName)).isDefined) {
+      if (associatedTableCaptureGroups.exists(x => !x.tableName.equalsIgnoreCase(tableName))) {
         true
       } else {
         tables.get(tableName) match {
@@ -57,14 +74,12 @@ object SearchResultGrouper extends Logging {
             val columnMatches = for {
               g <- associatedTableCaptureGroups
             } yield {
-              val interval = g._1._2
+              val interval = g.captureGroup._2
               val matchedWords = result.wordData.slice(interval.start, interval.end)
-              val columnName = g._3
-              val columnIndex =
-                table.cols.zipWithIndex.find(c => c._1.equalsIgnoreCase(columnName)).map(_._2)
+              val columnIndex = table.getIndexOfColumn(g.columnName)
               if (!columnIndex.isDefined) {
                 throw new IllegalArgumentException(
-                  s"Could not find column $columnName in table $tableName"
+                  s"Could not find column $g.columnName in table $tableName"
                 )
               }
               (columnIndex.get, matchedWords)
@@ -72,7 +87,7 @@ object SearchResultGrouper extends Logging {
             // Get table rows to consider and check if there exists a row with the strings in
             // corresponding columns.
             val tableRows = table.positive
-            !tableRows.find(row => hasMatchesInColumns(row, columnMatches)).isDefined
+            tableRows.exists(row => hasMatchesInColumns(row, columnMatches))
           case None => throw new IllegalArgumentException(s"Could not find table $tableName")
         }
       }
@@ -94,39 +109,41 @@ object SearchResultGrouper extends Logging {
     // UUID, tableName, columnName, tag.
     // Sample capture group name: "Table Capture Group <fruit_colors> <fruit> <0>"
     val tableColTagCaptureGroupRegex =
-      s"""${QExprParser.tableCaptureGroupPrefix} <(.+)> <(.+)> <(.+)> <(\\d+)>""".r
+      s"""${QExprParser.tableCaptureGroupPrefix} <([^>]+)> <([^>]+)> <([^>]+)> <(\\d+)>""".r
 
     // Collect all the (tableName, groupName, tag) tuples for the Table Capture Groups.
     val groupInfos = (for {
-      tableGroup <- tableGroups
+      tableGroup: (String, Interval) <- tableGroups
       tableColTagMatch <- tableColTagCaptureGroupRegex.findFirstMatchIn(tableGroup._1)
       if (tableColTagMatch.groupCount == 4)
     } yield {
-      (
+      println(tableColTagMatch.group(2))
+      println(StringEscapeUtils.unescapeXml(tableColTagMatch.group(2)))
+      new TableCaptureGroup(
         tableGroup,
-        tableColTagMatch.group(2),
-        tableColTagMatch.group(3),
+        StringEscapeUtils.unescapeXml(tableColTagMatch.group(2)),
+        StringEscapeUtils.unescapeXml(tableColTagMatch.group(3)),
         tableColTagMatch.group(4).toInt
       )
     }).toSeq
 
     // Group together Table Capture Groups to be row-wise associated with each other.
     // These are the ones that have the same table name and the same integer tag.
-    val rowWiseAssociatedGroups = groupInfos.groupBy(i => (i._2, i._4))
+    val rowWiseAssociatedGroups = groupInfos.groupBy(i => (i.tableName, i.tag))
 
     // For each set of Table Capture Groups, check that the matching text from different columns
     // come from the same row in the table.
-    if (rowWiseAssociatedGroups.find({
-      case (k, v) => containsMatchesFromDifferentRows(k._1, v)
-    }).isDefined) {
+    if (rowWiseAssociatedGroups.exists({
+      case (k, v) => !containsMatchesFromTheSameRow(k._1, v)
+    })) {
       None
     } else {
       // Filter Capture Groups that wrap the special Table Capture Groups
       // and basically match the same tokens.
       val filteredGroups = groups.filter(
         gp1 => !(gp1._1.startsWith(BlackLabSemantics.genericCaptureGroupNamePrefix) &&
-          groups.find(gp2 => (gp2._1.startsWith(QExprParser.tableCaptureGroupPrefix))
-            && (gp2._2.equals(gp1._2))).isDefined)
+          groups.exists(gp2 => (gp2._1.startsWith(QExprParser.tableCaptureGroupPrefix))
+            && (gp2._2.equals(gp1._2))))
       )
       val groupNames = filteredGroups.keys.toList.sortBy(groups)
 
@@ -221,12 +238,8 @@ object SearchResultGrouper extends Logging {
     tables: Map[String, Table],
     results: Iterable[BlackLabResult]
   ): Seq[GroupedBlackLabResult] = {
-    val keyed = for {
-      blackLabResultsWithColumnNames <- results.map(inferCaptureGroupNames(req, tables, _))
-      blackLabResultWithColumnNames <- blackLabResultsWithColumnNames
-    } yield {
-      keyResult(req, tables, blackLabResultWithColumnNames)
-    }
+    val withColumnNames = results.map(inferCaptureGroupNames(req, tables, _)).flatten
+    val keyed = withColumnNames.map(keyResult(req, tables, _))
     createGroups(req, keyed)
   }
 

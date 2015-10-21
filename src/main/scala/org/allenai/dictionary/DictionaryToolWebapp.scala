@@ -33,7 +33,9 @@ object DictionaryToolWebapp {
     val service = system.actorOf(Props[DictionaryToolActor], "webapp-actor")
 
     {
-      implicit val timeout = Timeout(30.seconds)
+      // Bumping up this timeout from the original 30 seconds as OKCorpus is going to be used in
+      // table expansion efforts where queries could take longer to complete.
+      implicit val timeout = Timeout(300.seconds)
       IO(Http) ? Http.Bind(service, interface = "0.0.0.0", port = port)
     }
   }

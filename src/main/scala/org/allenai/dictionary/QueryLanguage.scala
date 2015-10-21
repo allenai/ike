@@ -3,8 +3,12 @@ package org.allenai.dictionary
 import org.allenai.dictionary.index.NlpAnnotate
 import org.allenai.dictionary.patterns.NamedPattern
 
+import org.apache.commons.lang.StringEscapeUtils
+
 import java.text.ParseException
 import java.util.regex.Pattern
+import org.apache.commons.lang.StringEscapeUtils
+
 import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
 import scala.util.{ Failure, Success, Try }
@@ -177,42 +181,21 @@ object QueryLanguage {
     patterns: Map[String, NamedPattern]
   ): Try[QExpr] = {
     // Helper Method that splits a table query into its constituent parts: table name,
-    // column name and tag name. Latter too are optional.
+    // column name and tag name. Latter two are optional.
     // Takes a value of the form `table.col:0` or `table` or `table.col`.
     // Returns a 3-tuple with table name, (optional) column name and (optional) integer tag to
     // associate different columns with the same row.
     def getTableQueryParts(queryString: String): (String, Option[String], Option[Int]) = {
+      val tableColTagRegex = """([^\.]+)\.([^:]+):(\d+)""".r
       val tableColRegex = """([^\.]+)\.(.+)""".r
-      val tableColMatchOption = tableColRegex.findFirstMatchIn(queryString)
-      tableColMatchOption match {
-        case Some(tableColMatch) if (tableColMatch.groupCount == 2) =>
-          val table = tableColMatch.group(1)
-          val colTag = tableColMatch.group(2)
-          val colRegex = """([^:]+):(\d+)""".r
-          val colTagMatchOption = colRegex.findFirstMatchIn(colTag)
-          val (colOption, intTagOption) = colTagMatchOption match {
-            case Some(colTagMatch) if (colTagMatch.groupCount == 2) =>
-              (Some(colTagMatch.group(1)), Some(colTagMatch.group(2).toInt))
-            case _ =>
-              (Some(colTag), None)
-          }
-          (table, colOption, intTagOption)
+      queryString match {
+        case tableColTagRegex(table, col, tag) =>
+          (table, Some(col), Some(tag.toInt))
+        case tableColRegex(table, col) =>
+          (table, Some(col), None)
         case _ =>
           (queryString, None, None)
       }
-    }
-
-    // Helper method to get data from specified column in specified table
-    // and return a disjunction of the values from that column from all rows
-    // of the table.
-    def constructDisjunctiveQuery(table: Table, colIndex: Int): QDisj = {
-      val rowExprs = for {
-        row <- table.positive
-      } yield {
-        val value = row.values(colIndex)
-        QSeq(value.qwords)
-      }
-      QDisj(rowExprs)
     }
 
     // Gets a string of the form $table or $table.column or $table.column:0
@@ -221,6 +204,20 @@ object QueryLanguage {
     // disjunctive expression, if tags were specified in the query to associate results
     // matching different parts of the overall query.
     def expandDict(value: String): QExpr = {
+
+      // Helper method to get data from specified column in specified table
+      // and return a disjunction of the values from that column from all rows
+      // of the table.
+      def constructDisjunctiveQuery(table: Table, colIndex: Int): QDisj = {
+        val rowExprs = for {
+          row <- table.positive
+        } yield {
+          val value = row.values(colIndex)
+          QSeq(value.qwords)
+        }
+        QDisj(rowExprs)
+      }
+
       // For use in constructing a unique capture group name when a table-column-tag combination
       // is repeated in user input query.
       def uuid = java.util.UUID.randomUUID.toString
@@ -247,11 +244,9 @@ object QueryLanguage {
               }
             case Some(columnName) =>
               // Get index of the required column in the table.
-              val colIndexOption = table.cols.zipWithIndex.find(
-                p => (p._1.equalsIgnoreCase(columnName))
-              )
+              val colIndexOption = table.getIndexOfColumn(columnName)
               colIndexOption match {
-                case Some((_, colIndex)) =>
+                case Some(colIndex) =>
                   // Form disjunction of all possible values in specified column in table.
                   val qDisj = constructDisjunctiveQuery(table, colIndex)
 
@@ -262,16 +257,14 @@ object QueryLanguage {
                   // We will name the special "Table Capture Group" as follows:
                   // "Table Capture Group  <uniqueId> <tableName> <columnName> <tag>"
                   // NOTE:
-                  // 1. This means that we assume table and column names cannot have < or > in
-                  // them, which is fair because it could lead to some ambiguous patterns, given
-                  // that <groupName> is also used to construct named capture groups.
-                  // 2. The uniqueId is a UUID. This is necessary because identical Table Capture
+                  // The uniqueId is a UUID. This is necessary because identical Table Capture
                   // Groups can be repeated in an expression and because Capture Groups are
                   // ultimately carried around as Maps with the name as key, we do not want any
                   // group to be overwritten.
                   tagOption match {
                     case Some(tag) => QNamed(qDisj, s"${QExprParser.tableCaptureGroupPrefix}" +
-                      s" <${uuid}> <${tableName}> <${columnName}> <${tag}>")
+                      s" <$uuid> <${StringEscapeUtils.escapeXml(tableName)}>" +
+                      s"<${StringEscapeUtils.escapeXml(columnName)}> <$tag>")
                     case None => qDisj
                   }
                 case None =>
