@@ -159,7 +159,7 @@ var HelpInterface = React.createClass({
     {
       name: 'Similar Phrases',
       example: '"information extraction"~50',
-      descr: 'Matches the phrase "information extraction" as well as the 50 phrases most similar to "that brown dog"'
+      descr: 'Matches the phrase "information extraction" as well as the 50 phrases most similar to "information extraction"'
     },
     {
       name: 'Special Characters',
@@ -170,6 +170,21 @@ var HelpInterface = React.createClass({
       name: 'Wildcards',
       example: '. dog',
       descr: 'Matches any word followed by the word "dog"'
+    },
+    {
+      name: 'Table Query',
+      example: '$colors',
+      descr: 'Matches any text containing an entry in a single-column "colors" table'
+    },
+    {
+      name: 'Table Column Query',
+      example: '$fruit_colors.fruit',
+      descr: 'Matches any text containing one of the entries in the "fruit" column of the "fruit_colors" table'
+    },
+    {
+      name: 'Row-Associative Table Column Query',
+      example: '$fruit_colors.color:0 $fruit_colors.fruit:0',
+      descr: 'Matches any text containing a fruit color (followed by space) followed by a fruit that are present in the same row of the "fruit_colors" table in the "color" and the "fruit" column respectively'
     },
   ],
   querySyntaxRow: function(row, i) {
