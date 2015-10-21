@@ -117,8 +117,6 @@ object SearchResultGrouper extends Logging {
       tableColTagMatch <- tableColTagCaptureGroupRegex.findFirstMatchIn(tableGroup._1)
       if (tableColTagMatch.groupCount == 4)
     } yield {
-      println(tableColTagMatch.group(2))
-      println(StringEscapeUtils.unescapeXml(tableColTagMatch.group(2)))
       new TableCaptureGroup(
         tableGroup,
         StringEscapeUtils.unescapeXml(tableColTagMatch.group(2)),
