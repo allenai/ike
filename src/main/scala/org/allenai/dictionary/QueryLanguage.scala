@@ -243,33 +243,27 @@ object QueryLanguage {
               }
             case Some(columnName) =>
               // Get index of the required column in the table.
-              val colIndexOption = table.getIndexOfColumn(columnName)
-              colIndexOption match {
-                case Some(colIndex) =>
-                  // Form disjunction of all possible values in specified column in table.
-                  val qDisj = constructDisjunctiveQuery(table, colIndex)
+              val colIndex = table.getIndexOfColumn(columnName)
 
-                  // If this expression is tagged to be associated with other parts of
-                  // the query so that they come from the same table row, then enclose this in a
-                  // special "Table Capture Group" with appropriate name to use for post-processing
-                  // results. Otherwise simply return the disjunction.
-                  // We will name the special "Table Capture Group" as follows:
-                  // "Table Capture Group  <uniqueId> <tableName> <columnName> <tag>"
-                  // NOTE:
-                  // The uniqueId is a UUID. This is necessary because identical Table Capture
-                  // Groups can be repeated in an expression and because Capture Groups are
-                  // ultimately carried around as Maps with the name as key, we do not want any
-                  // group to be overwritten.
-                  tagOption match {
-                    case Some(tag) => QNamed(qDisj, s"${QExprParser.tableCaptureGroupPrefix}" +
-                      s" <$uuid> <${StringEscapeUtils.escapeXml(tableName)}>" +
-                      s"<${StringEscapeUtils.escapeXml(columnName)}> <$tag>")
-                    case None => qDisj
-                  }
-                case None =>
-                  throw new IllegalArgumentException(
-                    s"Table '$tableName' does not have column $columnName."
-                  )
+              // Form disjunction of all possible values in specified column in table.
+              val qDisj = constructDisjunctiveQuery(table, colIndex)
+
+              // If this expression is tagged to be associated with other parts of
+              // the query so that they come from the same table row, then enclose this in a
+              // special "Table Capture Group" with appropriate name to use for post-processing
+              // results. Otherwise simply return the disjunction.
+              // We will name the special "Table Capture Group" as follows:
+              // "Table Capture Group  <uniqueId> <tableName> <columnName> <tag>"
+              // NOTE:
+              // The uniqueId is a UUID. This is necessary because identical Table Capture
+              // Groups can be repeated in an expression and because Capture Groups are
+              // ultimately carried around as Maps with the name as key, we do not want any
+              // group to be overwritten.
+              tagOption match {
+                case Some(tag) => QNamed(qDisj, s"${QExprParser.tableCaptureGroupPrefix}" +
+                  s" <$uuid> <${StringEscapeUtils.escapeXml(tableName)}>" +
+                  s" <${StringEscapeUtils.escapeXml(columnName)}> <$tag>")
+                case None => qDisj
               }
           }
         case None =>

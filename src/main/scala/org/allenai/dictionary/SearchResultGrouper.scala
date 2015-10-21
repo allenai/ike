@@ -45,7 +45,7 @@ object SearchResultGrouper extends Logging {
         rowWords.mkString(" ").equalsIgnoreCase(expectedWords.mkString(" "))
       }
 
-      !expectedColumnMatches.exists(m => !tableCellContainsExpectedText(row, m._1, m._2))
+      expectedColumnMatches.forall(m => tableCellContainsExpectedText(row, m._1, m._2))
     }
 
     // Case Class with all relevant information pertaining to a special "Table Capture Group".
@@ -77,12 +77,7 @@ object SearchResultGrouper extends Logging {
               val interval = g.captureGroup._2
               val matchedWords = result.wordData.slice(interval.start, interval.end)
               val columnIndex = table.getIndexOfColumn(g.columnName)
-              if (!columnIndex.isDefined) {
-                throw new IllegalArgumentException(
-                  s"Could not find column $g.columnName in table $tableName"
-                )
-              }
-              (columnIndex.get, matchedWords)
+              (columnIndex, matchedWords)
             }
             // Get table rows to consider and check if there exists a row with the strings in
             // corresponding columns.
