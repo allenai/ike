@@ -220,7 +220,7 @@ object QueryLanguage {
 
     // Helper Method to get the table, the column name and index to process.
     // Throw an exception if column is not specified (None) and the table has more than one column.
-    def getColumnIndexToProcess(
+    def getTableColumnAndIndexToProcess(
       tableName: String, columnNameOption: Option[String]
     ): (Table, String, Int) = {
       tables.get(tableName) match {
@@ -275,7 +275,7 @@ object QueryLanguage {
       val (tableName, columnNameOption, tagOption) = getTableQueryParts(value)
 
       // Process table query.
-      val (table, columnName, columnIndex) = getColumnIndexToProcess(tableName, columnNameOption)
+      val (table, columnName, columnIndex) = getTableColumnAndIndexToProcess(tableName, columnNameOption)
 
       // Form disjunction of all possible values in specified column in table.
       val qDisj = constructDisjunctiveQuery(table, columnIndex)
@@ -337,7 +337,7 @@ object QueryLanguage {
             )
           }
 
-          val (table, columnName, columnIndex) = getColumnIndexToProcess(tableName, columnNameOption)
+          val (table, columnName, columnIndex) = getTableColumnAndIndexToProcess(tableName, columnNameOption)
           QDisj(tableExpander.expandTableColumn(table, columnName).slice(0, pos - 1)
             map { x => QSeq(x.qwords) })
 
@@ -392,11 +392,6 @@ object QueryLanguage {
 
   /** Replaces QDict and QGeneralizePhrases expressions within a QExpr with
     * QDisj and QSimilarPhrase
-    *
-    * @param expr QExpr to interpolate
-    * @param userEmail email of the user, used to find tables for dictionary expansions and named
-    *                  patterns
-    * @param similarPhrasesSearcher searcher to use when replacing QGeneralizePhrase expressions
     * @return the attempt to interpolated the query
     */
   def interpolateQuery(
