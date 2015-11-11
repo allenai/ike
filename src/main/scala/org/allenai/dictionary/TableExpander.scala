@@ -2,7 +2,6 @@ package org.allenai.dictionary
 
 import org.allenai.common.Logging
 
-
 /** Implement this trait for expanding (generalizing) tables with seed entries.
   * Various similarity measures may be used. Each can be implemented as a separate TableExpander.
   * Different similarity measures may potentially become features to train a classifier,
@@ -17,8 +16,8 @@ trait TableExpander {
   * intersection set. Uses WordVecPhraseSearcher internally to expand each table entry.
   * @param word2vecSearcher
   */
-class Word2VecTableExpander1(word2vecSearcher: WordVecPhraseSearcher)
-  extends Logging with TableExpander {
+class Word2VecIntersectionTableExpander(word2vecSearcher: WordVecPhraseSearcher)
+    extends Logging with TableExpander {
 
   override def expandTableColumn(table: Table, columnName: String): Seq[SimilarPhrase] = {
     // Get index of the required column in the table.
@@ -38,7 +37,8 @@ class Word2VecTableExpander1(word2vecSearcher: WordVecPhraseSearcher)
       val tableEntry = row.values(colIndex)
       currentTableEntries.add(tableEntry.qwords)
       val similarPhrases = word2vecSearcher.getSimilarPhrases(
-        tableEntry.qwords.map(_.value).mkString(" "))
+        tableEntry.qwords.map(_.value).mkString(" ")
+      )
       for (similarPhrase <- similarPhrases) {
         if (!similarPhraseScoreMap.contains(similarPhrase.qwords) ||
           (similarPhraseScoreMap(similarPhrase.qwords) < similarPhrase.similarity)) {
@@ -54,13 +54,12 @@ class Word2VecTableExpander1(word2vecSearcher: WordVecPhraseSearcher)
   }
 }
 
-
 /** Class that generalizes a given table (column) entries using Word2Vec. The basic idea here is:
   * get the word2vec centroid of all seed entries, then return the neighbors of the centroid.
   * @param word2vecSearcher
   */
-class Word2VecTableExpander2(word2vecSearcher: WordVecPhraseSearcher)
-  extends Logging with TableExpander {
+class Word2VecCentroidTableExpander(word2vecSearcher: WordVecPhraseSearcher)
+    extends Logging with TableExpander {
 
   override def expandTableColumn(table: Table, columnName: String): Seq[SimilarPhrase] = {
     // Get index of the required column in the table.
@@ -73,11 +72,12 @@ class Word2VecTableExpander2(word2vecSearcher: WordVecPhraseSearcher)
     val columnEntries = for {
       row <- table.positive
     } yield {
-        val tableEntry = row.values(colIndex)
-        currentTableEntries.add(tableEntry.qwords)
-        tableEntry.qwords.map(_.value).mkString(" ")
+      val tableEntry = row.values(colIndex)
+      currentTableEntries.add(tableEntry.qwords)
+      tableEntry.qwords.map(_.value).mkString(" ")
     }
-    word2vecSearcher.getCentroidMatches(columnEntries) filter(
-      x => !currentTableEntries.contains(x.qwords))
+    word2vecSearcher.getCentroidMatches(columnEntries) filter (
+      x => !currentTableEntries.contains(x.qwords)
+    )
   }
 }

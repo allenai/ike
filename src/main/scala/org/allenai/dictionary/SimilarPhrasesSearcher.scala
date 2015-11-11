@@ -1,16 +1,16 @@
 package org.allenai.dictionary
 
-import java.{lang, util}
+import java.{ lang, util }
 
 import org.allenai.common.Config._
 import org.allenai.common.Logging
 
 import com.medallia.word2vec.Searcher.UnknownWordException
-import com.medallia.word2vec.{Searcher, Word2VecModel}
+import com.medallia.word2vec.{ Searcher, Word2VecModel }
 import com.typesafe.config.Config
 
 import scala.collection.JavaConverters._
-import scala.collection.{mutable, SeqView}
+import scala.collection.{ mutable, SeqView }
 import scala.util.{ Try, Success, Failure }
 
 trait SimilarPhrasesSearcher {
@@ -72,7 +72,7 @@ class WordVecPhraseSearcher(config: Config) extends Logging with SimilarPhrasesS
     } yield vector
 
     if (vectors.length > 0) {
-      val centroidVector = vectors.reduceLeft[Vector[Double]]{ (v1, v2) => addVectors(v1, v2) } map
+      val centroidVector = vectors.reduceLeft[Vector[Double]] { (v1, v2) => addVectors(v1, v2) } map
         (_ / vectors.length)
       getSimilarPhrases(centroidVector)
     } else Seq.empty[SimilarPhrase]
