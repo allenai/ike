@@ -18,7 +18,10 @@ trait SimilarPhrasesSearcher {
 }
 
 class WordVecPhraseSearcher(config: Config) extends Logging with SimilarPhrasesSearcher {
-  private val model: Searcher = {
+
+  val maxNumSimilarPhrases = 100
+
+  private val model = {
     logger.info("Loading phrase vectors ...")
     val file = DataFile.fromDatastore(config[Config]("vectors"))
     val result = Word2VecModel.fromBinFile(file).forSearch()
@@ -26,10 +29,14 @@ class WordVecPhraseSearcher(config: Config) extends Logging with SimilarPhrasesS
     result
   }
 
+  /** Given a phrase, returns upto maxNumSimilarPhrases closest phrases.
+    * @param phrase
+    * @return
+    */
   override def getSimilarPhrases(phrase: String): Seq[SimilarPhrase] = {
     val phraseWithUnderscores = phrase.replace(' ', '_').toLowerCase
     try {
-      model.getMatches(phraseWithUnderscores, 100).asScala.map { m =>
+      model.getMatches(phraseWithUnderscores, maxNumSimilarPhrases).asScala.map { m =>
         val qwords = m.`match`().split("_").map(QWord)
         SimilarPhrase(qwords, m.distance())
       }
@@ -38,9 +45,13 @@ class WordVecPhraseSearcher(config: Config) extends Logging with SimilarPhrasesS
     }
   }
 
+  /** Given a vector, returns upto maxNumSimilarPhrases closest phrases.
+    * @param vector
+    * @return
+    */
   def getSimilarPhrases(vector: Vector[Double]): Seq[SimilarPhrase] = {
     try {
-      model.getMatches(vector.toArray, 100).asScala.map { m =>
+      model.getMatches(vector.toArray, maxNumSimilarPhrases).asScala.map { m =>
         val qwords = m.`match`().split("_").map(QWord)
         SimilarPhrase(qwords, m.distance())
       }
@@ -63,6 +74,7 @@ class WordVecPhraseSearcher(config: Config) extends Logging with SimilarPhrasesS
   }
 
   /** Given a bunch of phrases, computes their centroid and determines n closest word2vec neighbors.
+    * Utility function for table expansion.
     * @param phrases
     */
   def getCentroidMatches(phrases: Seq[String]): Seq[SimilarPhrase] = {
@@ -78,6 +90,8 @@ class WordVecPhraseSearcher(config: Config) extends Logging with SimilarPhrasesS
     } else Seq.empty[SimilarPhrase]
   }
 
+  /** Helper Method to add two vectors of Doubles.
+    */
   def addVectors(vector1: Vector[Double], vector2: Vector[Double]): Vector[Double] = {
     vector1 zip vector2 map { case (x, y) => x + y }
   }
