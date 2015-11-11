@@ -343,7 +343,7 @@ object QueryLanguage {
 
         case None =>
           throw new IllegalArgumentException("Table Expansion Request could not be completed. " +
-            "No TableExpander specified!")
+            "No Table Expansion utility was found!")
       }
     }
 
