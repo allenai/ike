@@ -34,6 +34,8 @@ case class QSimilarPhrases(qwords: Seq[QWord], pos: Int, phrases: Seq[SimilarPhr
     extends QLeaf {
   override def toString(): String = s"QSimilarPhrases(${qwords.map(_.value).mkString(" ")},$pos)"
 }
+// Generalize a table column to the nearest `pos` similar words/phrases
+case class QGeneralizeTable(tableColumn: String, pos: Int) extends QLeaf
 case class QWildcard() extends QLeaf
 case class QNamed(qexpr: QExpr, name: String) extends QCapture
 case class QUnnamed(qexpr: QExpr) extends QCapture
@@ -97,13 +99,26 @@ object QExprParser extends RegexParsers {
   val chunk = chunkTagRegex ^^ QChunk
 
   // Example: $tablename
-  val dict = """\$[^$(){}\s*+|,]+""".r ^^ { s => QDict(s.tail) }
+  val dictRegex = """\$[^$(){}\s*+|,]+""".r
+
+  val dict = dictRegex ^^ { s => QDict(s.tail) }
+
+  // This represents the same (dictRegex) but outputs just the query substring matching the regex
+  // instead of constructing a QDict. Used to process table expansion queries (similarity queries)
+  // with tilde.
+  val dictString = dictRegex ^^ { s => s.tail }
+
+  // Example: $tablename
+  val generalizeTable = (dictString) ~ ("~" ~> integer) ^^ { x =>
+    QGeneralizeTable(x._1, x._2)
+  }
 
   // Example: #patternname
   val namedPattern = "#[a-zA-Z_]+".r ^^ { s => QNamedPattern(s.tail) }
   val wildcard = "\\.".r ^^^ QWildcard()
   val atom =
-    wildcard | pos | chunk | dict | namedPattern | generalizedWord | generalizedPhrase | words
+    wildcard | pos | chunk | generalizeTable | dict | namedPattern | generalizedWord |
+      generalizedPhrase | words
 
   // Example: ?<capturegroup>
   val captureName = "?<" ~> """[A-z0-9]+""".r <~ ">"
@@ -169,15 +184,21 @@ object QueryLanguage {
     * columns in the same table need to be associated based on whether they appear in
     * the same row in the table, they need to be tagged by integer ids, like:
     * `$table.column1:0` and `$table.column2:0`.
+    * If calling a similarity function to expand a table column, the query should look like:
+    * `$table.column ~ 10` for 10 similar words/phrases to the entries already present in the
+    * specified column. For a single column table, one can alternately just use the table name:
+    * `$table ~ 10`.
     * @param expr the expression to be interpolated if there are references to tables.
     * @param tables tables currently loaded into OKCorpus.
     * @param patterns patterns  pre-loaded into OKCorpus.
+    * @param tableExpanderOption the table similarity function to use to expand a table if requested.
     * @return attempted interpolated resulting expression.
     */
   def interpolateTables(
     expr: QExpr,
     tables: Map[String, Table],
-    patterns: Map[String, NamedPattern]
+    patterns: Map[String, NamedPattern],
+    tableExpanderOption: Option[TableExpander]
   ): Try[QExpr] = {
     // Helper Method that splits a table query into its constituent parts: table name,
     // column name and tag name. Latter two are optional.
@@ -194,6 +215,35 @@ object QueryLanguage {
           (table, Some(col), None)
         case _ =>
           (queryString, None, None)
+      }
+    }
+
+    // Helper Method to get the table, the column name and index to process.
+    // Throw an exception if column is not specified (None) and the table has more than one column.
+    def getColumnIndexToProcess(
+      tableName: String, columnNameOption: Option[String]
+    ): (Table, String, Int) = {
+      tables.get(tableName) match {
+        case Some(table) =>
+          columnNameOption match {
+            case None =>
+              // No column name was specified. This only makes sense if the specified
+              // table has a single column.
+              val numCols = table.cols.length
+              if (numCols == 1) {
+                (table, table.cols(0), 0)
+              } else {
+                throw new IllegalArgumentException(
+                  s"Table '$tableName' has $numCols columns. Refine your query with a column name, "
+                    + "using the format: `$tablename.columnname`."
+                )
+              }
+            case Some(columnName) =>
+              // Get index of the required column in the table.
+              (table, columnName, table.getIndexOfColumn(columnName))
+          }
+        case None =>
+          throw new IllegalArgumentException(s"Could not find table '$tableName'")
       }
     }
 
@@ -225,49 +275,27 @@ object QueryLanguage {
       val (tableName, columnNameOption, tagOption) = getTableQueryParts(value)
 
       // Process table query.
-      tables.get(tableName) match {
-        case Some(table) =>
-          columnNameOption match {
-            case None =>
-              // No column name was specified. This only makes sense if the specified
-              // table has a single column.
-              val numCols = table.cols.length
-              if (numCols == 1) {
-                // Form disjunction of all possible values in the table.
-                constructDisjunctiveQuery(table, 0)
-              } else {
-                throw new IllegalArgumentException(
-                  s"Table '$tableName' has $numCols columns. Refine your query with a column name, "
-                    + "using the format: `$tablename.columnname`."
-                )
-              }
-            case Some(columnName) =>
-              // Get index of the required column in the table.
-              val colIndex = table.getIndexOfColumn(columnName)
+      val (table, columnName, columnIndex) = getColumnIndexToProcess(tableName, columnNameOption)
 
-              // Form disjunction of all possible values in specified column in table.
-              val qDisj = constructDisjunctiveQuery(table, colIndex)
+      // Form disjunction of all possible values in specified column in table.
+      val qDisj = constructDisjunctiveQuery(table, columnIndex)
 
-              // If this expression is tagged to be associated with other parts of
-              // the query so that they come from the same table row, then enclose this in a
-              // special "Table Capture Group" with appropriate name to use for post-processing
-              // results. Otherwise simply return the disjunction.
-              // We will name the special "Table Capture Group" as follows:
-              // "Table Capture Group  <uniqueId> <tableName> <columnName> <tag>"
-              // NOTE:
-              // The uniqueId is a UUID. This is necessary because identical Table Capture
-              // Groups can be repeated in an expression and because Capture Groups are
-              // ultimately carried around as Maps with the name as key, we do not want any
-              // group to be overwritten.
-              tagOption match {
-                case Some(tag) => QNamed(qDisj, s"${QExprParser.tableCaptureGroupPrefix}" +
-                  s" <$uuid> <${StringEscapeUtils.escapeXml(tableName)}>" +
-                  s" <${StringEscapeUtils.escapeXml(columnName)}> <$tag>")
-                case None => qDisj
-              }
-          }
-        case None =>
-          throw new IllegalArgumentException(s"Could not find table '$tableName'")
+      // If this expression is tagged to be associated with other parts of
+      // the query so that they come from the same table row, then enclose this in a
+      // special "Table Capture Group" with appropriate name to use for post-processing
+      // results. Otherwise simply return the disjunction.
+      // We will name the special "Table Capture Group" as follows:
+      // "Table Capture Group  <uniqueId> <tableName> <columnName> <tag>"
+      // NOTE:
+      // The uniqueId is a UUID. This is necessary because identical Table Capture
+      // Groups can be repeated in an expression and because Capture Groups are
+      // ultimately carried around as Maps with the name as key, we do not want any
+      // group to be overwritten.
+      (columnNameOption, tagOption) match {
+        case (Some(columnName), Some(tag)) => QNamed(qDisj, s"${QExprParser.tableCaptureGroupPrefix}" +
+          s" <$uuid> <${StringEscapeUtils.escapeXml(tableName)}>" +
+          s" <${StringEscapeUtils.escapeXml(columnName)}> <$tag>")
+        case _ => qDisj
       }
     }
 
@@ -293,8 +321,35 @@ object QueryLanguage {
       }
     }
 
+    // Takes a string of the form $table or $table.column or $table.column and gets up to `pos`
+    // phrases similar to the existing entries in the table (column).
+    def generalizeTable(value: String, pos: Int): QExpr = {
+      tableExpanderOption match {
+        case Some(tableExpander) =>
+          // Get table name, column name and integer tag from query. Tag does not make sense in
+          // expansion query so it is expected to be None.
+          val (tableName, columnNameOption, tagOption) = getTableQueryParts(value)
+
+          // Error if integer tag is specified.
+          if (tagOption.isDefined) {
+            throw new IllegalArgumentException(
+              s"Integer Tag not compatible with Table Expansion Query."
+            )
+          }
+
+          val (table, columnName, columnIndex) = getColumnIndexToProcess(tableName, columnNameOption)
+          QDisj(tableExpander.expandTableColumn(table, columnName).slice(0, pos - 1)
+            map { x => QSeq(x.qwords) })
+
+        case None =>
+          throw new IllegalArgumentException("Table Expansion Request could not be completed. " +
+            "No TableExpander specified!")
+      }
+    }
+
     def recurse(expr: QExpr, forbiddenPatternNames: Set[String] = Set.empty): QExpr = expr match {
       case QDict(value) => expandDict(value)
+      case QGeneralizeTable(value, pos) => generalizeTable(value, pos)
       case QNamedPattern(value) => expandNamedPattern(value, forbiddenPatternNames)
       case l: QLeaf => l
       case QSeq(children) => QSeq(children.map(recurse(_, forbiddenPatternNames)))
@@ -348,9 +403,13 @@ object QueryLanguage {
     expr: QExpr,
     tables: Map[String, Table],
     patterns: Map[String, NamedPattern],
-    similarPhrasesSearcher: SimilarPhrasesSearcher
+    similarPhrasesSearcher: SimilarPhrasesSearcher,
+    tableExpander: TableExpander
   ): Try[QExpr] = {
-    interpolateSimilarPhrases(interpolateTables(expr, tables, patterns).get, similarPhrasesSearcher)
+    interpolateSimilarPhrases(
+      interpolateTables(expr, tables, patterns, Some(tableExpander)).get,
+      similarPhrasesSearcher
+    )
   }
 
   /** Converts a query to its string format

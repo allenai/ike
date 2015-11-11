@@ -23,7 +23,7 @@ object GeneralizedQuerySampler {
     limitTo: Option[(Table, Int, Int)]
   ): SpanQuery = {
     def toTextPattern(qexpr: QExpr): TextPattern = {
-      BlackLabSemantics.blackLabQuery(QueryLanguage.interpolateTables(qexpr, tables, patterns).get)
+      BlackLabSemantics.blackLabQuery(QueryLanguage.interpolateTables(qexpr, tables, patterns, None).get)
     }
     def phrase2QExpr(phrase: Seq[QWord]): QExpr = {
       if (phrase.size == 1) phrase.head else QSeq(phrase)

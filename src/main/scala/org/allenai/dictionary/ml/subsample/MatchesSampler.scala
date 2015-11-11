@@ -75,7 +75,8 @@ case class MatchesSampler() extends Sampler() {
     val query = QueryLanguage.interpolateTables(
       MatchesSampler.getNamedQuery(qexpr),
       tables,
-      patterns
+      patterns,
+      None
     ).get
     searcher.find(BlackLabSemantics.blackLabQuery(query))
   }
@@ -91,12 +92,12 @@ case class MatchesSampler() extends Sampler() {
   ): Hits = {
     val spanQuery = if (targetTable.cols.size == 1) {
       val oneColQexpr = MatchesSampler.getNamedColumnMatchingQuery(qexpr, targetTable)
-      val interQuery = QueryLanguage.interpolateTables(oneColQexpr, tables, patterns).get
+      val interQuery = QueryLanguage.interpolateTables(oneColQexpr, tables, patterns, None).get
       val spanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(interQuery))
       new SpanQueryStartAt(spanQuery, startFromDoc, startFromToken)
     } else {
       val query = QueryLanguage.interpolateTables(
-        MatchesSampler.getNamedQuery(qexpr), tables, patterns
+        MatchesSampler.getNamedQuery(qexpr), tables, patterns, None
       ).get
       val spanQuery = searcher.createSpanQuery(BlackLabSemantics.blackLabQuery(query))
       val tableQuery = Sampler.buildLabelledQuery(qexpr, targetTable)
