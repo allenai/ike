@@ -5,7 +5,7 @@ import java.{ lang, util }
 import org.allenai.common.Config._
 import org.allenai.common.Logging
 
-import com.medallia.word2vec.Searcher.UnknownWordException
+import com.medallia.word2vec.Searcher.{Match, UnknownWordException}
 import com.medallia.word2vec.{ Searcher, Word2VecModel }
 import com.typesafe.config.Config
 
@@ -36,10 +36,7 @@ class WordVecPhraseSearcher(config: Config) extends Logging with SimilarPhrasesS
   override def getSimilarPhrases(phrase: String): Seq[SimilarPhrase] = {
     val phraseWithUnderscores = phrase.replace(' ', '_').toLowerCase
     try {
-      model.getMatches(phraseWithUnderscores, maxNumSimilarPhrases).asScala.map { m =>
-        val qwords = m.`match`().split("_").map(QWord)
-        SimilarPhrase(qwords, m.distance())
-      }
+      getSimilarPhrasesFromMatches(model.getMatches(phraseWithUnderscores, maxNumSimilarPhrases))
     } catch {
       case _: UnknownWordException => Seq.empty
     }
@@ -51,12 +48,20 @@ class WordVecPhraseSearcher(config: Config) extends Logging with SimilarPhrasesS
     */
   def getSimilarPhrases(vector: Vector[Double]): Seq[SimilarPhrase] = {
     try {
-      model.getMatches(vector.toArray, maxNumSimilarPhrases).asScala.map { m =>
-        val qwords = m.`match`().split("_").map(QWord)
-        SimilarPhrase(qwords, m.distance())
-      }
+      getSimilarPhrasesFromMatches(model.getMatches(vector.toArray, maxNumSimilarPhrases))
     } catch {
       case _: UnknownWordException => Seq.empty
+    }
+  }
+
+  /** Helper Method to construct a Seq of SimilarPhrases from matches returned by the Searcher.
+    * @param matches
+    * @return
+    */
+  def getSimilarPhrasesFromMatches(matches: util.List[Match]): Seq[SimilarPhrase] = {
+    matches.asScala.map { m =>
+      val qwords = m.`match`().split("_").map(QWord)
+      SimilarPhrase(qwords, m.distance())
     }
   }
 
