@@ -14,9 +14,9 @@ trait TableExpander {
 /** Class that generalizes a given table (column) entries using Word2Vec. The basic idea here is:
   * expand each seed row in the given column using Word2Vec, then determine / return the
   * intersection set. Uses WordVecPhraseSearcher internally to expand each table entry.
-  * @param word2vecSearcher
+  * @param wordvecSearcher
   */
-class Word2VecIntersectionTableExpander(word2vecSearcher: WordVecPhraseSearcher)
+class WordVecIntersectionTableExpander(wordvecSearcher: WordVecPhraseSearcher)
     extends Logging with TableExpander {
 
   override def expandTableColumn(table: Table, columnName: String): Seq[SimilarPhrase] = {
@@ -36,7 +36,7 @@ class Word2VecIntersectionTableExpander(word2vecSearcher: WordVecPhraseSearcher)
     } yield {
       val tableEntry = row.values(colIndex)
       currentTableEntries.add(tableEntry.qwords)
-      val similarPhrases = word2vecSearcher.getSimilarPhrases(
+      val similarPhrases = wordvecSearcher.getSimilarPhrases(
         tableEntry.qwords.map(_.value).mkString(" ")
       )
       for (similarPhrase <- similarPhrases) {
@@ -56,9 +56,9 @@ class Word2VecIntersectionTableExpander(word2vecSearcher: WordVecPhraseSearcher)
 
 /** Class that generalizes a given table (column) entries using Word2Vec. The basic idea here is:
   * get the word2vec centroid of all seed entries, then return the neighbors of the centroid.
-  * @param word2vecSearcher
+  * @param wordvecSearcher
   */
-class Word2VecCentroidTableExpander(word2vecSearcher: WordVecPhraseSearcher)
+class WordVecCentroidTableExpander(wordvecSearcher: WordVecPhraseSearcher)
     extends Logging with TableExpander {
 
   override def expandTableColumn(table: Table, columnName: String): Seq[SimilarPhrase] = {
@@ -76,7 +76,7 @@ class Word2VecCentroidTableExpander(word2vecSearcher: WordVecPhraseSearcher)
       currentTableEntries.add(tableEntry.qwords)
       tableEntry.qwords.map(_.value).mkString(" ")
     }
-    word2vecSearcher.getCentroidMatches(columnEntries) filter (
+    wordvecSearcher.getCentroidMatches(columnEntries) filter (
       x => !currentTableEntries.contains(x.qwords)
     )
   }
