@@ -65,7 +65,7 @@ class WordVecCentroidTableExpander(wordvecSearcher: WordVecPhraseSearcher)
     val colIndex = table.getIndexOfColumn(columnName)
 
     // Construct set of all table rows. If the same entries appear in the similar phrases result
-    // returned, we need to filter them out.
+    // returned by the WordVecPhraseSearcher, they should be filtered out.
     val currentTableEntries = new scala.collection.mutable.HashSet[Seq[QWord]]()
 
     val columnEntries = for {
