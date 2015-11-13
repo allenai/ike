@@ -61,7 +61,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   val similarPhrasesSearcher =
     new WordVecPhraseSearcher(ConfigFactory.load()[Config]("SimilarPhrasesSearcher"))
   val tableExpander =
-    new WordVecCentroidTableExpander(similarPhrasesSearcher)
+    new WordVecIntersectionTableExpander(similarPhrasesSearcher)
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {

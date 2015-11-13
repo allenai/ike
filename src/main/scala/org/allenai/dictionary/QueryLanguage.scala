@@ -108,7 +108,7 @@ object QExprParser extends RegexParsers {
   // with tilde.
   val dictString = dictRegex ^^ { s => s.tail }
 
-  // Example: $tablename
+  // Example: $tablename.columnname ~ 10
   val generalizeTable = (dictString) ~ ("~" ~> integer) ^^ { x =>
     QGeneralizeTable(x._1, x._2)
   }
