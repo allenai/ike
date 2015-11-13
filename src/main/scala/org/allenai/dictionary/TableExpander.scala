@@ -49,8 +49,7 @@ class WordVecIntersectionTableExpander(wordvecSearcher: WordVecPhraseSearcher)
       .mapValues(phrases => averageSimilarity(phrases.map(_.similarity)))
 
     // Convert the phrase score map into SimilarPhrase objects and return.
-    val v = phraseScoreMap.map(x => new SimilarPhrase(x._1, x._2)).toSeq
-    v
+    phraseScoreMap.map(x => new SimilarPhrase(x._1, x._2)).toSeq
   }
 }
 
