@@ -83,6 +83,8 @@ object BlackLabSemantics {
         throw new IllegalArgumentException("Can not convert QNamedPattern to TextPattern")
       case QGeneralizePhrase(_, _) =>
         throw new IllegalArgumentException("Can not convert QGeneralizePhrase to TextPattern")
+      case QGeneralizeTable(_, _) =>
+        throw new IllegalArgumentException("Can not convert QGeneralizeTable to TextPattern")
       case QWildcard() => new TextPatternAnyToken(1, 1)
       case QNamed(e: QExpr, name: String) => new TextPatternCaptureGroup(blqHelper(e), name)
       case QUnnamed(e) =>
