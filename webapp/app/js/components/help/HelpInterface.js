@@ -186,6 +186,12 @@ var HelpInterface = React.createClass({
       example: '$fruit_colors.color:0 $fruit_colors.fruit:0',
       descr: 'Matches any text containing a fruit color (followed by space) followed by a fruit that are present in the same row of the "fruit_colors" table in the "color" and the "fruit" column respectively'
     },
+    {
+      name: 'Table Expansion Query',
+      example: '$fruits.fruit ~ 100',
+      descr: 'Expands the "fruits" table to propose 100 closest words/phrases to the entries in the "fruit" column of the "fruits" table, and returns corpus matches with these candidates. If this is a single column table, you may just use "$fruits ~100".'
+    },
+
   ],
   querySyntaxRow: function(row, i) {
     return (
