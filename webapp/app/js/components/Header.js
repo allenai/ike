@@ -49,7 +49,6 @@ const Header = React.createClass({
   render() {
     return (<header>
       <a href="/"><img src="/assets/logo.png" width="64"/></a>
-      <em>&ldquo;The Pacific Northwest&#39;s Cutest Extraction Tool&rdquo;</em>
       {this.renderAuth()}
     </header>);
   }
