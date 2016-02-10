@@ -48,7 +48,7 @@ const Header = React.createClass({
 
   render() {
     return (<header>
-      <a href="/"><img src="/assets/logo.png" width="64"/></a>
+      <a href="/"><img style={{ margin: "20px 20px 20px 0" }} src="/assets/logo.png" height="48"/></a>
       {this.renderAuth()}
     </header>);
   }
