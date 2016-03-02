@@ -1,5 +1,7 @@
 package org.allenai.dictionary
 
+import scala.collection.immutable.Iterable
+
 import java.{ lang, util }
 
 import org.allenai.common.Config._
@@ -15,16 +17,103 @@ import scala.util.{ Try, Success, Failure }
 
 trait SimilarPhrasesSearcher {
   def getSimilarPhrases(phrase: String): Seq[SimilarPhrase]
+
+  def getCentroidMatches(phrases: Seq[String]): Seq[SimilarPhrase]
 }
 
-class WordVecPhraseSearcher(config: Config) extends Logging with SimilarPhrasesSearcher {
+class CombinationPhraseSearcher(searcherList: List[EmbeddingBasedPhraseSearcher], config: Config)
+    extends Logging
+    with SimilarPhrasesSearcher {
+  val embeddingBasedPhraseSearcherList: List[EmbeddingBasedPhraseSearcher] = searcherList
+  val combinationStrategy = config[String]("combinationStrategy")
+  /** Given a phrase, returns upto maxNumSimilarPhrases closest phrases.
+    * @param phrase
+    * @return
+    */
+  override def getSimilarPhrases(phrase: String): Seq[SimilarPhrase] = {
+    val unionSetOfSimilarPhrases: List[SimilarPhrase] = (for {
+      searcher <- embeddingBasedPhraseSearcherList
+    } yield {
+      val phraseWithUnderscores = phrase.replace(' ', '_').toLowerCase
+      try {
+        searcher.getSimilarPhrasesFromMatches(searcher.model.getMatches(
+          phraseWithUnderscores,
+          searcher.maxNumSimilarPhrases
+        ))
+      } catch {
+        case _: UnknownWordException => Seq.empty
+      }
+    }).flatten
+
+    // Group the set of similar phrases from all searchers by the phrase, and add up the similarity
+    // scores
+    groupAndCombineScoresOfSimilarPhrases(unionSetOfSimilarPhrases)
+  }
+
+  /** Given a bunch of phrases, computes their centroid and determines n closest word2vec
+    * neighbors.
+    * Utility function for table expansion.
+    * @param phrases
+    */
+  override def getCentroidMatches(phrases: Seq[String]): Seq[SimilarPhrase] = {
+    val unionSetOfSimilarPhrases: List[SimilarPhrase] = (for {
+      model <- embeddingBasedPhraseSearcherList
+    } yield {
+      val vectors = for {
+        phrase <- phrases
+        vector <- model.getVectorForPhrase(phrase)
+      } yield vector
+      if (vectors.length > 0) {
+        val centroidVector = vectors.reduceLeft[Vector[Double]] { (v1, v2) =>
+          model.addVectors(
+            v1,
+            v2
+          )
+        } map
+          (_ / vectors.length)
+        model.getSimilarPhrases(centroidVector)
+      } else Seq.empty[SimilarPhrase]
+    }).flatten
+
+    // Group the set of similar phrases from all searchers by the phrase, and combine the similarity
+    // scores based on the combination strategy
+    groupAndCombineScoresOfSimilarPhrases(unionSetOfSimilarPhrases)
+  }
+
+  def groupAndCombineScoresOfSimilarPhrases(similarPhraseSet: List[SimilarPhrase]): Seq[SimilarPhrase] = {
+    if (combinationStrategy.equals("sum")) {
+      similarPhraseSet.groupBy(_.qwords).map(group => new SimilarPhrase(group._1, group._2
+        .map(_.similarity).sum / group._2.map(_.similarity).size))
+        .toSeq.sortBy(-1 * _.similarity)
+    } else if (combinationStrategy.equals("min")) {
+      similarPhraseSet.groupBy(_.qwords).map(group => new SimilarPhrase(group._1, group._2
+        .map(_.similarity).min)).toSeq.sortBy(-1 * _.similarity)
+    } else if (combinationStrategy.equals("max")) {
+      similarPhraseSet.groupBy(_.qwords).map(group => new SimilarPhrase(group._1, group._2
+        .map(_.similarity).max)).toSeq.sortBy(-1 * _.similarity)
+    } else {
+      // default strategy is average
+      similarPhraseSet.groupBy(_.qwords).map(group => new SimilarPhrase(group._1, group._2
+        .map(_.similarity).sum / embeddingBasedPhraseSearcherList.size)).toSeq.sortBy(-1 * _
+        .similarity)
+    }
+  }
+}
+
+class EmbeddingBasedPhraseSearcher(config: Config) extends Logging with SimilarPhrasesSearcher {
 
   val maxNumSimilarPhrases = 100
 
-  private val model = {
+  val model = {
     logger.info("Loading phrase vectors ...")
     val file = DataFile.fromDatastore(config[Config]("vectors"))
-    val result = Word2VecModel.fromBinFile(file).forSearch()
+    val format: String = config[String]("format")
+    var result: Searcher = null
+    if (format.equals("binary")) {
+      result = Word2VecModel.fromBinFile(file).forSearch()
+    } else {
+      result = Word2VecModel.fromTextFile(file).forSearch()
+    }
     logger.info("Loading phrase vectors complete")
     result
   }

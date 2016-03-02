@@ -58,10 +58,27 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   val searchApps = config.getConfigList("DictionaryToolWebapp.indices").asScala.map { config =>
     config.getString("name") -> Future { SearchApp(config) }
   }.toMap
-  val similarPhrasesSearcher =
-    new WordVecPhraseSearcher(ConfigFactory.load()[Config]("SimilarPhrasesSearcher"))
-  val tableExpander =
-    new WordVecCentroidTableExpander(similarPhrasesSearcher)
+
+  // Create isntances of embedding based similar phrase searchers
+  val word2vecPhrasesSearcher =
+    new EmbeddingBasedPhraseSearcher(ConfigFactory.load()[Config]("Word2vecPhrasesSearcher"))
+  val PMIEmbeddingPhrasesSearcher =
+    new EmbeddingBasedPhraseSearcher(ConfigFactory.load()[Config]("PMIPhrasesSearcher"))
+
+  // Create a list of embedding based similar phrase searchers
+  val searcherList: List[EmbeddingBasedPhraseSearcher] = List(
+    word2vecPhrasesSearcher,
+    PMIEmbeddingPhrasesSearcher
+  )
+  // Create a combination searcher that combines similarity scores of all searchers
+  val combinationPhraseSearcher: SimilarPhrasesSearcher =
+    new CombinationPhraseSearcher(searcherList, ConfigFactory.load()[Config]
+      ("CombinationPhraseSearcher"))
+
+  // TODO: Once combinationPhraseSearcher testing is done, pass on the combination
+  // searcher object to WordVecCentroidTableExpander
+  val tableExpander = new WordVecCentroidTableExpander(word2vecPhrasesSearcher)
+  //val tableExpander = new WordVecCentroidTableExpander(combinationPhraseSearcher)
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
@@ -108,7 +125,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
                 query,
                 tables,
                 patterns,
-                similarPhrasesSearcher,
+                word2vecPhrasesSearcher,
                 tableExpander
               ).get
               val resultsFuture = searchersFuture.map { searchers =>
@@ -167,7 +184,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
               val timeout = config.getConfig("QuerySuggester").
                 getDuration("timeoutInSeconds", TimeUnit.SECONDS)
               complete(searchersFuture.map { searchers =>
-                SearchApp.suggestQuery(searchers.toSeq, req, similarPhrasesSearcher, timeout)
+                SearchApp.suggestQuery(searchers.toSeq, req, word2vecPhrasesSearcher, timeout)
               })
             }
           }
@@ -176,7 +193,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
       parameters('phrase) { phrase =>
         complete {
           usageLogger.info(s"similarPhrases for phrase $phrase")
-          SimilarPhrasesResponse(similarPhrasesSearcher.getSimilarPhrases(phrase))
+          SimilarPhrasesResponse(word2vecPhrasesSearcher.getSimilarPhrases(phrase))
         }
       }
     }
