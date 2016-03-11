@@ -179,7 +179,7 @@ class EmbeddingBasedPhraseSearcher(config: Config) extends Logging with SimilarP
     * Utility function for table expansion.
     * @param phrases
     */
-  def getCentroidMatches(phrases: Seq[String]): Seq[SimilarPhrase] = {
+  override def getCentroidMatches(phrases: Seq[String]): Seq[SimilarPhrase] = {
     val vectors = for {
       phrase <- phrases
       vector <- getVectorForPhrase(phrase)
