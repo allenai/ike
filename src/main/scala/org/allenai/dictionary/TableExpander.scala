@@ -19,7 +19,7 @@ trait TableExpander {
   * Uses WordVecPhraseSearcher internally to expand each table entry.
   * @param wordvecSearcher
   */
-class WordVecIntersectionTableExpander(wordvecSearcher: EmbeddingBasedPhraseSearcher)
+class EmbeddingBasedIntersectionTableExpander(wordvecSearcher: SimilarPhrasesSearcher)
     extends Logging with TableExpander {
 
   override def expandTableColumn(table: Table, columnName: String): Seq[SimilarPhrase] = {
@@ -57,7 +57,7 @@ class WordVecIntersectionTableExpander(wordvecSearcher: EmbeddingBasedPhraseSear
   * get the word2vec centroid of all seed entries, then return the neighbors of the centroid.
   * @param wordvecSearcher
   */
-class WordVecCentroidTableExpander(wordvecSearcher: SimilarPhrasesSearcher)
+class EmbeddingBasedCentroidTableExpander(wordvecSearcher: SimilarPhrasesSearcher)
     extends Logging with TableExpander {
 
   override def expandTableColumn(table: Table, columnName: String): Seq[SimilarPhrase] = {

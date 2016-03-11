@@ -17,21 +17,25 @@ import scala.util.{ Try, Success, Failure }
 
 trait SimilarPhrasesSearcher {
   def getSimilarPhrases(phrase: String): Seq[SimilarPhrase]
-
   def getCentroidMatches(phrases: Seq[String]): Seq[SimilarPhrase]
 }
 
-class CombinationPhraseSearcher(searcherList: List[EmbeddingBasedPhraseSearcher], config: Config)
+/* This class takes a sequence of EmbeddingBasedPhraseSearcher s as input
+   and combines the results produced by these EmbeddingBasedPhraseSearcher s
+   using the combination strategy defined in config file
+   "combinationPhraseSearcher:combinationStrategy".
+ */
+class EmbeddingSearcherCombinator(searcherList: Seq[EmbeddingBasedPhraseSearcher], config: Config)
     extends Logging
     with SimilarPhrasesSearcher {
-  val embeddingBasedPhraseSearcherList: List[EmbeddingBasedPhraseSearcher] = searcherList
+  val embeddingBasedPhraseSearcherList: Seq[EmbeddingBasedPhraseSearcher] = searcherList
   val combinationStrategy = config[String]("combinationStrategy")
   /** Given a phrase, returns upto maxNumSimilarPhrases closest phrases.
     * @param phrase
     * @return
     */
   override def getSimilarPhrases(phrase: String): Seq[SimilarPhrase] = {
-    val unionSetOfSimilarPhrases: List[SimilarPhrase] = (for {
+    val unionSetOfSimilarPhrases: Seq[SimilarPhrase] = (for {
       searcher <- embeddingBasedPhraseSearcherList
     } yield {
       val phraseWithUnderscores = phrase.replace(' ', '_').toLowerCase
@@ -56,7 +60,7 @@ class CombinationPhraseSearcher(searcherList: List[EmbeddingBasedPhraseSearcher]
     * @param phrases
     */
   override def getCentroidMatches(phrases: Seq[String]): Seq[SimilarPhrase] = {
-    val unionSetOfSimilarPhrases: List[SimilarPhrase] = (for {
+    val unionSetOfSimilarPhrases: Seq[SimilarPhrase] = (for {
       model <- embeddingBasedPhraseSearcherList
     } yield {
       val vectors = for {
@@ -80,7 +84,7 @@ class CombinationPhraseSearcher(searcherList: List[EmbeddingBasedPhraseSearcher]
     groupAndCombineScoresOfSimilarPhrases(unionSetOfSimilarPhrases)
   }
 
-  def groupAndCombineScoresOfSimilarPhrases(similarPhraseSet: List[SimilarPhrase]): Seq[SimilarPhrase] = {
+  def groupAndCombineScoresOfSimilarPhrases(similarPhraseSet: Seq[SimilarPhrase]): Seq[SimilarPhrase] = {
     if (combinationStrategy.equals("sum")) {
       similarPhraseSet.groupBy(_.qwords).map(group => new SimilarPhrase(group._1, group._2
         .map(_.similarity).sum / group._2.map(_.similarity).size))
@@ -100,6 +104,10 @@ class CombinationPhraseSearcher(searcherList: List[EmbeddingBasedPhraseSearcher]
   }
 }
 
+/*
+  This class constructs a similarity phrase searcher based on embeddings based vector
+  representations learnt from large text corpora. E.g. word2vec embeddings, PMI based embeddings.
+ */
 class EmbeddingBasedPhraseSearcher(config: Config) extends Logging with SimilarPhrasesSearcher {
 
   val maxNumSimilarPhrases = 100

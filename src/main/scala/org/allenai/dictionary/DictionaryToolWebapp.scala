@@ -61,24 +61,24 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
 
   // Create isntances of embedding based similar phrase searchers
   val word2vecPhrasesSearcher =
-    new EmbeddingBasedPhraseSearcher(ConfigFactory.load()[Config]("Word2vecPhrasesSearcher"))
+    new EmbeddingBasedPhraseSearcher(ConfigFactory.load()[Config]("word2vecPhrasesSearcher"))
   val PMIEmbeddingPhrasesSearcher =
-    new EmbeddingBasedPhraseSearcher(ConfigFactory.load()[Config]("PMIPhrasesSearcher"))
+    new EmbeddingBasedPhraseSearcher(ConfigFactory.load()[Config]("pmiPhrasesSearcher"))
 
   // Create a list of embedding based similar phrase searchers
-  val searcherList: List[EmbeddingBasedPhraseSearcher] = List(
+  val searcherList: Seq[EmbeddingBasedPhraseSearcher] = Seq(
     word2vecPhrasesSearcher,
     PMIEmbeddingPhrasesSearcher
   )
   // Create a combination searcher that combines similarity scores of all searchers
   val combinationPhraseSearcher: SimilarPhrasesSearcher =
-    new CombinationPhraseSearcher(searcherList, ConfigFactory.load()[Config]
-      ("CombinationPhraseSearcher"))
+    new EmbeddingSearcherCombinator(searcherList, ConfigFactory.load()[Config]
+      ("combinationPhraseSearcher"))
 
   // TODO: Once combinationPhraseSearcher testing is done, pass on the combination
   // searcher object to WordVecCentroidTableExpander
-  val tableExpander = new WordVecCentroidTableExpander(word2vecPhrasesSearcher)
-  //val tableExpander = new WordVecCentroidTableExpander(combinationPhraseSearcher)
+  //val tableExpander = new WordVecCentroidTableExpander(word2vecPhrasesSearcher)
+  val tableExpander = new EmbeddingBasedCentroidTableExpander(combinationPhraseSearcher)
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
