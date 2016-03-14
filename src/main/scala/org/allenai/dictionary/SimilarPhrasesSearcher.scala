@@ -16,8 +16,16 @@ import scala.collection.{ mutable, SeqView }
 import scala.util.{ Try, Success, Failure }
 
 trait SimilarPhrasesSearcher {
+
+  /** Given a phrase, returns upto maxNumSimilarPhrases closest phrases. The similarity measure
+    * and is dependent on the specific implementation of the SimilarPhrasesSearcher.
+    */
   def getSimilarPhrases(phrase: String): Seq[SimilarPhrase]
-  def getCentroidMatches(phrases: Seq[String]): Seq[SimilarPhrase]
+  /** Given a set of phrases, retrieves and ranks phrases close to this set,
+    * in terms of similarity measure. The similarity measure and ranking is dependent on the
+    * specific implementation of the SimilarPhrasesSearcher.
+    */
+  def getSimilarPhrases(phraseSeq: Seq[String]): Seq[SimilarPhrase]
 }
 
 /** This class takes a sequence of EmbeddingBasedPhrasesSearchers as input and combines the
@@ -65,14 +73,14 @@ class EmbeddingSearcherCombinator(searcherList: Seq[EmbeddingBasedPhrasesSearche
   /** Given a bunch of phrases, computes their centroid and determines n closest word2vec
     * neighbors.
     * Utility function for table expansion.
-    * @param phrases
+    * @param phraseSeq
     */
-  override def getCentroidMatches(phrases: Seq[String]): Seq[SimilarPhrase] = {
+  override def getSimilarPhrases(phraseSeq: Seq[String]): Seq[SimilarPhrase] = {
     val unionSetOfSimilarPhrases = (for {
       model <- embeddingBasedPhraseSearcherList
     } yield {
       val vectors = for {
-        phrase <- phrases
+        phrase <- phraseSeq
         vector <- model.getVectorForPhrase(phrase)
       } yield vector
       if (vectors.length > 0) {
@@ -186,11 +194,11 @@ class EmbeddingBasedPhrasesSearcher(config: Config) extends Logging with Similar
 
   /** Given a bunch of phrases, computes their centroid and determines n closest word2vec neighbors.
     * Utility function for table expansion.
-    * @param phrases
+    * @param phraseSeq
     */
-  override def getCentroidMatches(phrases: Seq[String]): Seq[SimilarPhrase] = {
+  override def getSimilarPhrases(phraseSeq: Seq[String]): Seq[SimilarPhrase] = {
     val vectors = for {
-      phrase <- phrases
+      phrase <- phraseSeq
       vector <- getVectorForPhrase(phrase)
     } yield vector
 

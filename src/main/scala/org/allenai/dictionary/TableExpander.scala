@@ -77,7 +77,7 @@ class EmbeddingBasedCentroidTableExpander(wordvecSearcher: SimilarPhrasesSearche
       tableEntry.qwords.map(_.value).mkString(" ")
     }
 
-    val expandedSet = wordvecSearcher.getCentroidMatches(columnEntries)
+    val expandedSet = wordvecSearcher.getSimilarPhrases(columnEntries)
 
     // If the table entries are missing from the similar phrase-set, they should be added to the
     // set. i.e. ExpandedSet should be a superset of original set.
