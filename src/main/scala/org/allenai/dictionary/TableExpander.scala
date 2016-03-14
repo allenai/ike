@@ -31,7 +31,9 @@ class EmbeddingBasedIntersectionTableExpander(wordvecSearcher: SimilarPhrasesSea
       val numPhrases = similarityScores.length
       if (numPhrases > 0) {
         similarityScores.sum / numPhrases
-      } else 0.0
+      } else {
+        0.0
+      }
     }
 
     val currentTableRows = table.positive.map(_.values(colIndex))
@@ -63,7 +65,6 @@ class EmbeddingBasedCentroidTableExpander(wordvecSearcher: SimilarPhrasesSearche
   override def expandTableColumn(table: Table, columnName: String): Seq[SimilarPhrase] = {
     // Get index of the required column in the table.
     val colIndex = table.getIndexOfColumn(columnName)
-
     // Construct set of all table rows.
     val currentTableEntries = new scala.collection.mutable.HashSet[Seq[QWord]]()
 
@@ -76,7 +77,7 @@ class EmbeddingBasedCentroidTableExpander(wordvecSearcher: SimilarPhrasesSearche
       tableEntry.qwords.map(_.value).mkString(" ")
     }
 
-    val expandedSet: Seq[SimilarPhrase] = wordvecSearcher.getCentroidMatches(columnEntries)
+    val expandedSet = wordvecSearcher.getCentroidMatches(columnEntries)
 
     // If the table entries are missing from the similar phrase-set, they should be added to the
     // set. i.e. ExpandedSet should be a superset of original set.

@@ -20,22 +20,30 @@ trait SimilarPhrasesSearcher {
   def getCentroidMatches(phrases: Seq[String]): Seq[SimilarPhrase]
 }
 
-/* This class takes a sequence of EmbeddingBasedPhraseSearcher s as input
-   and combines the results produced by these EmbeddingBasedPhraseSearcher s
-   using the combination strategy defined in config file
-   "combinationPhraseSearcher:combinationStrategy".
- */
-class EmbeddingSearcherCombinator(searcherList: Seq[EmbeddingBasedPhraseSearcher], config: Config)
+/** This class takes a sequence of EmbeddingBasedPhrasesSearchers as input and combines the
+  * results produced by these EmbeddingBasedPhrasesSearchers using the combination strategy
+  * defined in config file "combinationPhraseSearcher:combinationStrategy".
+  */
+class EmbeddingSearcherCombinator(searcherList: Seq[EmbeddingBasedPhrasesSearcher], config: Config)
     extends Logging
     with SimilarPhrasesSearcher {
-  val embeddingBasedPhraseSearcherList: Seq[EmbeddingBasedPhraseSearcher] = searcherList
+
+  val embeddingBasedPhraseSearcherList: Seq[EmbeddingBasedPhrasesSearcher] = searcherList
+  var prevEmbeddingSize = -1
+  for (searcher <- searcherList) {
+    val currentEmbeddingSize = searcher.embeddingSize
+    if (prevEmbeddingSize > 0) {
+      assert(currentEmbeddingSize == prevEmbeddingSize, "Embedding sizes of searchers being " +
+        "combined in the EmbeddingSearcherCombinator should be the same.")
+    }
+    prevEmbeddingSize = currentEmbeddingSize
+  }
   val combinationStrategy = config[String]("combinationStrategy")
+
   /** Given a phrase, returns upto maxNumSimilarPhrases closest phrases.
-    * @param phrase
-    * @return
     */
   override def getSimilarPhrases(phrase: String): Seq[SimilarPhrase] = {
-    val unionSetOfSimilarPhrases: Seq[SimilarPhrase] = (for {
+    val unionSetOfSimilarPhrases = (for {
       searcher <- embeddingBasedPhraseSearcherList
     } yield {
       val phraseWithUnderscores = phrase.replace(' ', '_').toLowerCase
@@ -60,7 +68,7 @@ class EmbeddingSearcherCombinator(searcherList: Seq[EmbeddingBasedPhraseSearcher
     * @param phrases
     */
   override def getCentroidMatches(phrases: Seq[String]): Seq[SimilarPhrase] = {
-    val unionSetOfSimilarPhrases: Seq[SimilarPhrase] = (for {
+    val unionSetOfSimilarPhrases = (for {
       model <- embeddingBasedPhraseSearcherList
     } yield {
       val vectors = for {
@@ -76,7 +84,9 @@ class EmbeddingSearcherCombinator(searcherList: Seq[EmbeddingBasedPhraseSearcher
         } map
           (_ / vectors.length)
         model.getSimilarPhrases(centroidVector)
-      } else Seq.empty[SimilarPhrase]
+      } else {
+        Seq.empty[SimilarPhrase]
+      }
     }).flatten
 
     // Group the set of similar phrases from all searchers by the phrase, and combine the similarity
@@ -87,8 +97,7 @@ class EmbeddingSearcherCombinator(searcherList: Seq[EmbeddingBasedPhraseSearcher
   def groupAndCombineScoresOfSimilarPhrases(similarPhraseSet: Seq[SimilarPhrase]): Seq[SimilarPhrase] = {
     if (combinationStrategy.equals("sum")) {
       similarPhraseSet.groupBy(_.qwords).map(group => new SimilarPhrase(group._1, group._2
-        .map(_.similarity).sum / group._2.map(_.similarity).size))
-        .toSeq.sortBy(-1 * _.similarity)
+        .map(_.similarity).sum)).toSeq.sortBy(-1 * _.similarity)
     } else if (combinationStrategy.equals("min")) {
       similarPhraseSet.groupBy(_.qwords).map(group => new SimilarPhrase(group._1, group._2
         .map(_.similarity).min)).toSeq.sortBy(-1 * _.similarity)
@@ -104,27 +113,27 @@ class EmbeddingSearcherCombinator(searcherList: Seq[EmbeddingBasedPhraseSearcher
   }
 }
 
-/*
-  This class constructs a similarity phrase searcher based on embeddings based vector
-  representations learnt from large text corpora. E.g. word2vec embeddings, PMI based embeddings.
- */
-class EmbeddingBasedPhraseSearcher(config: Config) extends Logging with SimilarPhrasesSearcher {
+/** This class constructs a similarity phrase searcher based on embeddings based vector
+  * representations learnt from large text corpora. E.g. word2vec embeddings, PMI based embeddings.
+  */
+class EmbeddingBasedPhrasesSearcher(config: Config) extends Logging with SimilarPhrasesSearcher {
 
   val maxNumSimilarPhrases = 100
 
   val model = {
     logger.info("Loading phrase vectors ...")
     val file = DataFile.fromDatastore(config[Config]("vectors"))
-    val format: String = config[String]("format")
-    var result: Searcher = null
-    if (format.equals("binary")) {
-      result = Word2VecModel.fromBinFile(file).forSearch()
+    val format = config[String]("format")
+    val result = if (format.equals("binary")) {
+      Word2VecModel.fromBinFile(file).forSearch()
     } else {
-      result = Word2VecModel.fromTextFile(file).forSearch()
+      Word2VecModel.fromTextFile(file).forSearch()
     }
     logger.info("Loading phrase vectors complete")
     result
   }
+
+  val embeddingSize = config[Int]("embeddingSize")
 
   /** Given a phrase, returns upto maxNumSimilarPhrases closest phrases.
     * @param phrase
@@ -189,7 +198,9 @@ class EmbeddingBasedPhraseSearcher(config: Config) extends Logging with SimilarP
       val centroidVector = vectors.reduceLeft[Vector[Double]] { (v1, v2) => addVectors(v1, v2) } map
         (_ / vectors.length)
       getSimilarPhrases(centroidVector)
-    } else Seq.empty[SimilarPhrase]
+    } else {
+      Seq.empty[SimilarPhrase]
+    }
   }
 
   /** Helper Method to add two vectors of Doubles.

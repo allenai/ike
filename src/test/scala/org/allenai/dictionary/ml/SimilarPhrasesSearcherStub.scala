@@ -7,4 +7,7 @@ class SimilarPhrasesSearcherStub(phrases: Map[String, Seq[SimilarPhrase]] = Map(
   override def getSimilarPhrases(phrase: String): Seq[SimilarPhrase] = {
     phrases.getOrElse(phrase, Seq())
   }
+  override def getCentroidMatches(phraseSeq: Seq[String]): Seq[SimilarPhrase] = {
+    Seq.empty
+  }
 }
