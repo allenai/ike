@@ -18,7 +18,7 @@ import scala.util.{ Try, Success, Failure }
 trait SimilarPhrasesSearcher {
 
   /** Given a phrase, returns upto maxNumSimilarPhrases closest phrases. The similarity measure
-    * and is dependent on the specific implementation of the SimilarPhrasesSearcher.
+    * is dependent on the specific implementation of the SimilarPhrasesSearcher.
     */
   def getSimilarPhrases(phrase: String): Seq[SimilarPhrase]
   /** Given a set of phrases, retrieves and ranks phrases close to this set,

@@ -12,14 +12,15 @@ trait TableExpander {
   def expandTableColumn(table: Table, columnName: String): Seq[SimilarPhrase]
 }
 
-/** Class that generalizes a given table (column) entries using Word2Vec. The basic idea here is:
-  * expand each seed row in the given column using Word2Vec, then determine / return the
-  * intersection set (phrases returned as matches for a "large" fraction of rows in the table--
+/** Class that generalizes a given table (column) entries using similar phrases.
+  * The basic idea here is:
+  * expand each seed row in the given column using SimilarPhrasesSearcher, then determine / return
+  * the intersection set (phrases returned as matches for a "large" fraction of rows in the table--
   * hard-coded to 75%.
-  * Uses WordVecPhraseSearcher internally to expand each table entry.
-  * @param wordvecSearcher
+  * Uses SimilarPhrasesSearcher internally to expand each table entry.
+  * @param similarPhrasesSearcher
   */
-class EmbeddingBasedIntersectionTableExpander(wordvecSearcher: SimilarPhrasesSearcher)
+class SimilarPhrasesBasedIntersectionTableExpander(similarPhrasesSearcher: SimilarPhrasesSearcher)
     extends Logging with TableExpander {
 
   override def expandTableColumn(table: Table, columnName: String): Seq[SimilarPhrase] = {
@@ -45,7 +46,7 @@ class EmbeddingBasedIntersectionTableExpander(wordvecSearcher: SimilarPhrasesSea
     // Score is arithmetic mean of all similarity scores obtained.
     val phraseScoreMap = (currentTableRows.flatMap {
       tableEntry =>
-        wordvecSearcher.getSimilarPhrases(tableEntry.qwords.map(_.value).mkString(" "))
+        similarPhrasesSearcher.getSimilarPhrases(tableEntry.qwords.map(_.value).mkString(" "))
     }).groupBy(_.qwords)
       .filter(_._2.size >= 0.75 * currentTableRows.size)
       .mapValues(phrases => averageSimilarity(phrases.map(_.similarity)))
@@ -55,11 +56,12 @@ class EmbeddingBasedIntersectionTableExpander(wordvecSearcher: SimilarPhrasesSea
   }
 }
 
-/** Class that generalizes a given table (column) entries using Word2Vec. The basic idea here is:
-  * get the word2vec centroid of all seed entries, then return the neighbors of the centroid.
-  * @param wordvecSearcher
+/** Class that generalizes a given table (column) entries using SimilarPhrasesSearcher. The basic
+  * idea here is: get the phrases similar to the set of all seed entries, by using
+  * the logic implemented in SimilarPhrasesSearcher.getSimilarPhrases
+  * @param similarPhrasesSearcher
   */
-class EmbeddingBasedCentroidTableExpander(wordvecSearcher: SimilarPhrasesSearcher)
+class SimilarPhrasesBasedTableExpander(similarPhrasesSearcher: SimilarPhrasesSearcher)
     extends Logging with TableExpander {
 
   override def expandTableColumn(table: Table, columnName: String): Seq[SimilarPhrase] = {
@@ -77,7 +79,7 @@ class EmbeddingBasedCentroidTableExpander(wordvecSearcher: SimilarPhrasesSearche
       tableEntry.qwords.map(_.value).mkString(" ")
     }
 
-    val expandedSet = wordvecSearcher.getSimilarPhrases(columnEntries)
+    val expandedSet = similarPhrasesSearcher.getSimilarPhrases(columnEntries)
 
     // If the table entries are missing from the similar phrase-set, they should be added to the
     // set. i.e. ExpandedSet should be a superset of original set.
