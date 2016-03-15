@@ -74,9 +74,9 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
   )
 
   // TODO: Once EmbeddingSearcherCombinator testing is done, pass on the combination
-  // searcher object to EmbeddingBasedCentroidTableExpander
+  // searcher object to SimilarPhrasesBasedTableExpander
   val tableExpander = new SimilarPhrasesBasedTableExpander(word2vecPhrasesSearcher)
-  //val tableExpander = new EmbeddingBasedCentroidTableExpander(combinationPhraseSearcher)
+  //val tableExpander = new SimilarPhrasesBasedTableExpander(combinationPhraseSearcher)
 
   implicit def myExceptionHandler(implicit log: LoggingContext): ExceptionHandler =
     ExceptionHandler {
