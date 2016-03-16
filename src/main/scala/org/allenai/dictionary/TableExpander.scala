@@ -12,14 +12,15 @@ trait TableExpander {
   def expandTableColumn(table: Table, columnName: String): Seq[SimilarPhrase]
 }
 
-/** Class that generalizes a given table (column) entries using Word2Vec. The basic idea here is:
-  * expand each seed row in the given column using Word2Vec, then determine / return the
-  * intersection set (phrases returned as matches for a "large" fraction of rows in the table--
+/** Class that generalizes a given table (column) entries using similar phrases.
+  * The basic idea here is:
+  * expand each seed row in the given column using SimilarPhrasesSearcher, then determine / return
+  * the intersection set (phrases returned as matches for a "large" fraction of rows in the table--
   * hard-coded to 75%.
-  * Uses WordVecPhraseSearcher internally to expand each table entry.
-  * @param wordvecSearcher
+  * Uses SimilarPhrasesSearcher internally to expand each table entry.
+  * @param similarPhrasesSearcher
   */
-class WordVecIntersectionTableExpander(wordvecSearcher: WordVecPhraseSearcher)
+class SimilarPhrasesBasedIntersectionTableExpander(similarPhrasesSearcher: SimilarPhrasesSearcher)
     extends Logging with TableExpander {
 
   override def expandTableColumn(table: Table, columnName: String): Seq[SimilarPhrase] = {
@@ -31,7 +32,9 @@ class WordVecIntersectionTableExpander(wordvecSearcher: WordVecPhraseSearcher)
       val numPhrases = similarityScores.length
       if (numPhrases > 0) {
         similarityScores.sum / numPhrases
-      } else 0.0
+      } else {
+        0.0
+      }
     }
 
     val currentTableRows = table.positive.map(_.values(colIndex))
@@ -43,7 +46,7 @@ class WordVecIntersectionTableExpander(wordvecSearcher: WordVecPhraseSearcher)
     // Score is arithmetic mean of all similarity scores obtained.
     val phraseScoreMap = (currentTableRows.flatMap {
       tableEntry =>
-        wordvecSearcher.getSimilarPhrases(tableEntry.qwords.map(_.value).mkString(" "))
+        similarPhrasesSearcher.getSimilarPhrases(tableEntry.qwords.map(_.value).mkString(" "))
     }).groupBy(_.qwords)
       .filter(_._2.size >= 0.75 * currentTableRows.size)
       .mapValues(phrases => averageSimilarity(phrases.map(_.similarity)))
@@ -53,21 +56,21 @@ class WordVecIntersectionTableExpander(wordvecSearcher: WordVecPhraseSearcher)
   }
 }
 
-/** Class that generalizes a given table (column) entries using Word2Vec. The basic idea here is:
-  * get the word2vec centroid of all seed entries, then return the neighbors of the centroid.
-  * @param wordvecSearcher
+/** Class that generalizes a given table (column) entries using SimilarPhrasesSearcher. The basic
+  * idea here is: get the phrases similar to the set of all seed entries, by using
+  * the logic implemented in SimilarPhrasesSearcher.getSimilarPhrases
+  * @param similarPhrasesSearcher
   */
-class WordVecCentroidTableExpander(wordvecSearcher: WordVecPhraseSearcher)
+class SimilarPhrasesBasedTableExpander(similarPhrasesSearcher: SimilarPhrasesSearcher)
     extends Logging with TableExpander {
 
   override def expandTableColumn(table: Table, columnName: String): Seq[SimilarPhrase] = {
     // Get index of the required column in the table.
     val colIndex = table.getIndexOfColumn(columnName)
-
-    // Construct set of all table rows. If the same entries appear in the similar phrases result
-    // returned by the WordVecPhraseSearcher, they should be filtered out.
+    // Construct set of all table rows.
     val currentTableEntries = new scala.collection.mutable.HashSet[Seq[QWord]]()
 
+    // Retrieve the set of entries in the particular column being expanded.
     val columnEntries = for {
       row <- table.positive
     } yield {
@@ -75,8 +78,16 @@ class WordVecCentroidTableExpander(wordvecSearcher: WordVecPhraseSearcher)
       currentTableEntries.add(tableEntry.qwords)
       tableEntry.qwords.map(_.value).mkString(" ")
     }
-    wordvecSearcher.getCentroidMatches(columnEntries) filter (
-      x => !currentTableEntries.contains(x.qwords)
-    )
+
+    val expandedSet = similarPhrasesSearcher.getSimilarPhrases(columnEntries)
+
+    // If the table entries are missing from the similar phrase-set, they should be added to the
+    // set. i.e. ExpandedSet should be a superset of original set.
+    for (entry: String <- columnEntries) {
+      if (!expandedSet.contains(entry)) {
+        expandedSet.+:(SimilarPhrase(entry.split("_").map(QWord), 1))
+      }
+    }
+    return expandedSet
   }
 }
