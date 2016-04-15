@@ -10,17 +10,15 @@ var DownloadTableButton = React.createClass({
     var downloadDict = function(e) {
       e.stopPropagation();
       var tsv = TableManager.table2csv(table);
-      var encodedTsv = encodeURIComponent(tsv);
-      var pom = document.createElement('a');
-      pom.setAttribute('href', 'data:text/tsv;charset=utf-8,' + encodedTsv);
-      pom.setAttribute('target', '_blank');
-      pom.setAttribute('download', table.name + ".dict.tsv");
-      document.body.appendChild(pom);
+      var blob = new Blob([tsv], {type: 'text/tsv'});
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = table.name + ".dict.tsv";
+      document.body.appendChild(a);
       setTimeout(function() {
-        pom.click();
-        document.body.removeChild(pom);
+        a.click();
+        document.body.removeChild(a);
       }, 50);
-    };
     var icon = <Glyphicon glyph="download"/>;
     return <Button onClick={downloadDict} bsSize="xsmall">{icon}</Button>;
   }
