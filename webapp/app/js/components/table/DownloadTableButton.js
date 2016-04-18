@@ -19,6 +19,7 @@ var DownloadTableButton = React.createClass({
         a.click();
         document.body.removeChild(a);
       }, 50);
+    };
     var icon = <Glyphicon glyph="download"/>;
     return <Button onClick={downloadDict} bsSize="xsmall">{icon}</Button>;
   }
