@@ -103,9 +103,6 @@ var SearchInterface = React.createClass({
 
   componentDidMount: function() {
     CorporaStore.addChangeListener(this.corporaChanged);
-
-    if(this.queryLink().value)
-      this.search();
   },
 
   componentWillUnmount: function() {
