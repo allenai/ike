@@ -106,6 +106,11 @@ var HelpInterface = React.createClass({
       descr: 'Matches a determiner like "the" or "a" followed by the word "dog" (see below for table of POS symbols)'
     },
     {
+      name: 'Chunk Tags',
+      example: 'NP VP',
+      descr: 'Matches a Noun Phrase followed by a Verb Phrase. Also supported: PP (Prepositional Phrase)'
+    },
+    {
       name: 'Unnamed Capture Groups',
       example: '(DT) dog',
       descr: 'Captures a determiner before the word "dog"' 
