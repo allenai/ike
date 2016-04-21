@@ -3,6 +3,8 @@ var bs = require('react-bootstrap');
 var ButtonToolbar = bs.ButtonToolbar;
 var ButtonGroup = bs.ButtonGroup;
 var Button = bs.Button;
+var OverlayTrigger = bs.OverlayTrigger;
+var Tooltip = bs.Tooltip;
 var TableManager = require('../../managers/TableManager.js');
 var Glyphicon = bs.Glyphicon;
 
@@ -95,12 +97,18 @@ var AddResultButton = React.createClass({
     return (
       <ButtonToolbar>
         <ButtonGroup bsSize="small" style={{display: 'flex'}}>
-          <Button onClick={this.togglePos} bsStyle={this.posStyle()}>
-            <Glyphicon glyph="plus" />
-          </Button>
-          <Button onClick={this.toggleNeg} bsStyle={this.negStyle()}>
-            <Glyphicon glyph="minus" />
-          </Button>
+          <OverlayTrigger container={document.body} trigger="hover" placement="left"
+            overlay={<Tooltip>Click to add this extraction to the target table as a positive example</Tooltip>}>
+            <Button onClick={this.togglePos} bsStyle={this.posStyle()}>
+              <Glyphicon glyph="plus" />
+            </Button>
+          </OverlayTrigger>
+          <OverlayTrigger container={document.body} trigger="hover" placement="right"
+            overlay={<Tooltip>Click to add this extraction to the target table as a negative example</Tooltip>}>
+            <Button onClick={this.toggleNeg} bsStyle={this.negStyle()}>
+              <Glyphicon glyph="minus" />
+            </Button>
+          </OverlayTrigger>
         </ButtonGroup>
       </ButtonToolbar>
     );
