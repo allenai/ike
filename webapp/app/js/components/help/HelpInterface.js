@@ -136,6 +136,11 @@ var HelpInterface = React.createClass({
       descr: 'Matches the phrase "the dog and the" followed by either a noun, a plural noun, or a proper noun (see below for table of POS symbols)'
     },
     {
+      name: 'Disjunctions',
+      example: '{(?<column1> NN) in (?<column2> NP), (?<column1> NN) at (?<column2> NN)}',
+      descr: 'In expressions with disjuncts containing capture groups, you have to name the capture groups with corresponding column names. Unnamed capture groups will not work in this case.'
+    },
+    {
       name: 'Repetitions',
       example: 'JJ* dog',
       descr: 'Matches the word "dog" with zero or more adjectives before it'
