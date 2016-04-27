@@ -235,6 +235,78 @@ var HelpInterface = React.createClass({
       </div>
     );
   },
+  generalConfigOptions: [
+    {
+      option: 'Max Rows',
+      descr: 'Maximum number of unique results per query'
+    },
+    {
+      option: 'Evidence Per Result Group',
+      descr: 'Number of corpus hits for which source text is included in provenance'
+    }
+  ],
+  querySuggestConfigOptions: [
+    { option: 'Disable',
+      descr: 'Hide Narrow/Broaden buttons on the Search page'
+    },
+    {
+      option: 'Max Number of Edits',
+      descr: 'Maximum number of transformations of the input query to consider for producing new query suggestions'
+    },
+    {
+      option: 'Beam Size',
+      descr: 'The Query Suggestion module uses a Beam Search over a tree of query transformations to come up with a ranked list of candidate queries. This option is used to limit the candidate set of transformations to consider at every step of the search.'
+    },
+    {
+      option: 'Sample Size',
+      descr: ' Number of corpus samples used to evaluate query suggestions'
+    },
+    {
+      option: 'Positive Weight',
+      descr: 'In evaluating query suggestions, this weight is applied to positively labeled hits for a candidate query'
+    },
+    {
+      option: 'Negative Weight',
+      descr: 'In evaluating query suggestions, this weight is applied to negatively labeled hits for a candidate query'
+    },
+    {
+      option: 'Unlabelled Weight',
+      descr: 'In evaluating query suggestions, this weight is applied to hits not present in the target table'
+    }
+  ],
+  configOptionRow: function(row, i) {
+    return (
+      <tr key={i}>
+        <td>{row.option}</td>
+        <td>{row.descr}</td>
+      </tr>
+    );
+  },
+  configOptionsTable: function(configOptions) {
+    var rows = configOptions.map(this.configOptionRow);
+    return (
+      <Table striped condensed>
+        <thead>
+          <tr>
+            <th style={{width: '25%'}}>Name</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>{rows}</tbody>
+      </Table>
+     );
+  },
+  renderConfigOptions: function() {
+    return (
+      <div>
+        <h3>Config Options</h3>
+        <h4>General</h4>
+        <Panel>{this.configOptionsTable(this.generalConfigOptions)}</Panel>
+        <h4>Query Suggestion</h4>
+        <Panel>{this.configOptionsTable(this.querySuggestConfigOptions)}</Panel>
+      </div>
+    );
+  },
   render: function() {
     return (
       <Row>
@@ -242,6 +314,7 @@ var HelpInterface = React.createClass({
           {this.renderBugs()}
           {this.renderQuerySyntax()}
           {this.renderPosTags()}
+          {this.renderConfigOptions()}
         </Col>
       </Row>
     );

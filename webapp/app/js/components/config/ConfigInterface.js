@@ -44,6 +44,7 @@ var ConfigInterface = React.createClass({
     var disable = this.toggleCheckbox('disable', 'ml');
     return (
       <div>
+        <span><i>Use the 'Config Options' section of the Help page as reference to use these options.</i></span>
         <Input
           type='checkbox'
           label='Hide rows that are in table'
