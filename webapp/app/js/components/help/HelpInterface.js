@@ -77,11 +77,15 @@ var HelpInterface = React.createClass({
       </div>
     );
   },
-  renderBugs: function() {
+  renderGuideAndBugLinks: function() {
+    var guideUrl = 'https://docs.google.com/document/d/1mTyuvTUNzHHapIEfg2i7NM4cp12wCD6AsTbiOxQA5tA/edit#heading=h.v4yfgk8xta6l';
     var issueUrl = 'https://github.com/allenai/okcorpus/issues';
     return (
       <div>
         <h3>Getting Help</h3>
+        <p>
+          If you are a new user, refer the <a href={guideUrl}>IKE Getting Started Guide</a>.
+        </p>
         <p>
           File bugs, request features, and ask for help
           by creating a new issue <a href={issueUrl}>on GitHub</a>.
@@ -311,7 +315,7 @@ var HelpInterface = React.createClass({
     return (
       <Row>
         <Col xs={6}>
-          {this.renderBugs()}
+          {this.renderGuideAndBugLinks()}
           {this.renderQuerySyntax()}
           {this.renderPosTags()}
           {this.renderConfigOptions()}
