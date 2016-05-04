@@ -59,7 +59,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     config.getString("name") -> Future { SearchApp(config) }
   }.toMap
 
-  // Create isntances of embedding based similar phrase searchers
+  // Create instances of embedding based similar phrase searchers
   val word2vecPhrasesSearcher =
     new EmbeddingBasedPhrasesSearcher(ConfigFactory.load()[Config]("word2vecPhrasesSearcher"))
   val pmiEmbeddingPhrasesSearcher =
@@ -277,7 +277,7 @@ class DictionaryToolActor extends Actor with HttpService with SprayJsonSupport w
     pathEnd {
       complete {
         val readySearchApps = searchApps.filter(_._2.isCompleted)
-        readySearchApps.map {
+        readySearchApps.toSeq.sortBy(_._1).map {
           case (corpusName, app) => CorpusDescription(corpusName, app.get.description)
         }
       }
