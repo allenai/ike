@@ -62,7 +62,7 @@ libraryDependencies ++= Seq(
     "com.github.tminglei" %% "slick-pg" % "0.8.2",
     "com.typesafe.play" %% "play-json" % "2.3.8",
     "org.postgresql" % "postgresql" % "9.4-1201-jdbc41",
-    "nl.inl.blacklab" % "blacklab_2.10" % "1.0-ALLENAI-10",
+    "nl.inl.blacklab" % "blacklab_2.11" % "1.0-ALLENAI-12",
     "com.medallia.word2vec" % "Word2VecJava" % "0.10.3",
     "com.google.guava" % "guava" % "18.0",
     "org.apache.thrift" % "libthrift" % "0.9.1",
