@@ -163,15 +163,15 @@ object SearchResultGrouper extends Logging {
     result: BlackLabResult
   ): KeyedBlackLabResult = {
     val groups = result.captureGroups
-    val columns = targetTable(req, tables) match {
-      case Some(table) => table.cols
+    val (columns, tableName) = targetTable(req, tables) match {
+      case Some(table) => (table.cols, table.name)
       case None => throw new IllegalArgumentException(s"No target table found")
     }
     val intervals = for {
       col <- columns
     } yield groups.getOrElse(
       col,
-      throw new IllegalArgumentException(s"Could not find column $col in results")
+      throw new IllegalArgumentException(s"Capture Groups in specified query do not map to expected number of columns, ${columns.length} in target table $tableName")
     )
     KeyedBlackLabResult(intervals, result)
   }

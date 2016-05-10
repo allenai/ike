@@ -118,10 +118,10 @@ object SearchApp extends Logging {
       try {
         future.get(timeoutInSeconds, TimeUnit.SECONDS)
       } catch {
-        case to: TimeoutException =>
-          logger.info(s"Suggestion for ${request.query} times out")
+        case e: Exception =>
+          logger.error(s"QuerySuggestor encountered excception: ${e.getMessage}")
           future.cancel(true) // Interrupt the suggestions
-          throw new TimeoutException("Query suggestion timed out")
+          throw e
       }
     }
     stringQueries <- Try(

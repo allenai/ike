@@ -97,13 +97,13 @@ var AddResultButton = React.createClass({
     return (
       <ButtonToolbar>
         <ButtonGroup bsSize="small" style={{display: 'flex'}}>
-          <OverlayTrigger container={document.body} trigger="hover" placement="left"
+          <OverlayTrigger container={document.body} trigger="hover" placement="top"
             overlay={<Tooltip>Click to add this extraction to the target table as a <strong>positive example</strong></Tooltip>}>
             <Button onClick={this.togglePos} bsStyle={this.posStyle()}>
               <Glyphicon glyph="plus" />
             </Button>
           </OverlayTrigger>
-          <OverlayTrigger container={document.body} trigger="hover" placement="right"
+          <OverlayTrigger container={document.body} trigger="hover" placement="top"
             overlay={<Tooltip>Click to add this extraction to the target table as a <strong>negative example</strong></Tooltip>}>
             <Button onClick={this.toggleNeg} bsStyle={this.negStyle()}>
               <Glyphicon glyph="minus" />
