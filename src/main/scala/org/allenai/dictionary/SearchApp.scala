@@ -9,6 +9,7 @@ import com.typesafe.config.Config
 import nl.inl.blacklab.search.{ HitsWindow, Searcher, TextPattern }
 
 import java.util.concurrent.{ Callable, Executors, TimeUnit, TimeoutException }
+import scala.util.control.NonFatal
 import scala.util.{ Success, Try }
 
 case class SuggestQueryRequest(
@@ -118,8 +119,8 @@ object SearchApp extends Logging {
       try {
         future.get(timeoutInSeconds, TimeUnit.SECONDS)
       } catch {
-        case e: Exception =>
-          logger.error(s"QuerySuggestor encountered excception: ${e.getMessage}")
+        case NonFatal(e) =>
+          logger.error(s"QuerySuggestor encountered exception: ${e.getMessage}")
           future.cancel(true) // Interrupt the suggestions
           throw e
       }

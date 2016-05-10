@@ -204,7 +204,7 @@ var HelpInterface = React.createClass({
       name: 'Table Expansion Query',
       example: '$fruits.fruit ~ 100',
       descr: 'Expands the "fruits" table to propose 100 closest words/phrases to the entries in the "fruit" column of the "fruits" table, and returns corpus matches with these candidates. If this is a single column table, you may just use "$fruits ~100". ' +
-      'Note: this command is currently not compatible with the Query Suggestor (Narrow/Broaden feature).'
+      'Note: This command is currently not compatible with the Query Suggestor (Narrow/Broaden feature).'
     },
 
   ],
