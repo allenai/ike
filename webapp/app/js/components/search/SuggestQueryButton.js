@@ -157,7 +157,7 @@ var SuggestQueryButton = React.createClass({
         <div style={{height: "35px"}}>
           <Loader scale={0.70}/>
         </div>
-    } else if (this.state.error != null || this.state.suggestions.length == 0) {
+    } else if (this.state.error != null || this.state.suggestions.isEmpty) {
       instanceToShow = (<div style={{textAlign: 'center', fontStyle: 'italic'}}>
         No suggestions found</div>)
     } else {
