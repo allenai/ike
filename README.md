@@ -9,7 +9,7 @@ IKE (Interactive Knowledge Extraction)
 2. Enter the `reStart` command
 3. Open http://localhost:8080 in a browser
 
-The webapp will download several large files from the [datastore](https://github.com/allenai/datastore) upon first request. This could take several minutes. You will see a series of messages that look like the following:
+The webapp will download some large files from the [datastore](https://github.com/allenai/datastore) upon first request. This could take several minutes. You will see a series of messages that look like the following:
 
 ```
 ike 2016-05-11 13:46:27,070 INFO  org.allenai.datastore.Datastore - Downloading org.allenai.dictionary.indexes/WaterlooFilteredV2Shard4-d1.zip from the public datastore. 1.23 GB bytes read.
