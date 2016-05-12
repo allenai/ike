@@ -38,6 +38,8 @@ Usage: CreateIndex [options]
 ```
 The URLs for both clusters and corpora can be either file URLs or datastore URLs. A datastore URL looks like this: `datastore://{public|private}/<group>/<name>-v<version>.<ext>` for files, and `datastore://{public|private}/<group>/<name>-d<version>` for directories.
 
+You can also specify corpus and/or cluster files in your file system by using a `file://` URL, for e.g., `file://path/to/my/corpus/file`.
+
 NOTE: The private datastore resources are for AI2 users only.
 
 When you have created the index, you can use it by modifying [`application.conf`](src/main/resources/application.conf) and restarting.
