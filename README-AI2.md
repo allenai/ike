@@ -10,11 +10,6 @@ IKE AI2-internal Details
 3. If you want to create a new machine, run the script in [`set_up_instance.sh`](scripts/set_up_instance.sh). It will create a new instance in EC2 and set it up for deployment. If you want to deploy to the existing machine, skip this step.
 4. Run `sbt "deploy prod"`.
 
-## Creating an index
-
-Cluster recommendation: 
-For the `--clusters` parameter to `CreateIndex`, we recommend using clusters from the private datastore, in any of the `org.allenai.brownclusters.*` groups. The most common one is `datastore://private/org.allenai.brownclusters.acl/c500-v1`.
-
 ## Logging
 
 IKEs logs to standard out and to a rotated logs file in `/local/deploy/ike/logs`, just like all other AI2 services. In addition to that, it logs to Papertrail at https://papertrailapp.com/groups/1690753. Papertrail is configured to write archives to a bucket in S3 named `ai2-papertrail-backup`. All archives go there, not only IKE, so to get the IKE logs you have to filter them out.

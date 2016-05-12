@@ -30,17 +30,15 @@ Usage: CreateIndex [options]
        Directory to create the index in
  -b <value> | --batchSize <value>
        Batch size
- -c <value> | --clusters <value>
-       URL of a file to load clusters from
  -t <value> | --textSource <value>
        URL of a file or directory to load the text from
  --help
 ```
-The URLs for both clusters and corpora can be either file URLs or datastore URLs. A datastore URL looks like this: `datastore://{public|private}/<group>/<name>-v<version>.<ext>` for files, and `datastore://{public|private}/<group>/<name>-d<version>` for directories.
-
-You can also specify corpus and/or cluster files in your file system by using a `file://` URL, for e.g., `file://path/to/my/corpus/file`.
+The URL for the corpus can be either a file URL or a datastore URL. A datastore URL looks like this: `datastore://{public|private}/<group>/<name>-v<version>.<ext>` for files, and `datastore://{public|private}/<group>/<name>-d<version>` for directories.
 
 NOTE: The private datastore resources are for AI2 users only.
+
+You can also point to a corpus directory in your file system by using a `file://` URL, for e.g., `file://path/to/my/corpus/directory`.
 
 When you have created the index, you can use it by modifying [`application.conf`](src/main/resources/application.conf) and restarting.
 
