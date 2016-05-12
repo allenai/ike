@@ -68,7 +68,7 @@ var HelpInterface = React.createClass({
       <div>
         <h3>Part-of-Speech Symbols</h3>
         <p>
-          OkCorpus uses part-of-speech (POS) symbols 
+          IKE uses part-of-speech (POS) symbols
           from <a href={ptbUrl}>the Penn Treebank</a>, reproduced below.
         </p>
         <Panel>

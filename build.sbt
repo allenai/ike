@@ -2,13 +2,13 @@ import Dependencies._
 
 scalaVersion := "2.11.5"
 
-val okcorpus = project.in(file(".")).enablePlugins(WebappPlugin)
+val ike = project.in(file(".")).enablePlugins(WebappPlugin)
 
 organization := "org.allenai"
 
-name := "okcorpus"
+name := "ike"
 
-homepage := Some(url("https://okcorpus.dev.allenai.org"))
+homepage := Some(url("https://ike.allenai.org"))
 
 description := "buildin' them electric tables"
 
@@ -72,7 +72,7 @@ libraryDependencies ++= Seq(
 
 javaOptions in Revolver.reStart += "-Xmx14G"
 
-mainClass in Revolver.reStart := Some("org.allenai.dictionary.DictionaryToolWebapp")
+mainClass in Revolver.reStart := Some("org.allenai.ike.IkeToolWebapp")
 
 fork in run := true
 
