@@ -7,8 +7,8 @@ import java.{ lang, util }
 import org.allenai.common.Config._
 import org.allenai.common.Logging
 
-import com.medallia.word2vec.Searcher.{ Match, UnknownWordException }
-import com.medallia.word2vec.{ Searcher, Word2VecModel }
+import org.allenai.word2vec.Searcher.{ Match, UnknownWordException }
+import org.allenai.word2vec.{ Searcher, Word2VecModel }
 import com.typesafe.config.Config
 
 import scala.collection.JavaConverters._
