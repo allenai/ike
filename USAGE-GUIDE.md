@@ -63,11 +63,11 @@ Start with a seed list of entries for physical properties (created by hand), and
 
 > a. Create a single column table PhysicalProperties with 5 seed entries: 
 
-*color
-*odor
-*width
-*mass
-*volume
+* color
+* odor
+* width
+* mass
+* volume
 
 You can enter table rows manually by expanding the required target table in the Tables tab and entering into the text fields to create new rows. 
 
@@ -84,9 +84,9 @@ This will propose some good and some bad candidates from which you can add entri
 > d. Iterate over steps b and c to progressively expand the list. You will notice that the proposed extractions get better with each iteration because the seed set of entries gets progressively better and more representative of the class of things we are looking for.
 
 > e. You could optionally do the same with the entities. For e.g., you can create an Entities table with a seed set of entries *like
-*matter
-*light
-*sound
+* matter
+* light
+* sound
 and iteratively expand the list.
 
 
