@@ -7,7 +7,7 @@ This guide will help a new user to quickly start building tables in IKE.
 
 #Steps to create and build a table
 
-(1)  Create your target table
+#### 1. Create your target table
 
 Go to the Tables tab.
 For each column required in the target table, create the column by entering the column name in the 'Add column' field, and clicking on the '+' button. This creates the required columns.
@@ -17,7 +17,7 @@ For example, suppose we wanted to record facts about the conductivity of differe
 
 ![](images/ikeguidepic1.png)
 
-(2)  Populate your table
+#### 2. Populate your table
 
 Go to the Search tab.
 Choose your target table from the dropdown—this would be `MaterialConductivity` in our example.
@@ -57,7 +57,7 @@ Let’s suppose that we wanted to build a table of entities and the associated p
 
 Below are steps to build this table using bootstrapping.
 
-(1) Expand seed list 
+#### 1. Expand seed list 
 
 Start with a seed list of entries for physical properties (created by hand), and expand the list (single-column table) to a much larger set of possible properties.
 
@@ -90,12 +90,12 @@ This will propose some good and some bad candidates from which you can add entri
 and iteratively expand the list.
 
 
-(2) Create a target table
+#### 2. Create a target table
 
 Once you have a good and large enough set of physical properties, create a table `EntityPhysicalProperties` with two columns: `Entity` and `Property`.
 
 
-(3) Populate target table using expanded list(s)
+#### 3. Populate target table using expanded list(s)
  
 Use the expanded set of properties to find properties of entities and put results into target table `EntityPhysicalProperties`.
 
