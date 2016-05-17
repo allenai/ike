@@ -3,7 +3,10 @@ IKE Getting Started Guide
 
 The IKE (Interactive Knowledge Extraction) tool helps you build tables of information by extracting facts from text via a simple and effective query language. The query language is built on top of BlackLab, an open-source retrieval engine. IKE lets you issue queries based on lexical and syntactic features in text and proposes extractions based on these queries, which can be used for interactive table building.
 
-This guide will help a new user to quickly start building tables in IKE.
+This guide will help a new user to quickly start building tables in the IKE web app.
+
+**To begin using IKE**, you will need to first sign into IKE using a Google account, by clicking on the 'Sign In' button at the top right of the web app.
+The first time you sign in, you will be prompted to explicitly grant IKE permissions to use the specified Google account. Subsequently you will be able to sign in with the same account with a single click.
 
 #Steps to create and build a table
 
