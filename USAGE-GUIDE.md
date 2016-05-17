@@ -7,7 +7,7 @@ This guide will help a new user to quickly start building tables in IKE.
 
 #Steps to create and build a table
 
-1. Create your target table
+(1)  Create your target table
 
 Go to the Tables tab.
 For each column required in the target table, create the column by entering the column name in the 'Add column' field, and clicking on the '+' button. This creates the required columns.
@@ -17,7 +17,7 @@ For example, suppose we wanted to record facts about the conductivity of differe
 
 ![](images/ikeguidepic1.png)
 
-2. Populate your table
+(2)  Populate your table
 
 Go to the Search tab.
 Choose your target table from the dropdown—this would be `MaterialConductivity` in our example.
@@ -57,11 +57,11 @@ Let’s suppose that we wanted to build a table of entities and the associated p
 
 Below are steps to build this table using bootstrapping.
 
-1. Expand seed list 
+(1) Expand seed list 
 
 Start with a seed list of entries for physical properties (created by hand), and expand the list (single-column table) to a much larger set of possible properties.
 
-a. Create a single column table PhysicalProperties with 5 seed entries: 
+> a. Create a single column table PhysicalProperties with 5 seed entries: 
 
 *color
 *odor
@@ -71,7 +71,7 @@ a. Create a single column table PhysicalProperties with 5 seed entries:
 
 You can enter table rows manually by expanding the required target table in the Tables tab and entering into the text fields to create new rows. 
 
-b. Use a search query to expand the existing set to a much larger set of properties:
+> b. Use a search query to expand the existing set to a much larger set of properties:
 
 ```
 $PhysicalProperties.Property ~ 100
@@ -79,23 +79,23 @@ $PhysicalProperties.Property ~ 100
 
 This will propose some good and some bad candidates from which you can add entries that look good.  Entries already present in the table will have the “+” button pre-selected.
 
-c. Add additional positive examples from the search results by using the “+” button.
+> c. Add additional positive examples from the search results by using the “+” button.
 
-d. Iterate over steps b and c to progressively expand the list. You will notice that the proposed extractions get better with each iteration because the seed set of entries gets progressively better and more representative of the class of things we are looking for.
+> d. Iterate over steps b and c to progressively expand the list. You will notice that the proposed extractions get better with each iteration because the seed set of entries gets progressively better and more representative of the class of things we are looking for.
 
-e. You could optionally do the same with the entities. For e.g., you can create an Entities table with a seed set of entries *like
+> e. You could optionally do the same with the entities. For e.g., you can create an Entities table with a seed set of entries *like
 *matter
 *light
 *sound
 and iteratively expand the list.
 
 
-2. Create a target table
+(2) Create a target table
 
 Once you have a good and large enough set of physical properties, create a table `EntityPhysicalProperties` with two columns: `Entity` and `Property`.
 
 
-3. Populate target table using expanded list(s)
+(3) Populate target table using expanded list(s)
  
 Use the expanded set of properties to find properties of entities and put results into target table `EntityPhysicalProperties`.
 
@@ -157,5 +157,34 @@ Sample provenance for a row:
 ```
 {"query":"(NP) is DT (JJ) conductor of (NN)",
 "context":[{"fragment":"Fortunately copper is a good conductor of heat so you might conclude that the temperature of the copper in contact with the boiler water will only be slightly",
-"words":[{"word":"Fortunately","attributes":{"chunk":"BE-ADVP","lemma":"fortunately","pos":"RB","punct":""}},{"word":"copper","attributes":{"chunk":"BE-NP","lemma":"copper","pos":"NN","punct":" "}},{"word":"is","attributes":{"chunk":"BE-VP","lemma":"be","pos":"VBZ","punct":" "}},{"word":"a","attributes":{"chunk":"B-NP","lemma":"a","pos":"DT","punct":" "}},{"word":"good","attributes":{"chunk":"I-NP","lemma":"good","pos":"JJ","punct":" "}},{"word":"conductor","attributes":{"chunk":"E-NP","lemma":"conductor","pos":"NN","punct":" "}},{"word":"of","attributes":{"chunk":"BE-PP","lemma":"of","pos":"IN","punct":" "}},{"word":"heat","attributes":{"chunk":"BE-NP","lemma":"heat","pos":"NN","punct":" "}},{"word":"so","attributes":{"chunk":"BE-SBAR","lemma":"so","pos":"IN","punct":" "}},{"word":"you","attributes":{"chunk":"BE-NP","lemma":"you","pos":"PRP","punct":" "}},{"word":"might","attributes":{"chunk":"B-VP","lemma":"might","pos":"MD","punct":" "}},{"word":"conclude","attributes":{"chunk":"E-VP","lemma":"conclude","pos":"VB","punct":" "}},{"word":"that","attributes":{"chunk":"BE-PP","lemma":"that","pos":"IN","punct":" "}},{"word":"the","attributes":{"chunk":"B-NP","lemma":"the","pos":"DT","punct":" "}},{"word":"temperature","attributes":{"chunk":"E-NP","lemma":"temperature","pos":"NN","punct":" "}},{"word":"of","attributes":{"chunk":"BE-PP","lemma":"of","pos":"IN","punct":" "}},{"word":"the","attributes":{"chunk":"B-NP","lemma":"the","pos":"DT","punct":" "}},{"word":"copper","attributes":{"chunk":"E-NP","lemma":"copper","pos":"NN","punct":" "}},{"word":"in","attributes":{"chunk":"BE-PP","lemma":"in","pos":"IN","punct":" "}},{"word":"contact","attributes":{"chunk":"BE-NP","lemma":"contact","pos":"NN","punct":" "}},{"word":"with","attributes":{"chunk":"BE-PP","lemma":"with","pos":"IN","punct":" "}},{"word":"the","attributes":{"chunk":"B-NP","lemma":"the","pos":"DT","punct":" "}},{"word":"boiler","attributes":{"chunk":"I-NP","lemma":"boiler","pos":"NN","punct":" "}},{"word":"water","attributes":{"chunk":"E-NP","lemma":"water","pos":"NN","punct":" "}},{"word":"will","attributes":{"chunk":"B-VP","lemma":"will","pos":"MD","punct":" "}},{"word":"only","attributes":{"chunk":"I-VP","lemma":"only","pos":"RB","punct":" "}},{"word":"be","attributes":{"chunk":"E-VP","lemma":"be","pos":"VB","punct":" "}},{"word":"slightly","attributes":{"chunk":"B-ADJP","lemma":"slightly","pos":"RB","punct":" "}}],"matchOffset":[1,8],"corpus":"WaterlooFiltered"}
+"words":[{"word":"Fortunately",
+"attributes":{"chunk":"BE-ADVP","lemma":"fortunately","pos":"RB","punct":""}},
+{"word":"copper","attributes":{"chunk":"BE-NP","lemma":"copper","pos":"NN","punct":" 
+"}},{"word":"is","attributes":{"chunk":"BE-VP","lemma":"be","pos":"VBZ","punct":" 
+"}},{"word":"a","attributes":{"chunk":"B-NP","lemma":"a","pos":"DT","punct":" 
+"}},{"word":"good","attributes":{"chunk":"I-NP","lemma":"good","pos":"JJ","punct":" 
+"}},{"word":"conductor","attributes":{"chunk":"E-NP","lemma":"conductor","pos":"NN","punct":" 
+"}},{"word":"of","attributes":{"chunk":"BE-PP","lemma":"of","pos":"IN","punct":" 
+"}},{"word":"heat","attributes":{"chunk":"BE-NP","lemma":"heat","pos":"NN","punct":" 
+"}},{"word":"so","attributes":{"chunk":"BE-SBAR","lemma":"so","pos":"IN","punct":" 
+"}},{"word":"you","attributes":{"chunk":"BE-NP","lemma":"you","pos":"PRP","punct":" 
+"}},{"word":"might","attributes":{"chunk":"B-VP","lemma":"might","pos":"MD","punct":" 
+"}},{"word":"conclude","attributes":{"chunk":"E-VP","lemma":"conclude","pos":"VB","punct":" 
+"}},{"word":"that","attributes":{"chunk":"BE-PP","lemma":"that","pos":"IN","punct":" 
+"}},{"word":"the","attributes":{"chunk":"B-NP","lemma":"the","pos":"DT","punct":" 
+"}},{"word":"temperature","attributes":{"chunk":"E-NP","lemma":"temperature","pos":"NN","punct":" 
+"}},{"word":"of","attributes":{"chunk":"BE-PP","lemma":"of","pos":"IN","punct":" 
+"}},{"word":"the","attributes":{"chunk":"B-NP","lemma":"the","pos":"DT","punct":" 
+"}},{"word":"copper","attributes":{"chunk":"E-NP","lemma":"copper","pos":"NN","punct":" 
+"}},{"word":"in","attributes":{"chunk":"BE-PP","lemma":"in","pos":"IN","punct":" 
+"}},{"word":"contact","attributes":{"chunk":"BE-NP","lemma":"contact","pos":"NN","punct":" 
+"}},{"word":"with","attributes":{"chunk":"BE-PP","lemma":"with","pos":"IN","punct":" 
+"}},{"word":"the","attributes":{"chunk":"B-NP","lemma":"the","pos":"DT","punct":" 
+"}},{"word":"boiler","attributes":{"chunk":"I-NP","lemma":"boiler","pos":"NN","punct":" 
+"}},{"word":"water","attributes":{"chunk":"E-NP","lemma":"water","pos":"NN","punct":" 
+"}},{"word":"will","attributes":{"chunk":"B-VP","lemma":"will","pos":"MD","punct":" 
+"}},{"word":"only","attributes":{"chunk":"I-VP","lemma":"only","pos":"RB","punct":" 
+"}},{"word":"be","attributes":{"chunk":"E-VP","lemma":"be","pos":"VB","punct":" 
+"}},{"word":"slightly","attributes":{"chunk":"B-ADJP","lemma":"slightly","pos":"RB","punct":" 
+"}}],"matchOffset":[1,8],"corpus":"WaterlooFiltered"}
 ```
