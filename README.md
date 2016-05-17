@@ -1,6 +1,9 @@
 IKE (Interactive Knowledge Extraction)
 ======================================
 
+## Usage Guide
+[First time users, please refer the IKE Getting Started Guide](USAGE-GUIDE.md)
+
 ## Resources
 [Live Demo](http://ike.allenai.org/)
 
