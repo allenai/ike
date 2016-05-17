@@ -7,5 +7,5 @@ if [ -e "$CREDENTIALS" ]; then
   . "${SCRIPT_DIR}/webapp.sh"
 else
   echo "Error: $CREDENTIALS not found; will fail to start in prod."
-  exit(1)
+  exit 1
 fi
