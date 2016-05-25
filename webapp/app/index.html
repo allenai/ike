@@ -10,6 +10,50 @@
   </head>
   <body>
   <script src="https://apis.google.com/js/client:platform.js" async defer></script>
-    <script src="/DictApp.js"></script>
+   <script type="text/javascript">   
+      function userAgentContains(s) { 
+        return (navigator.userAgent || "").indexOf(s) >= 0;
+      }
+      var isMobile = userAgentContains("Mobi");
+      var notSupportedBrowser = !userAgentContains("Safari") && !userAgentContains("Chrome") && !userAgentContains("Opera");
+
+      // If on Mobile or other browser not supported, display appropriate message. If not proceed to show the tool.
+      if (notSupportedBrowser || isMobile) {
+        var msg = document.createElement('div');
+        
+        var msgPara1 = document.createElement('p');
+        msgPara1.appendChild(document.createTextNode("Sorry, IKE (Interactive Knowledge Extraction tool) does not work in the browser you are currently using."));
+       
+        var aElementSafari = document.createElement('a');
+        aElementSafari.setAttribute("href", "https://support.apple.com/downloads/safari");
+        aElementSafari.appendChild(document.createTextNode("Safari"));
+
+        var aElementChrome = document.createElement('a');
+        aElementChrome.setAttribute("href", "http://www.google.com/chrome/");
+        aElementChrome.appendChild(document.createTextNode("Chrome"));        
+
+        var aElementOpera = document.createElement('a');
+        aElementOpera.setAttribute("href", "http://www.opera.com/download");
+        aElementOpera.appendChild(document.createTextNode("Opera"));
+
+        var msgPara2 = document.createElement('p'); 
+        msgPara2.appendChild(document.createTextNode(" Please use the latest Desktop version of "));
+        msgPara2.appendChild(aElementSafari);
+        msgPara2.appendChild(document.createTextNode(", "));
+        msgPara2.appendChild(aElementChrome);
+        msgPara2.appendChild(document.createTextNode(" or "));
+        msgPara2.appendChild(aElementOpera);  
+        msgPara2.appendChild(document.createTextNode("."));
+ 
+        msg.appendChild(msgPara1);
+        msg.appendChild(msgPara2);
+        document.body.appendChild(msg);
+      } else {
+        var script = document.createElement('script')
+        script.setAttribute('type', 'text/javascript');
+        script.setAttribute('src', '/DictApp.js');
+        document.head.appendChild(script); 
+      }
+    </script>
   </body>
 </html>
