@@ -30,3 +30,10 @@ public/
 
 # OS X
 .DS_Store
+
+# deploy stuff
+/conf/deploy.conf
+/scripts/run_on_instance.sh
+/scripts/set_up_instance.sh
+/src/main/resources/prod.conf
+/src/main/resources/test.conf
