@@ -45,5 +45,11 @@ You can also point to a corpus directory in your file system by using a `file://
 
 When you have created the index, you can use it by modifying [`application.conf`](src/main/resources/application.conf) and restarting.
 
+### Index Size Limits
+
+A Blacklab index size will typically be 12-13x the size of the input corpus being indexed.
+Our testing on an Amazon [`r3.2xlarge`](https://aws.amazon.com/ec2/instance-types/) instance indicated that an index size of upto 2 GB could be processed with reasonable speed when loaded into IKE. If you have a large corpus, one way to get around the size limits is to shard the corpus and create multiple indexes, each within the size limit to load into IKE.
+
+
 ## AI2 Internal Information
 AI2 internal users, please go to [this link](README-AI2.md).
