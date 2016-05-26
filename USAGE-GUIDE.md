@@ -191,3 +191,7 @@ Sample provenance for a row:
 "}},{"word":"slightly","attributes":{"chunk":"B-ADJP","lemma":"slightly","pos":"RB","punct":" 
 "}}],"matchOffset":[1,8],"corpus":"WaterlooFiltered"}
 ```
+
+#Supported Browsers
+
+Use latest Desktop version of Safari, Chrome or Opera to view and work with IKE. IKE does ot currently work on other browsers.
