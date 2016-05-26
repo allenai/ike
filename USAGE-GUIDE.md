@@ -194,4 +194,4 @@ Sample provenance for a row:
 
 #Supported Browsers
 
-Use latest Desktop version of Safari, Chrome or Opera to view and work with IKE. IKE does ot currently work on other browsers.
+Use latest Desktop version of Safari, Chrome or Opera to view and work with IKE. IKE does not currently work on other browsers.
