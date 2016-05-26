@@ -7,8 +7,10 @@ IKE AI2-internal Details
 ## Deploy
 1. Get the IKE deployment key. It's in the `ai2-secure` bucket in S3, called `OkCorpusDeploymentKey.zip`.
 2. Set the `AWS_PEM_FILE` variable to point at the private key file.
-3. If you want to create a new machine, run the script in [`set_up_instance.sh`](scripts/set_up_instance.sh). It will create a new instance in EC2 and set it up for deployment. If you want to deploy to the existing machine, skip this step.
-4. Run `sbt "deploy prod"`.
+3. All deploy configs and scripts are in the AI2 private `deploy` repo, under the `ike` directory. In order to use them, clone the `deploy` project locally.
+4. Run the script [`https://github.com/allenai/deploy/blob/master/ike/setup.sh`] from the deploy repo, which will set up symlinks to the paths expected by the deploy script. 
+5. If you want to create a new machine, run the script in [`set_up_instance.sh`](https://github.com/allenai/deploy/blob/master/ike/scripts/set_up_instance.sh). It will create a new instance in EC2 and set it up for deployment. If you want to deploy to the existing machine, skip this step.
+6. Run `sbt "deploy prod"` / `sbt "deploy test"`.
 
 ## Logging
 
