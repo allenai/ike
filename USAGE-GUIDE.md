@@ -195,3 +195,4 @@ Sample provenance for a row:
 #Supported Browsers
 
 Use latest Desktop version of Safari, Chrome or Opera to view and work with IKE. IKE does not currently work on other browsers.
+We have a known issue with the first sign-in on Firefox. If it appears that your initial sign-in via Google OAuth did not succeed, refreshing the page might help.
