@@ -30,8 +30,8 @@ ReleaseKeys.releaseProcess := Seq(
 )
 
 scmInfo := Some(ScmInfo(
-  url("https://github.com/allenai/okcorpus"),
-  "https://github.com/allenai/okcorpus.git"))
+  url("https://github.com/allenai/ike"),
+  "https://github.com/allenai/ike.git"))
 
 pomExtra :=
   <developers>
