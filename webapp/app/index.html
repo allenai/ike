@@ -15,7 +15,7 @@
         return (navigator.userAgent || "").indexOf(s) >= 0;
       }
       var isMobile = userAgentContains("Mobi");
-      var notSupportedBrowser = !userAgentContains("Safari") && !userAgentContains("Chrome") && !userAgentContains("Opera");
+      var notSupportedBrowser = !userAgentContains("Safari") && !userAgentContains("Chrome") && !userAgentContains("Opera") && !userAgentContains("Firefox");
 
       // If on Mobile or other browser not supported, display appropriate message. If not proceed to show the tool.
       if (notSupportedBrowser || isMobile) {
@@ -43,7 +43,7 @@
         msgPara2.appendChild(aElementChrome);
         msgPara2.appendChild(document.createTextNode(" or "));
         msgPara2.appendChild(aElementOpera);  
-        msgPara2.appendChild(document.createTextNode("."));
+        msgPara2.appendChild(document.createTextNode(" for the best experience."));
  
         msg.appendChild(msgPara1);
         msg.appendChild(msgPara2);
