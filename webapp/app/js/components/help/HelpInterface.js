@@ -78,8 +78,8 @@ var HelpInterface = React.createClass({
     );
   },
   renderGuideAndBugLinks: function() {
-    var guideUrl = 'https://docs.google.com/document/d/1mTyuvTUNzHHapIEfg2i7NM4cp12wCD6AsTbiOxQA5tA/edit#heading=h.v4yfgk8xta6l';
-    var issueUrl = 'https://github.com/allenai/okcorpus/issues';
+    var guideUrl = 'https://github.com/allenai/ike/blob/master/USAGE-GUIDE.md';
+    var issueUrl = 'https://github.com/allenai/ike/issues';
     return (
       <div>
         <h3>Getting Help</h3>
@@ -88,7 +88,7 @@ var HelpInterface = React.createClass({
         </p>
         <p>
           File bugs, request features, and ask for help
-          by creating a new issue <a href={issueUrl}>on GitHub</a>.
+          by creating a new issue on <a href={issueUrl}>the IKE open-source repository in GitHub</a>.
         </p>
       </div>
     );
