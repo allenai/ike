@@ -1,3 +1,5 @@
+*NOTE* : THIS IS AN ARCHIVED REPO. Please use the new IKE repo (https://github.com/allenai/ike) for development.
+
 IKE (Interactive Knowledge Extraction)
 ======================================
 
