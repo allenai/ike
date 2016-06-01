@@ -12,23 +12,6 @@ homepage := Some(url("https://ike.allenai.org"))
 
 description := "buildin' them electric tables"
 
-import sbtrelease.ReleaseStateTransformations._
-
-// Override the problematic new release plugin.
-ReleaseKeys.releaseProcess := Seq(
-  checkSnapshotDependencies,
-  inquireVersions,
-  runClean,
-  runTest,
-  setReleaseVersion,
-  commitReleaseVersion,
-  tagRelease,
-  publishArtifacts,
-  setNextVersion,
-  commitNextVersion,
-  pushChanges
-)
-
 scmInfo := Some(ScmInfo(
   url("https://github.com/allenai/ike"),
   "https://github.com/allenai/ike.git"))
@@ -41,8 +24,6 @@ pomExtra :=
       <email>dev-role@allenai.org</email>
     </developer>
   </developers>
-
-PublishTo.ai2Private
 
 libraryDependencies ++= Seq(
     allenAiCommon,
@@ -89,5 +70,3 @@ dependencyOverrides ++= Set(
   "org.apache.commons" % "commons-compress" % "1.8",
   "org.scala-lang" % "scala-reflect" % "2.11.5"
 )
-
-enablePlugins(ReleasePlugin)
