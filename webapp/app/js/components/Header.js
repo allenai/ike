@@ -50,6 +50,8 @@ const Header = React.createClass({
     return (<header>
       <a href="/"><img style={{ margin: "20px 20px 20px 0" }} src="/assets/logo.png" height="48"/></a>
       {this.renderAuth()}
+      <div><a href="https://github.com/allenai/ike/blob/master/USAGE-GUIDE.md">IKE Getting Started Guide</a> | <a href="https://github.com/allenai/ike">IKE Code Repository</a></div>
+      <div><i>Learn more: <a href="http://ai2-website.s3.amazonaws.com/publications/IKE_camera_ready_v3.pdf">IKE - An Interactive Tool for Knowledge Extraction</a></i></div>
     </header>);
   }
 });
