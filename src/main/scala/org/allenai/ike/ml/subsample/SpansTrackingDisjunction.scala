@@ -1,8 +1,8 @@
 package org.allenai.ike.ml.subsample
 
-import nl.inl.blacklab.search.Span
-import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
-import nl.inl.blacklab.search.sequences.PerDocumentSortedSpans
+import org.allenai.blacklab.search.Span
+import org.allenai.blacklab.search.lucene.{ BLSpans, HitQueryContext }
+import org.allenai.blacklab.search.sequences.PerDocumentSortedSpans
 import org.apache.lucene.util.PriorityQueue
 
 import java.util

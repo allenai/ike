@@ -2,7 +2,7 @@ package org.allenai.ike
 
 import org.allenai.common.immutable.Interval
 
-import nl.inl.blacklab.search.{ Hit, Hits, Kwic, Span }
+import org.allenai.blacklab.search.{ Hit, Hits, Kwic, Span }
 
 import scala.collection.JavaConverters._
 

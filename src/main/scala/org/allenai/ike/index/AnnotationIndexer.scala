@@ -1,8 +1,8 @@
 package org.allenai.ike.index
 
-import nl.inl.blacklab.index.complex.ComplexFieldProperty
-import nl.inl.blacklab.index.complex.ComplexFieldProperty.SensitivitySetting
-import nl.inl.blacklab.index.{ DocIndexerXmlHandlers, Indexer }
+import org.allenai.blacklab.index.complex.ComplexFieldProperty
+import org.allenai.blacklab.index.complex.ComplexFieldProperty.SensitivitySetting
+import org.allenai.blacklab.index.{ DocIndexerXmlHandlers, Indexer }
 import org.xml.sax.Attributes
 
 import java.io.Reader

@@ -6,7 +6,7 @@ import org.allenai.ike.ml.{ QuerySuggester, Suggestions }
 import org.allenai.ike.persistence.Tablestore
 
 import com.typesafe.config.Config
-import nl.inl.blacklab.search.{ HitsWindow, Searcher, TextPattern }
+import org.allenai.blacklab.search.{ HitsWindow, Searcher, TextPattern }
 
 import java.util.concurrent.{ Callable, Executors, TimeUnit, TimeoutException }
 import scala.util.control.NonFatal

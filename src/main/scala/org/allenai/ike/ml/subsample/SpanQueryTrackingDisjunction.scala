@@ -1,6 +1,6 @@
 package org.allenai.ike.ml.subsample
 
-import nl.inl.blacklab.search.lucene.{ BLSpansWrapper, SpanQueryBase }
+import org.allenai.blacklab.search.lucene.{ BLSpansWrapper, SpanQueryBase }
 import org.apache.lucene.index.{ AtomicReaderContext, Term, TermContext }
 import org.apache.lucene.search.spans.{ SpanQuery, Spans }
 import org.apache.lucene.util.Bits

@@ -3,7 +3,7 @@ package org.allenai.ike.index
 import org.allenai.datastore.Datastore
 import org.allenai.nlpstack.core.{ ChunkedToken, Lemmatized }
 
-import nl.inl.blacklab.index.Indexer
+import org.allenai.blacklab.index.Indexer
 
 import java.io.{ File, StringReader }
 import java.net.URI
