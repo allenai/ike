@@ -2,7 +2,7 @@ package org.allenai.ike.ml
 
 import org.allenai.ike._
 
-import nl.inl.blacklab.search.Searcher
+import org.allenai.blacklab.search.Searcher
 
 import scala.collection.JavaConverters._
 

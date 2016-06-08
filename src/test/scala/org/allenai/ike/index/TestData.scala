@@ -1,7 +1,7 @@
 package org.allenai.ike.index
 
-import nl.inl.blacklab.index.Indexer
-import nl.inl.blacklab.search.Searcher
+import org.allenai.blacklab.index.Indexer
+import org.allenai.blacklab.search.Searcher
 
 import java.io.File
 

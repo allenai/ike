@@ -4,8 +4,8 @@ import org.allenai.ike._
 import org.allenai.ike.ml._
 import org.allenai.ike.patterns.NamedPattern
 
-import nl.inl.blacklab.search._
-import nl.inl.blacklab.search.sequences.TextPatternSequence
+import org.allenai.blacklab.search._
+import org.allenai.blacklab.search.sequences.TextPatternSequence
 import org.apache.lucene.search.spans.SpanQuery
 
 object GeneralizedQuerySampler {

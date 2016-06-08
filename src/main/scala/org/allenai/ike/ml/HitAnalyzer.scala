@@ -4,7 +4,7 @@ import org.allenai.common.{ Logging, Timing }
 import org.allenai.ike.ml.queryop.{ OpGenerator, QueryOp }
 import org.allenai.ike.{ QueryLanguage, Table }
 
-import nl.inl.blacklab.search.Hits
+import org.allenai.blacklab.search.Hits
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.IntMap

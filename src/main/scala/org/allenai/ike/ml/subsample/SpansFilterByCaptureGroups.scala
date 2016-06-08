@@ -1,7 +1,7 @@
 package org.allenai.ike.ml.subsample
 
-import nl.inl.blacklab.search.Span
-import nl.inl.blacklab.search.lucene.{ BLSpans, HitQueryContext }
+import org.allenai.blacklab.search.Span
+import org.allenai.blacklab.search.lucene.{ BLSpans, HitQueryContext }
 
 import java.util
 

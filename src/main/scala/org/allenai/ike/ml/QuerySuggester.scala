@@ -10,7 +10,7 @@ import org.allenai.ike.ml.subsample._
 import org.allenai.ike.patterns.NamedPattern
 
 import com.typesafe.config.ConfigFactory
-import nl.inl.blacklab.search._
+import org.allenai.blacklab.search._
 
 import scala.collection.immutable.IntMap
 

@@ -3,7 +3,7 @@ package org.allenai.ike
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.ike.index.TestData
 
-import nl.inl.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
+import org.allenai.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
 
 class TestSearcher extends UnitSpec with ScratchDirectory {
   TestData.createTestIndex(scratchDir)

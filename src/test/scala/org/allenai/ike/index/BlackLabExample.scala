@@ -3,10 +3,10 @@ package org.allenai.ike.index
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 import org.allenai.ike.BlackLabResult
 
-import nl.inl.blacklab.index.Indexer
-import nl.inl.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
-import nl.inl.blacklab.search.sequences.{ TextPatternRepetition, TextPatternSequence }
-import nl.inl.blacklab.search.{ Searcher, TextPatternCaptureGroup, TextPatternOr, TextPatternPrefix, TextPatternProperty, TextPatternTerm }
+import org.allenai.blacklab.index.Indexer
+import org.allenai.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
+import org.allenai.blacklab.search.sequences.{ TextPatternRepetition, TextPatternSequence }
+import org.allenai.blacklab.search.{ Searcher, TextPatternCaptureGroup, TextPatternOr, TextPatternPrefix, TextPatternProperty, TextPatternTerm }
 
 class BlackLabExample extends UnitSpec with ScratchDirectory {
 

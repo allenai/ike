@@ -5,7 +5,7 @@ import org.allenai.ike._
 import org.allenai.ike.ml.{ CapturedTokenSequence, TokenizedQuery }
 import org.allenai.ike.patterns.NamedPattern
 
-import nl.inl.blacklab.search.{ Hits, Searcher }
+import org.allenai.blacklab.search.{ Hits, Searcher }
 
 object Sampler extends Logging {
 
