@@ -5,7 +5,7 @@ import org.allenai.ike._
 import org.allenai.ike.index.TestData
 import org.allenai.ike.ml.{ SimilarPhrasesSearcherStub, TokenizedQuery }
 
-import nl.inl.blacklab.search.{ Hits, Span }
+import org.allenai.blacklab.search.{ Hits, Span }
 
 import scala.collection.JavaConverters._
 

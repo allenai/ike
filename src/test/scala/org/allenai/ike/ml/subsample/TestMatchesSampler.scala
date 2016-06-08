@@ -5,7 +5,7 @@ import org.allenai.ike._
 import org.allenai.ike.index.TestData
 import org.allenai.ike.ml.TokenizedQuery
 
-import nl.inl.blacklab.search.Hits
+import org.allenai.blacklab.search.Hits
 
 import scala.collection.JavaConverters._
 

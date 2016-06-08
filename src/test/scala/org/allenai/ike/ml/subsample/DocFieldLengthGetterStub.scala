@@ -1,6 +1,6 @@
 package org.allenai.ike.ml.subsample
 
-import nl.inl.blacklab.search.lucene.DocFieldLengthGetter
+import org.allenai.blacklab.search.lucene.DocFieldLengthGetter
 
 /** Stub for DocFieldLengthGetter for testing purposes
   */

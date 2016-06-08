@@ -2,8 +2,8 @@ package org.allenai.ike.ml.subsample
 
 import org.allenai.common.testkit.UnitSpec
 
-import nl.inl.blacklab.search.Span
-import nl.inl.blacklab.search.lucene.HitQueryContext
+import org.allenai.blacklab.search.Span
+import org.allenai.blacklab.search.lucene.HitQueryContext
 
 class TestMinimumValidCaptures extends UnitSpec {
   def s(spans: Int*) = spans.map { x => new Span(x, x + x / Math.abs(x)) }

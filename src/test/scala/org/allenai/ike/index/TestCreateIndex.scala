@@ -2,7 +2,7 @@ package org.allenai.ike.index
 
 import org.allenai.common.testkit.{ ScratchDirectory, UnitSpec }
 
-import nl.inl.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
+import org.allenai.blacklab.queryParser.corpusql.CorpusQueryLanguageParser
 
 import scala.collection.JavaConverters._
 
