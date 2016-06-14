@@ -1,0 +1,24 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          ike
+# Required-Start:    $remote_fs
+# Required-Stop:     $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: ike webapp
+# Description:       ike ike ike
+### END INIT INFO
+
+. /etc/default/ike
+
+exec="$APPROOT/bin/ike_control.sh"
+exec_user="ai2service"
+
+if ! [ $# -eq 1 ]; then
+	echo "usage: $0 stop|start|status"
+	exit 1
+fi
+
+sudo -u $exec_user $exec $1 
+exit $?

@@ -1,0 +1,3 @@
+START=yes
+APPROOT="/local/deploy/ike"
+CREDENTIALS="/path/to/pgpass-<env>.sh"
