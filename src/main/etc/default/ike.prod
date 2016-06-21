@@ -1,3 +1,1 @@
-START=yes
-APPROOT="/local/deploy/ike"
 CREDENTIALS="/opt/ops/var/s3/ops-keystore/database/ike/pgpass-prod.sh"

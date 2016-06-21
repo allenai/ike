@@ -2,6 +2,8 @@
 
 #usage: $0 [start|stop|status]
 
+export APPROOT=$(cd $(dirname $0)/..; pwd -P)
+
 if [ -e /etc/default/ike ]; then
 	. /etc/default/ike
 else

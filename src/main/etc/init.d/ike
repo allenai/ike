@@ -10,6 +10,8 @@
 # Description:       ike ike ike
 ### END INIT INFO
 
+export APPROOT=$(cd $(dirname $(readlink -f $0))/../..; pwd)
+
 . /etc/default/ike
 
 exec="$APPROOT/bin/ike_control.sh"
