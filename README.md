@@ -8,9 +8,11 @@ IKE (Interactive Knowledge Extraction)
 [Live Demo](http://ike.allenai.org/)
 
 ## Run Locally
-1. Run `sbt`
-2. Enter the `reStart` command
-3. Open http://localhost:8080 in a browser
+1. Install Postgres SQL locally and create a database for use by IKE. IKE needs this to store the tables you create.
+2. Modify the `Tablestore` key value setting in the [IKE config] (https://github.com/allenai/ike/blob/master/src/main/resources/application.conf) with appropriate database JDBC URL and credentials.
+3. Run `sbt`.
+4. Enter the `reStart` command.
+5. Open http://localhost:8080 in a browser.
 
 The webapp will download some large files from the [datastore](https://github.com/allenai/datastore) upon first request. This could take several minutes. You will see a series of messages that look like the following:
 
@@ -24,7 +26,7 @@ On subsequent runs, the service will start up quickly as the downloaded indexes 
 ## Creating and using an Index
 To create an index, you need the source text either as a directory of text files, or as one file with one document per line. Once you have that, run this in `sbt`:
 ```
-runMain org.allenai.dictionary.index.CreateIndex --help
+ike/runMain org.allenai.dictionary.index.CreateIndex --help
 ```
 At the time of writing, this prints
 ```
