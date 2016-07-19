@@ -8,7 +8,7 @@ IKE (Interactive Knowledge Extraction)
 [Live Demo](http://ike.allenai.org/)
 
 ## Run Locally
-1. Install Postgres SQL locally and create a database for use by IKE. IKE needs this to store the tables you create.
+1. Install PostgreSQL locally and create a database for use by IKE. IKE needs this to store the tables you create.
 2. Modify the `Tablestore` key value setting in the [IKE config] (https://github.com/allenai/ike/blob/master/src/main/resources/application.conf) with appropriate database JDBC URL and credentials.
 3. Run `sbt`.
 4. Enter the `reStart` command.
