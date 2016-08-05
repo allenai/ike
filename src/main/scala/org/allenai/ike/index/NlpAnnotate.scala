@@ -16,7 +16,10 @@ object NlpAnnotate {
 
   def postag(tokens: Seq[Token]): Seq[PostaggedToken] = postagger.postagTokenized(tokens)
 
-  def chunk(tokens: Seq[PostaggedToken]): Seq[ChunkedToken] = chunker.chunkPostagged(tokens)
+  def chunk(tokens: Seq[PostaggedToken]): Seq[ChunkedToken] = {
+    val chunked = chunker.chunkPostagged(tokens)
+    Chunker.joinPos(Chunker.joinOf(chunked))
+  }
 
   def addEndingMarkers(tokens: Seq[ChunkedToken]): Seq[ChunkedToken] = {
     if (tokens.isEmpty) {
