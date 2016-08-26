@@ -1,6 +1,5 @@
 package org.allenai.ike
 
-import org.allenai.common.immutable.Interval
 import org.allenai.common.{ Logging, Timing }
 
 import org.apache.commons.lang.StringEscapeUtils
@@ -8,6 +7,13 @@ import org.apache.commons.lang.StringEscapeUtils
 import scala.collection.immutable
 
 object SearchResultGrouper extends Logging {
+  /** Function that auto-generates column names given corresponding to a specified number of
+    * capture groups. Used for batch execution where a new table has to be created.
+    */
+  def generateColumnNamesForNewTable(numGroups: Int) = {
+    (0 until numGroups).map(i => "Column_" + i)
+  }
+
   def targetTable(req: SearchRequest, tables: Map[String, Table]): Option[Table] = for {
     target <- req.target
     table <- tables.get(target)
@@ -135,8 +141,8 @@ object SearchResultGrouper extends Logging {
       // and basically match the same tokens.
       val filteredGroups = groups.filter(
         gp1 => !(gp1._1.startsWith(BlackLabSemantics.genericCaptureGroupNamePrefix) &&
-          groups.exists(gp2 => (gp2._1.startsWith(QExprParser.tableCaptureGroupPrefix))
-            && (gp2._2.equals(gp1._2))))
+          groups.exists(gp2 => gp2._1.startsWith(QExprParser.tableCaptureGroupPrefix)
+            && gp2._2.equals(gp1._2)))
       )
       val groupNames = filteredGroups.keys.toList.sortBy(groups)
 
@@ -231,7 +237,7 @@ object SearchResultGrouper extends Logging {
     tables: Map[String, Table],
     results: Iterable[BlackLabResult]
   ): Seq[GroupedBlackLabResult] = {
-    val withColumnNames = results.map(inferCaptureGroupNames(req, tables, _)).flatten
+    val withColumnNames = results.flatMap(inferCaptureGroupNames(req, tables, _))
     val keyed = withColumnNames.map(keyResult(req, tables, _))
     createGroups(req, keyed)
   }

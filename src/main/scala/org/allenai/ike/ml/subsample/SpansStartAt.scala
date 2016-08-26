@@ -10,7 +10,7 @@ import java.util
   * @param clause Spans to modify
   * @param startDoc document to start from, returns hits have doc >= startFromDoc
   * @param startToken token to start from, returned hits have doc > startFromDoc or
-  *                      start >= startFromToken
+  * start >= startFromToken
   */
 class SpansStartAt(clause: BLSpans, startDoc: Int, startToken: Int) extends BLSpans {
 

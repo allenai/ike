@@ -13,7 +13,7 @@ import scala.collection.immutable.IntMap
   * @param suggestPos whether to build operators that add POS in the query
   * @param suggestWord whether to build operators that add words to the query
   * @param minSimilarityDifference when building possible QSimilarityOps, only suggest ops where
-  *                                that have pos values separated by at least this much
+  * that have pos values separated by at least this much
   */
 case class GeneralizingOpGenerator(
     suggestPos: Boolean,

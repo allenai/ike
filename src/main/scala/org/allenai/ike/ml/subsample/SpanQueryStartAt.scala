@@ -12,7 +12,7 @@ import java.util
   * @param query SpanQuery to modify
   * @param startDoc document to start from, returned hits have doc >= startFromDoc
   * @param startToken token to start from, returned hits have doc > startFromDoc or
-  *                      start >= startFromToken
+  * start >= startFromToken
   */
 class SpanQueryStartAt(query: SpanQuery, startDoc: Int, startToken: Int)
     extends SpanQueryBase(query) {

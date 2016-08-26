@@ -21,13 +21,13 @@
 
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
-      <pattern>%date{ISO8601} %-5level %logger{36} - %msg%n</pattern>
+      <pattern>%date{ISO8601} [%thread] %-5level %logger{36} - %msg%n</pattern>
     </encoder>
   </appender>
 
   <appender name="SYSLOG-TLS" class="com.papertrailapp.logback.Syslog4jAppender">
     <layout class="ch.qos.logback.classic.PatternLayout">
-      <pattern>%-5level %logger{35}: %m%n%xEx</pattern>
+      <pattern>%-5level [%thread] %logger{35}: %m%n%xEx</pattern>
     </layout>
 
     <syslogConfig class="org.productivity.java.syslog4j.impl.net.tcp.ssl.SSLTCPNetSyslogConfig">

@@ -78,7 +78,7 @@ object QueryGeneralizer {
     * @param qexpr QExpr to generalize
     * @param searchers Searchers to use when deciding what to generalize
     * @param sampleSize Number of samples to get per a searcher when deciding what a word can be
-    *                  generalized to
+    * generalized to
     * @return Generalization that could be made from the QExpr
     */
   def queryGeneralizations(

@@ -13,10 +13,10 @@ import java.util
   * @param _query The query to filter
   * @param _filter the filter to AND the query against
   * @param captureGroups Capture groups to filter the query by, both the filter and the query should
-  *                contain capture groups with the names in this list
+  * contain capture groups with the names in this list
   * @param startFromDoc document to start from, returns hits have doc >= startFromDoc
   * @param startFromToken token to start from, returned hits have doc > startFromDoc or
-  *                      start >= startFromToken
+  * start >= startFromToken
   */
 class SpanQueryFilterByCaptureGroups(
     _query: SpanQuery,

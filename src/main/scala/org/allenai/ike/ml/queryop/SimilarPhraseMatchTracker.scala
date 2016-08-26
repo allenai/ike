@@ -113,7 +113,7 @@ class SimilarPhraseMatchTracker(val qSimilarPhrases: QSimilarPhrases) {
     * used that threshold
     *
     * @param minCoverageDifference no two thresholds returned will cover sets of sentences that only
-    *                              differ by this much
+    * differ by this much
     * @param examples Examples the sentence indices correspond to
     * @return List of (POS threshold, edit map) pairs
     */

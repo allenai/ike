@@ -20,7 +20,7 @@ object CreateIndex extends App {
     destinationDir: File = null,
     batchSize: Int = 1000,
     textSource: URI = null,
-    oneSentPerDoc: Boolean = true
+    oneSentencePerDoc: Boolean = true
   )
 
   val parser = new scopt.OptionParser[Options](this.getClass.getSimpleName.stripSuffix("$")) {
@@ -37,24 +37,22 @@ object CreateIndex extends App {
     } text "URL of a file or directory to load the text from"
 
     opt[Unit]('o', "oneSentencePerDoc") action { (_, o) =>
-      o.copy(oneSentPerDoc = true)
+      o.copy(oneSentencePerDoc = true)
     }
     help("help")
   }
 
-  parser.parse(args, Options()) foreach { options =>
-    val indexDir = options.destinationDir
-    val batchSize = options.batchSize
-    val idTexts = options.textSource.getScheme match {
+  def getIdTextsForTextSource(textSource: URI): Iterator[IdText] = {
+    textSource.getScheme match {
       case "file" =>
-        val path = Paths.get(options.textSource)
+        val path = Paths.get(textSource)
         if (Files.isDirectory(path)) {
           IdText.fromDirectory(path.toFile)
         } else {
           IdText.fromFlatFile(path.toFile)
         }
       case "datastore" =>
-        val locator = Datastore.locatorFromUrl(options.textSource)
+        val locator = Datastore.locatorFromUrl(textSource)
         if (locator.directory) {
           IdText.fromDirectory(locator.path.toFile)
         } else {
@@ -63,49 +61,52 @@ object CreateIndex extends App {
       case otherAuthority =>
         throw new RuntimeException(s"URL scheme not supported: $otherAuthority")
     }
+  }
 
-    def indexableToken(lemmatized: Lemmatized[ChunkedToken]): IndexableToken = {
-      val word = lemmatized.token.string
-      val pos = lemmatized.token.postag
-      val lemma = lemmatized.lemma
-      val chunk = lemmatized.token.chunk
-      IndexableToken(word, pos, lemma, chunk)
-    }
+  private def indexableToken(lemmatized: Lemmatized[ChunkedToken]): IndexableToken = {
+    val word = lemmatized.token.string
+    val pos = lemmatized.token.postag
+    val lemma = lemmatized.lemma
+    val chunk = lemmatized.token.chunk
+    IndexableToken(word, pos, lemma, chunk)
+  }
 
-    def process(idText: IdText): Seq[IndexableText] = {
-      if (options.oneSentPerDoc) {
-        val sents = NlpAnnotate.annotate(idText.text)
-        sents.zipWithIndex.filter(_._1.nonEmpty).map {
-          case (sent, index) =>
-            val text = idText.text.substring(
-              sent.head.token.offset,
-              sent.last.token.offset + sent.last.token.string.length
-            )
-            val sentenceIdText = IdText(s"${idText.id}-$index", text)
+  def process(idText: IdText, oneSentencePerDoc: Boolean): Seq[IndexableText] = {
+    if (oneSentencePerDoc) {
+      val sents: Seq[Seq[Lemmatized[ChunkedToken]]] = NlpAnnotate.annotate(idText.text)
+      sents.zipWithIndex.filter(_._1.nonEmpty).map {
+        case (sent, index) =>
+          val text = idText.text.substring(
+            sent.head.token.offset,
+            sent.last.token.offset + sent.last.token.string.length
+          )
+          val sentenceIdText = IdText(s"${idText.id}-$index", text)
 
-            IndexableText(sentenceIdText, Seq(sent map indexableToken))
-        }
-      } else {
-        val text = idText.text
-        val sents = for {
-          sent <- NlpAnnotate.annotate(text)
-          indexableSent = sent map indexableToken
-        } yield indexableSent
-        Seq(IndexableText(idText, sents))
+          IndexableText(sentenceIdText, Seq(sent map indexableToken))
       }
+    } else {
+      val text = idText.text
+      val sents = for {
+        sent <- NlpAnnotate.annotate(text)
+        indexableSent = sent map indexableToken
+      } yield indexableSent
+      Seq(IndexableText(idText, sents))
     }
+  }
 
-    def processBatch(batch: Seq[IdText]): Seq[IndexableText] =
-      batch.toArray.par.map(process).flatten.seq
+  private def processBatch(batch: Seq[IdText], oneSentencePerDoc: Boolean): Seq[IndexableText] = {
+    batch.toArray.par.flatMap(idText => process(idText, oneSentencePerDoc)).seq
+  }
 
-    def addTo(indexer: Indexer)(text: IndexableText): Unit = {
-      CreateIndex.addTo(indexer)(text)
-    }
+  parser.parse(args, Options()) foreach { options =>
+    val indexDir = options.destinationDir
+    val batchSize = options.batchSize
+    val idTexts = getIdTextsForTextSource(options.textSource)
 
     val indexer = new Indexer(indexDir, true, classOf[AnnotationIndexer])
     val indexableTexts = for {
       batch <- idTexts.grouped(batchSize)
-      batchResults = processBatch(batch)
+      batchResults = processBatch(batch, options.oneSentencePerDoc)
       result <- batchResults
     } yield result
 

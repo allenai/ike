@@ -7,6 +7,7 @@ import spray.json.DefaultJsonProtocol._
 object JsonSerialization {
   import org.allenai.ike.QExprJsonSerialization._
 
+  implicit val intervalFormat = jsonFormat2(Interval.apply)
   implicit val wordDataFormat = jsonFormat2(WordData.apply)
   implicit val blackLabResultFormat = jsonFormat4(BlackLabResult.apply)
   implicit val keyedBlackLabResultFormat = jsonFormat2(KeyedBlackLabResult.apply)

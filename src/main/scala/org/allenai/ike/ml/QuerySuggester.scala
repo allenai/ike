@@ -30,7 +30,7 @@ case class ScoredQuery(query: QExpr, score: Double, positiveScore: Double,
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
   * this hit (see the ml/README.md)
   * @param captureStrings the string we captured, as a Sequence of phrases, one for each capture
-  *                       group
+  * group
   * @param doc the document number this Example came from
   * @param str String of hit, kept only for debugging purposes
   */
@@ -41,7 +41,7 @@ case class Example(label: Label, requiredEdits: Int,
   *
   * @param label label of the Hit
   * @param phraseId id for the phrase this Hit captured, Examples that captured the same phrase
-  *                 will have the same id
+  * will have the same id
   * @param requiredEdits number of query-tokens we need to edit for the starting query to match
   * this hit (see the ml/README.md)
   * @param doc document this example came from
@@ -329,7 +329,7 @@ object QuerySuggester extends Logging {
     *
     * @param searchers Searchers to use when suggesting new queries
     * @param startingQuery Starting query to build suggestion from, should have all QGeneralize
-    *                      interpolated to QSimilarPhrases
+    * interpolated to QSimilarPhrases
     * @param tables Tables to use when building the query
     * @param similarPhrasesSearcher to use when building similar phrase suggestions
     * @param target Name of the table to optimize the suggested queries for

@@ -13,7 +13,7 @@ import java.util
   * @param query the Spans to return
   * @param filter the Spans to AND with the `query` Spans
   * @param captureGroupNames the names of the captures groups to filter with, both the query and
-  *              filter spans should register these names as capture groups
+  * filter spans should register these names as capture groups
   * @param startFromDoc document to start collecting hits from
   * @param startFromToken token to start collecting hits from
   */
@@ -89,7 +89,7 @@ class SpansFilterByCaptureGroups(
   }
 
   /* @return Whether this is are currently on a valid match, assuming both filter and query
-   *     are on the same document
+   * are on the same document
    */
   private def onValidMatch: Boolean = {
     filterSpanHolder.indices.foreach(filterSpanHolder.update(_, null))

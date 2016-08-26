@@ -119,7 +119,7 @@ abstract class Sampler {
     * @param tables map of string->Table, used for interpolating queries
     * @param patterns map of string->NamedPattern, used for interpolating queries
     * @param startFromDoc document to start collecting hits from, returned hits will not have doc
-    *                smaller than startFromDoc
+    * smaller than startFromDoc
     * @return Hits object containing the samples
     */
   def getLabelledSample(
@@ -132,4 +132,3 @@ abstract class Sampler {
     startFromToken: Int
   ): Hits
 }
-

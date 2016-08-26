@@ -1,7 +1,5 @@
 package org.allenai.ike
 
-import org.allenai.common.immutable.Interval
-
 import org.allenai.blacklab.search.{ Hit, Hits, Kwic, Span }
 
 import scala.collection.JavaConverters._
@@ -31,7 +29,7 @@ case object BlackLabResult {
     } yield data
   }
 
-  def toInterval(span: Span): Interval = Interval.open(span.start, span.end)
+  def toInterval(span: Span): Interval = Interval(span.start, span.end)
 
   def captureGroups(hits: Hits, hit: Hit, shift: Int): Map[String, Option[Interval]] = {
     val names = hits.getCapturedGroupNames.asScala
@@ -56,7 +54,7 @@ case object BlackLabResult {
   ): Option[BlackLabResult] = {
     val kwic = hits.getKwic(hit, kwicSize)
     val data = wordData(hits, kwic)
-    val offset = Interval.open(kwic.getHitStart, kwic.getHitEnd)
+    val offset = Interval(kwic.getHitStart, kwic.getHitEnd)
     // TODO: https://github.com/allenai/okcorpus/issues/30
     if (hits.hasCapturedGroups) {
       val shift = hit.start - kwic.getHitStart
