@@ -1,3 +1,4 @@
+[![Build Status](https://semaphoreci.com/api/v1/allenai/ike/branches/hackathon/shields_badge.svg)](https://semaphoreci.com/allenai/ike)
 IKE (Interactive Knowledge Extraction)
 ======================================
 
