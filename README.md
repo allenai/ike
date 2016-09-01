@@ -54,5 +54,10 @@ A Blacklab index size will typically be 12-13x the size of the input corpus bein
 Our testing on an Amazon [`r3.2xlarge`](https://aws.amazon.com/ec2/instance-types/) instance indicated that an index size of upto 2 GB could be processed with reasonable speed when loaded into IKE. If you have a large corpus, one way to get around the size limits is to shard the corpus and create multiple indexes, each within the size limit to load into IKE.
 
 
+## Supported Platforms
+
+IKE has been built, tested and verified to work on Linux and Mac systems. However, if you are interested in developing / running on Windows, please see the instructions from [diniluca1789] (https://github.com/diniluca1789), an external IKE user who got it successfully building and running on Windows, as described in [this thread](https://github.com/allenai/ike/issues/225).
+
+
 ## AI2 Internal Information
 AI2 internal users, please go to [this link](README-AI2.md).
