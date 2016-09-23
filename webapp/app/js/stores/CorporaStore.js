@@ -17,7 +17,10 @@ const CorporaStore = assign({}, EventEmitter.prototype, {
   },
 
   getCorpusNames() {
-    return this.getCorpora().map(function(corpus) {
+    function isSelected(corpus) {
+      return corpus.defaultSelected
+    }
+    return this.getCorpora().filter(isSelected).map(function(corpus) {
       return corpus.name;
     });
   },
@@ -33,7 +36,8 @@ const CorporaStore = assign({}, EventEmitter.prototype, {
         var newCorpora = JSON.parse(body).map(function (corpus, i) {
           return {
             name: corpus.name,
-            description: corpus.description
+            description: corpus.description,
+            defaultSelected: corpus.defaultSelected
           }
         });
 

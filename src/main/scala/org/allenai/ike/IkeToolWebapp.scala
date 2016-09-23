@@ -19,6 +19,7 @@ import spray.util.LoggingContext
 
 import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
@@ -53,6 +54,10 @@ class IkeToolActor extends Actor with HttpService with SprayJsonSupport with Log
   val usageLogger = LoggerFactory.getLogger("Usage")
 
   logger.debug("Starting IkeToolActor") // this is just here to force logger initialization
+
+  // Case class to encapsulate a Search App and the default selected config for the index
+  // this app was built for
+  case class SearchAppWithConfig(searchApp: Future[SearchApp], defaultSelected: Boolean)
 
   val config = ConfigFactory.load
   val searchApps = config.getConfigList("IkeToolWebapp.indices").asScala.map { config =>
@@ -89,8 +94,10 @@ class IkeToolActor extends Actor with HttpService with SprayJsonSupport with Log
 
   val serviceRoute = pathPrefix("api") {
     parameters('corpora.?) { corpora =>
+      val readySearchAppsWithDefaultSelected =
+        searchApps.filter(app => app._2.isCompleted && app._2.get.defaultSelected)
       val corpusNames = corpora match {
-        case None => searchApps.keys
+        case None => readySearchAppsWithDefaultSelected.keys
         case Some(names) => names.split(' ').toSeq
       }
       val corpusNamesString = corpusNames.mkString(", ")
@@ -278,7 +285,12 @@ class IkeToolActor extends Actor with HttpService with SprayJsonSupport with Log
       complete {
         val readySearchApps = searchApps.filter(_._2.isCompleted)
         readySearchApps.toSeq.sortBy(_._1).map {
-          case (corpusName, app) => CorpusDescription(corpusName, app.get.description)
+          case (corpusName, app) =>
+            CorpusDescription(
+              corpusName,
+              app.get.description,
+              app.get.defaultSelected
+            )
         }
       }
     }

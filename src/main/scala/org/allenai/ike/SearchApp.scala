@@ -34,7 +34,7 @@ case class SearchConfig(limit: Int = 100, evidenceLimit: Int = 1)
 case class SearchRequest(query: Either[String, QExpr], target: Option[String],
   userEmail: Option[String], config: SearchConfig)
 case class SearchResponse(qexpr: QExpr, groups: Seq[GroupedBlackLabResult])
-case class CorpusDescription(name: String, description: Option[String])
+case class CorpusDescription(name: String, description: Option[String], defaultSelected: Boolean)
 case class SimilarPhrasesResponse(phrases: Seq[SimilarPhrase])
 
 case class SearchApp(config: Config) extends Logging {
@@ -43,6 +43,7 @@ case class SearchApp(config: Config) extends Logging {
   val description = config.get[String]("description")
   val indexDir = DataFile.fromConfig(config)
   val searcher = Searcher.open(indexDir)
+  val defaultSelected = config.get[Boolean]("defaultSelected").getOrElse(true)
 
   def blackLabHits(textPattern: TextPattern, limit: Int): Try[HitsWindow] = Try {
     searcher.find(textPattern).window(0, limit)

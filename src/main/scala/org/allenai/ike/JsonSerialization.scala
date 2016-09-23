@@ -25,7 +25,7 @@ object JsonSerialization {
   implicit val inferQueryRequest = jsonFormat5(SuggestQueryRequest.apply)
   implicit val scoredQuery = jsonFormat5(ScoredStringQuery.apply)
   implicit val inferQueryResponse = jsonFormat3(SuggestQueryResponse.apply)
-  implicit val corpusDescription = jsonFormat2(CorpusDescription.apply)
+  implicit val corpusDescription = jsonFormat3(CorpusDescription.apply)
   implicit val similarPhrasesResponse = jsonFormat1(SimilarPhrasesResponse.apply)
 
   implicit val namedPattern = jsonFormat2(NamedPattern.apply)
