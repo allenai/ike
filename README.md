@@ -27,7 +27,7 @@ On subsequent runs, the service will start up quickly as the downloaded indexes 
 ## Creating and using an Index
 To create an index, you need the source text either as a directory of text files, or as one file with one document per line. Once you have that, run this in `sbt`:
 ```
-ike/runMain org.allenai.dictionary.index.CreateIndex --help
+ike/runMain org.allenai.ike.index.CreateIndex --help
 ```
 At the time of writing, this prints
 ```
