@@ -25,6 +25,7 @@ pomExtra :=
     </developer>
   </developers>
 
+
 libraryDependencies ++= Seq(
     allenAiCommon,
     allenAiTestkit,
@@ -74,3 +75,8 @@ dependencyOverrides ++= Set(
   "org.apache.commons" % "commons-compress" % "1.8",
   "org.scala-lang" % "scala-reflect" % "2.11.5"
 )
+
+deployDirs += "etc"
+
+mappings in Universal ++=
+  (sourceDirectory.value / "main" / "etc" ** "*" pair relativeTo(sourceDirectory.value / "main"))
