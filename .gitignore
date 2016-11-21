@@ -39,3 +39,5 @@ public/
 /scripts/set_up_instance.sh
 /src/main/resources/prod.conf
 /src/main/resources/test.conf
+/src/main/etc/default/ike.prod
+/src/main/etc/default/ike.test
