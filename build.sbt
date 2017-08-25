@@ -8,8 +8,6 @@ organization := "org.allenai"
 
 name := "ike"
 
-homepage := Some(url("https://ike.allenai.org"))
-
 description := "buildin' them electric tables"
 
 scmInfo := Some(ScmInfo(
