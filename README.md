@@ -5,6 +5,8 @@ IKE (Interactive Knowledge Extraction)
 ## Usage Guide
 [First time users, please refer the IKE Getting Started Guide](USAGE-GUIDE.md)
 
+[Installation instructions contributed by UTAustin] (installing_ike_contributed_by_UTAustin.pdf)
+
 ## Run Locally
 1. Install PostgreSQL locally and create a database for use by IKE. IKE needs this to store the tables you create.
 2. Modify the `Tablestore` key value setting in the [IKE config] (https://github.com/allenai/ike/blob/master/src/main/resources/application.conf) with appropriate database JDBC URL and credentials.
